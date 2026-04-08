@@ -55,7 +55,7 @@ class UsuarioUpdate(BaseModel):
 
 @router.get("", response_model=List[UsuarioOut])
 async def listar_usuarios(usuario: UsuarioActual = Depends(get_usuario_actual)):
-    if usuario.rol not in ("director_cap_humano", "cap_humano"):
+    if usuario.rol not in ("superadmin", "director_cap_humano", "cap_humano"):
         raise HTTPException(status_code=403, detail="Sin permiso")
     conn = get_conn()
     cur = conn.cursor()
