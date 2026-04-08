@@ -38,11 +38,61 @@ function TabNomina() {
     setDetalle(r.data)
   }
 
-  if (loading) return <div className="text-center py-12 text-slate-400 text-sm">Cargando...</div>
-  if (!nominas.length) return <div className="text-center py-12 text-slate-400 text-sm">No hay nóminas registradas aún.</div>
+  if (loading) return (
+    <div className="space-y-3">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 animate-pulse">
+          <div className="flex justify-between">
+            <div className="space-y-2">
+              <div className="h-4 w-48 bg-slate-100 rounded" />
+              <div className="h-3 w-32 bg-slate-100 rounded" />
+            </div>
+            <div className="h-5 w-24 bg-slate-100 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
+  if (!nominas.length) return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+      <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+            d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+        </svg>
+      </div>
+      <p className="text-slate-700 font-medium text-sm">Aún no hay nóminas registradas</p>
+      <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">
+        Una vez que se procese la primera quincena aparecerá tu historial de pagos aquí.
+      </p>
+    </div>
+  )
+
+  // Resumen del último pago
+  const ultimo = nominas[0]
 
   return (
     <div className="space-y-3">
+      {/* Tarjeta resumen */}
+      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 text-white mb-4">
+        <p className="text-blue-200 text-xs font-medium uppercase tracking-wide mb-1">Último pago</p>
+        <p className="text-3xl font-bold">{fmt(ultimo.total_final)}</p>
+        <p className="text-blue-200 text-xs mt-1">
+          {fmtFecha(ultimo.fecha_inicio)} — {fmtFecha(ultimo.fecha_fin)} · {Math.round(ultimo.horas_reales)} hrs
+        </p>
+        <div className="flex items-center gap-2 mt-3">
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            ultimo.nomina_estado === 'pagado' ? 'bg-emerald-400/20 text-emerald-100' :
+            ultimo.nomina_estado === 'validado' ? 'bg-blue-300/20 text-blue-100' :
+            'bg-amber-400/20 text-amber-100'
+          }`}>
+            {ESTADO_NOMINA[ultimo.nomina_estado]?.label || ultimo.nomina_estado}
+          </span>
+          <span className="text-blue-300 text-xs">{nominas.length} quincena{nominas.length !== 1 ? 's' : ''} en historial</span>
+        </div>
+      </div>
+
       {nominas.map(n => {
         const cfg = ESTADO_NOMINA[n.nomina_estado] || { label: n.nomina_estado, cls: 'bg-slate-100 text-slate-600' }
         return (
@@ -144,9 +194,24 @@ function TabChecadas() {
       )}
 
       {loading ? (
-        <div className="text-center py-8 text-slate-400 text-sm">Cargando...</div>
+        <div className="flex flex-col gap-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="bg-white border border-slate-100 rounded-xl px-4 py-3 animate-pulse flex gap-6">
+              {[...Array(4)].map((_, j) => <div key={j} className="h-3 bg-slate-100 rounded w-16" />)}
+            </div>
+          ))}
+        </div>
       ) : checadas.length === 0 ? (
-        <div className="text-center py-8 text-slate-400 text-sm">No hay checadas registradas para este período.</div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p className="text-slate-700 font-medium text-sm">Sin registros en este período</p>
+          <p className="text-slate-400 text-xs mt-1">Las checadas del checador biométrico aparecerán aquí.</p>
+        </div>
       ) : (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
@@ -227,7 +292,18 @@ function TabAclaraciones() {
       </div>
 
       {aclaraciones.length === 0 ? (
-        <div className="text-center py-8 text-slate-400 text-sm">No tienes aclaraciones registradas.</div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
+          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+          </div>
+          <p className="text-slate-700 font-medium text-sm">No tienes aclaraciones registradas</p>
+          <p className="text-slate-400 text-xs mt-1 max-w-xs mx-auto">
+            Si tienes alguna duda sobre tus checadas o nómina, puedes enviar una aclaración al área de Capital Humano.
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {aclaraciones.map(a => {
@@ -411,6 +487,18 @@ export default function PortalDocente() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6">
+        {/* Tab title */}
+        <div className="mb-5">
+          <h1 className="text-lg font-semibold text-slate-800">
+            {TABS.find(t => t.id === tab)?.label}
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {tab === 'nomina'       && 'Tu historial de pagos y desglose fiscal por quincena'}
+            {tab === 'checadas'     && 'Registros de entrada y salida del checador biométrico'}
+            {tab === 'aclaraciones' && 'Consultas y aclaraciones enviadas a Capital Humano'}
+            {tab === 'cuenta'       && 'Configuración de tu contraseña de acceso'}
+          </p>
+        </div>
         {tab === 'nomina'       && <TabNomina />}
         {tab === 'checadas'     && <TabChecadas />}
         {tab === 'aclaraciones' && <TabAclaraciones />}

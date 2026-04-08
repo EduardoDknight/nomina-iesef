@@ -413,9 +413,11 @@ function DrawerUsuario({ usuario: u, onClose, onSaved }) {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Rol *</label>
             <select value={form.rol} onChange={e => set('rol', e.target.value)} className={input}>
-              {Object.entries(ROLES_LABEL).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
+              {Object.entries(ROLES_LABEL)
+                .filter(([val]) => !['docente', 'trabajador'].includes(val))
+                .map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
             </select>
           </div>
           {necesitaPrograma && (
@@ -482,7 +484,8 @@ function TabUsuarios() {
     setLoading(true)
     try {
       const res = await api.get('/usuarios')
-      setUsuarios(res.data)
+      // Solo mostrar usuarios administrativos del sistema (no docentes ni personal)
+      setUsuarios(res.data.filter(u => !['docente', 'trabajador'].includes(u.rol)))
     } catch {
       setUsuarios([])
     } finally {
@@ -581,7 +584,7 @@ function TabCredenciales() {
   const { usuario } = useAuth()
   const [subtab, setSubtab] = useState('docentes')
   const [docentes, setDocentes] = useState([])
-  const [trabajadores, setTrabajadores] = useState([])
+  const [administrativos, setAdministrativos] = useState([])
   const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(null)
@@ -598,18 +601,18 @@ function TabCredenciales() {
       .finally(() => setLoading(false))
   }
 
-  const cargarTrabajadores = () => {
+  const cargarAdministrativos = () => {
     if (!puedeVerTrabajadores) return
     setLoading(true)
     api.get('/usuarios/credenciales-trabajadores')
-      .then(r => setTrabajadores(r.data))
-      .catch(() => setTrabajadores([]))
+      .then(r => setAdministrativos(r.data))
+      .catch(() => setAdministrativos([]))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
     if (subtab === 'docentes') cargarDocentes()
-    else cargarTrabajadores()
+    else if (subtab === 'administrativos') cargarAdministrativos()
     setBusqueda('')
   }, [subtab])
 
@@ -620,7 +623,7 @@ function TabCredenciales() {
     try {
       const r = await api.post(`/usuarios/${id}/reset-password`)
       setMsg({ tipo: 'ok', texto: `Contraseña de ${r.data.nombre} restablecida a ${r.data.password_reset_a}` })
-      if (subtab === 'docentes') cargarDocentes(); else cargarTrabajadores()
+      if (subtab === 'docentes') cargarDocentes(); else if (subtab === 'administrativos') cargarAdministrativos()
     } catch (err) {
       setMsg({ tipo: 'error', texto: err.response?.data?.detail || 'Error al restablecer.' })
     } finally {
@@ -638,12 +641,13 @@ function TabCredenciales() {
       .then(blob => {
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
-        a.download = `credenciales_${subtab}_${new Date().toISOString().slice(0,10)}.xlsx`
+        const nombreArchivo = subtab === 'docentes' ? 'docentes' : 'administrativos'
+        a.download = `credenciales_${nombreArchivo}_${new Date().toISOString().slice(0,10)}.xlsx`
         a.click()
       })
   }
 
-  const lista = subtab === 'docentes' ? docentes : trabajadores
+  const lista = subtab === 'docentes' ? docentes : administrativos
   const filtrada = lista.filter(u =>
     !busqueda || u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     u.username.toLowerCase().includes(busqueda.toLowerCase())
@@ -672,9 +676,9 @@ function TabCredenciales() {
           Docentes
         </button>
         {puedeVerTrabajadores && (
-          <button onClick={() => setSubtab('trabajadores')}
-            className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-colors ${subtab === 'trabajadores' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-500 hover:bg-slate-100'}`}>
-            Trabajadores
+          <button onClick={() => setSubtab('administrativos')}
+            className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-colors ${subtab === 'administrativos' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-500 hover:bg-slate-100'}`}>
+            Administrativos
           </button>
         )}
       </div>
