@@ -318,17 +318,17 @@ export default function Login() {
                 <label htmlFor="login-email"
                   className="block text-xs font-medium mb-1.5"
                   style={{ color: 'rgba(255,255,255,0.50)' }}>
-                  Correo institucional
+                  Usuario o correo
                 </label>
                 <input
                   id="login-email"
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
+                  type="text"
+                  autoComplete="username"
+                  inputMode="text"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  placeholder="correo@iesef.edu.mx"
+                  placeholder="correo@iesef.edu.mx o usuario"
                   className="w-full px-4 py-3 rounded-lg text-white placeholder-white/25 outline-none transition-colors"
                   style={inputBase}
                   onFocus={e => (e.target.style.border = inputFocus)}

@@ -154,97 +154,354 @@ function TabNomina() {
 }
 
 // ── Tab: Mis Checadas ─────────────────────────────────────────────────────────
-function TabChecadas() {
-  const [quincenas, setQuincenas] = useState([])
-  const [quincenaId, setQuincenaId] = useState(null)
-  const [checadas, setChecadas] = useState([])
-  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    api.get('/portal/quincenas-disponibles').then(r => {
-      setQuincenas(r.data)
-      if (r.data.length > 0) setQuincenaId(r.data[0].id)
-    })
-  }, [])
+// Badge estado entrada
+const ENT_CFG = {
+  entrada_ok: { label: 'OK',      cls: 'bg-emerald-100 text-emerald-700' },
+  retardo:    { label: 'Retardo', cls: 'bg-amber-100 text-amber-700' },
+  falta:      { label: 'Falta',   cls: 'bg-red-100 text-red-700' },
+}
+// Badge estado salida
+const SAL_CFG = {
+  salida_ok:          { label: 'OK',         cls: 'bg-emerald-100 text-emerald-700' },
+  salida_anticipada:  { label: 'Anticipada', cls: 'bg-slate-100 text-slate-600' },
+  salida_tarde:       { label: 'Tarde',      cls: 'bg-slate-100 text-slate-500' },
+}
+// Status icon config
+const STATUS_ICON = {
+  completa:                    { icon: '✓', cls: 'text-emerald-600' },
+  asumida_por_continuidad:     { icon: '↔', cls: 'text-amber-500' },
+  sin_salida_continuidad:      { icon: '↔', cls: 'text-amber-500' },
+  sin_entrada_continuidad:     { icon: '↔', cls: 'text-amber-500' },
+  sin_checadas:                { icon: '—', cls: 'text-slate-400' },
+  virtual:                     { icon: '⊡', cls: 'text-blue-400' },
+  sin_salida:                  { icon: '!', cls: 'text-orange-500' },
+  sin_entrada:                 { icon: '!', cls: 'text-orange-500' },
+  falta_con_registro:          { icon: '!', cls: 'text-red-500' },
+}
 
-  useEffect(() => {
-    if (!quincenaId) return
-    setLoading(true)
-    api.get('/portal/mis-checadas', { params: { quincena_id: quincenaId } })
-      .then(r => setChecadas(r.data))
-      .finally(() => setLoading(false))
-  }, [quincenaId])
+function BadgeTiempoReal({ actualizado }) {
+  const hora = actualizado
+    ? new Date(actualizado).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+    : null
+  return (
+    <div className="flex items-center gap-2 text-xs text-slate-500">
+      <span className="flex items-center gap-1.5">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+        </span>
+        Tiempo real
+      </span>
+      {hora && <span>· Actualizado {hora} · se actualiza cada 5 min</span>}
+    </div>
+  )
+}
+
+function isoWeekBounds(offsetWeeks = 0) {
+  const hoy = new Date()
+  hoy.setDate(hoy.getDate() + offsetWeeks * 7)
+  const wd  = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1  // 0=lun
+  const lun = new Date(hoy); lun.setDate(hoy.getDate() - wd)
+  const sab = new Date(lun); sab.setDate(lun.getDate() + 5)
+  const fmt = (d) => d.toISOString().slice(0, 10)
+  return { fi: fmt(lun), ff: fmt(sab) }
+}
+
+function currentQuincena() {
+  const hoy = new Date()
+  const yr  = hoy.getFullYear()
+  const mo  = String(hoy.getMonth() + 1).padStart(2, '0')
+  if (hoy.getDate() <= 15) {
+    return { fi: `${yr}-${mo}-01`, ff: `${yr}-${mo}-15` }
+  }
+  const lastDay = new Date(yr, hoy.getMonth() + 1, 0).getDate()
+  return { fi: `${yr}-${mo}-16`, ff: `${yr}-${mo}-${lastDay}` }
+}
+
+function DateRangeSelector({ value, onChange }) {
+  const fmtLabel = (s) => new Date(s + 'T12:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })
+
+  const hoyM = new Date()
+  const yrM  = hoyM.getFullYear()
+  const moM  = String(hoyM.getMonth() + 1).padStart(2, '0')
+  const lastM = new Date(yrM, hoyM.getMonth() + 1, 0).getDate()
+  const estemes = { fi: `${yrM}-${moM}-01`, ff: `${yrM}-${moM}-${lastM}` }
+
+  const presets = [
+    { label: 'Esta semana',     ...isoWeekBounds(0) },
+    { label: 'Semana pasada',   ...isoWeekBounds(-1) },
+    { label: 'Este mes',        ...estemes },
+    { label: 'Quincena actual', ...currentQuincena() },
+  ]
+
+  const active = presets.find(p => p.fi === value.fi && p.ff === value.ff)
 
   return (
-    <div>
-      {quincenas.length > 0 && (
-        <div className="mb-4">
-          <select
-            value={quincenaId || ''}
-            onChange={e => setQuincenaId(Number(e.target.value))}
-            className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+    <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5">
+      {/* Preset buttons */}
+      <div className="flex flex-wrap gap-1.5">
+        {presets.map(p => (
+          <button
+            key={p.label}
+            onClick={() => onChange({ fecha_inicio: p.fi, fecha_fin: p.ff })}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              active?.label === p.label
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
           >
-            {quincenas.map(q => (
-              <option key={q.id} value={q.id}>
-                {fmtFecha(q.fecha_inicio)} — {fmtFecha(q.fecha_fin)}
-              </option>
-            ))}
-          </select>
-        </div>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {/* Custom range */}
+      <div className="flex items-center gap-2">
+        <input
+          type="date"
+          value={value.fi}
+          onChange={e => onChange({ fecha_inicio: e.target.value, fecha_fin: value.ff })}
+          className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <span className="text-xs text-slate-400">—</span>
+        <input
+          type="date"
+          value={value.ff}
+          onChange={e => onChange({ fecha_inicio: value.fi, fecha_fin: e.target.value })}
+          className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
+      {active && (
+        <p className="text-[10px] text-slate-400">{fmtLabel(value.fi)} – {fmtLabel(value.ff)}</p>
       )}
+    </div>
+  )
+}
+
+function TabChecadas() {
+  const defaultRange = isoWeekBounds(0)
+  const [rango, setRango]     = useState({ fi: defaultRange.fi, ff: defaultRange.ff })
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [verTodas, setVerTodas] = useState(false)
+
+  const cargar = (fi, ff) => {
+    setLoading(true)
+    api.get('/portal/mis-checadas', { params: { fecha_inicio: fi, fecha_fin: ff } })
+      .then(r => setData(r.data))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    cargar(rango.fi, rango.ff)
+    const iv = setInterval(() => cargar(rango.fi, rango.ff), 5 * 60 * 1000)
+    return () => clearInterval(iv)
+  }, [rango.fi, rango.ff])
+
+  const handleRangeChange = ({ fecha_inicio, fecha_fin }) => {
+    if (fecha_inicio && fecha_fin && fecha_inicio <= fecha_fin) {
+      setRango({ fi: fecha_inicio, ff: fecha_fin })
+      setVerTodas(false)
+    }
+  }
+
+  const clasesContinuidad = data?.clases.filter(c =>
+    c.alerta_cadena ||
+    c.estado === 'asumida_por_continuidad' ||
+    c.estado === 'sin_salida_continuidad' ||
+    c.estado === 'sin_entrada_continuidad'
+  ).length ?? 0
+
+  return (
+    <div className="space-y-3">
+      {/* Selector de rango */}
+      <DateRangeSelector
+        value={{ fi: rango.fi, ff: rango.ff }}
+        onChange={handleRangeChange}
+      />
+
+      {/* Cabecera: badge tiempo real */}
+      <div className="flex items-center justify-end">
+        <BadgeTiempoReal actualizado={data?.actualizado_en} />
+      </div>
 
       {loading ? (
-        <div className="flex flex-col gap-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-white border border-slate-100 rounded-xl px-4 py-3 animate-pulse flex gap-6">
-              {[...Array(4)].map((_, j) => <div key={j} className="h-3 bg-slate-100 rounded w-16" />)}
-            </div>
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white border border-slate-200 rounded-xl px-4 py-3 animate-pulse h-12" />
           ))}
         </div>
-      ) : checadas.length === 0 ? (
+      ) : !data || data.clases.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
-          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <p className="text-slate-700 font-medium text-sm">Sin registros en este período</p>
-          <p className="text-slate-400 text-xs mt-1">Las checadas del checador biométrico aparecerán aquí.</p>
+          <p className="text-slate-500 text-sm">Sin clases programadas en este período.</p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Fecha</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Día</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">Entrada</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">Salida</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {checadas.map((c, i) => {
-                const incompleta = !c.entrada || !c.salida
-                return (
-                  <tr key={i} className={incompleta ? 'bg-orange-50/40' : 'hover:bg-slate-50'}>
-                    <td className="px-4 py-3 text-slate-700 tabular-nums">{c.fecha}</td>
-                    <td className="px-4 py-3 text-slate-500 capitalize">{c.dia_semana}</td>
-                    <td className="px-4 py-3 text-center font-mono text-slate-700">{c.entrada || <span className="text-red-400">—</span>}</td>
-                    <td className="px-4 py-3 text-center font-mono text-slate-700">{c.salida || <span className="text-red-400">—</span>}</td>
-                    <td className="px-4 py-3">
-                      {incompleta
-                        ? <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Incompleta</span>
-                        : <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">✓</span>
-                      }
-                    </td>
+        <>
+          {/* Alerta continuidad */}
+          {data.alerta_continuidad && (
+            <div className="flex items-start gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              <span className="shrink-0 mt-0.5">↔</span>
+              <span>
+                <strong>{clasesContinuidad} clase{clasesContinuidad !== 1 ? 's' : ''} pagada{clasesContinuidad !== 1 ? 's' : ''} por continuidad</strong>
+                {' — '}El docente checó entrada al inicio y salida al final del bloque continuo, sin checar cada clase por separado.
+              </span>
+            </div>
+          )}
+
+          {/* Resumen horas */}
+          <div className="flex items-center gap-4 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+            <span>Checadas: <strong className="text-slate-800">{data.horas_checadas}h</strong></span>
+            {data.horas_continuidad > 0 && (
+              <span>Continuidad: <strong className="text-amber-700">{data.horas_continuidad}h</strong></span>
+            )}
+            {data.horas_asumidas > 0 && (
+              <span>Asumidas: <strong className="text-amber-600">{data.horas_asumidas}h</strong></span>
+            )}
+            <span className="ml-auto font-semibold text-slate-800">Total: {data.horas_totales}h</span>
+          </div>
+
+          {/* Tabla de clases */}
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400">
+                    <th className="text-left px-3 py-2.5">Fecha</th>
+                    <th className="text-left px-3 py-2.5">Materia · Grupo</th>
+                    <th className="text-left px-3 py-2.5 hidden sm:table-cell">Horario</th>
+                    <th className="text-center px-3 py-2.5">Entrada</th>
+                    <th className="text-center px-3 py-2.5">Salida</th>
+                    <th className="text-center px-2 py-2.5">·</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {data.clases.map((c, i) => {
+                    const [fecha, hora_ini] = [c.fecha, c.horario?.split('-')[0]]
+                    const entCfg = c.entrada ? (ENT_CFG[c.entrada.estado] || ENT_CFG.entrada_ok) : null
+                    const salCfg = c.salida  ? (SAL_CFG[c.salida.estado]  || SAL_CFG.salida_ok)  : null
+                    const stIco  = STATUS_ICON[c.estado] || STATUS_ICON.sin_checadas
+
+                    return (
+                      <tr
+                        key={i}
+                        className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${
+                          c.alerta_cadena ? 'bg-amber-50/40' : ''
+                        }`}
+                      >
+                        {/* Fecha */}
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <div className="text-xs font-medium text-slate-700">
+                            {new Date(c.fecha + 'T12:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                          </div>
+                          <div className="text-[10px] text-slate-400 capitalize">{c.dia}</div>
+                        </td>
+                        {/* Materia */}
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-xs font-medium text-slate-800 leading-tight">{c.materia}</span>
+                            {c.alerta_cadena && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-100 text-amber-700 uppercase">continuidad</span>
+                            )}
+                          </div>
+                          {c.grupo && <div className="text-[10px] text-slate-400">{c.grupo}</div>}
+                        </td>
+                        {/* Horario */}
+                        <td className="px-3 py-2.5 hidden sm:table-cell">
+                          <span className="text-xs font-mono text-slate-600">{c.horario}</span>
+                        </td>
+                        {/* Entrada */}
+                        <td className="px-3 py-2.5 text-center">
+                          {c.es_virtual ? (
+                            <span className="text-[10px] text-blue-400">virtual</span>
+                          ) : c.entrada ? (
+                            <div className="space-y-0.5">
+                              <div className="text-xs font-mono font-semibold text-slate-700">{c.entrada.ts}</div>
+                              {entCfg && (
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium ${entCfg.cls}`}>{entCfg.label}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-300 text-sm">—</span>
+                          )}
+                        </td>
+                        {/* Salida */}
+                        <td className="px-3 py-2.5 text-center">
+                          {c.es_virtual ? (
+                            <span className="text-[10px] text-blue-400">virtual</span>
+                          ) : c.salida ? (
+                            <div className="space-y-0.5">
+                              <div className="text-xs font-mono font-semibold text-slate-700">{c.salida.ts}</div>
+                              {salCfg && (
+                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium ${salCfg.cls}`}>{salCfg.label}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-300 text-sm">—</span>
+                          )}
+                        </td>
+                        {/* Status icon */}
+                        <td className="px-2 py-2.5 text-center">
+                          <span className={`text-base font-bold ${stIco.cls}`}>{stIco.icon}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Expandible: todas las marcaciones */}
+          {data.todas_marcaciones.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+              <button
+                className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-slate-50 transition-colors"
+                onClick={() => setVerTodas(v => !v)}
+              >
+                <span className="text-xs font-medium text-slate-600">
+                  Ver todas las marcaciones biométricas ({data.todas_marcaciones.length})
+                </span>
+                <svg className={`w-4 h-4 text-slate-400 transition-transform ${verTodas ? 'rotate-180' : ''}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {verTodas && (
+                <div className="border-t border-slate-100 overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400">
+                        <th className="text-left px-3 py-2">Fecha</th>
+                        <th className="text-left px-3 py-2">Hora</th>
+                        <th className="text-center px-3 py-2">E/S</th>
+                        <th className="text-center px-3 py-2">Asignada</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.todas_marcaciones.map((m, i) => (
+                        <tr key={i} className="border-t border-slate-50 hover:bg-slate-50">
+                          <td className="px-3 py-1.5 text-slate-600">{m.fecha}</td>
+                          <td className="px-3 py-1.5 font-mono text-slate-800 font-semibold">{m.ts}</td>
+                          <td className="px-3 py-1.5 text-center">
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+                              m.tipo === 'E' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'
+                            }`}>{m.tipo === 'E' ? 'Entrada' : 'Salida'}</span>
+                          </td>
+                          <td className="px-3 py-1.5 text-center">
+                            {m.asignada
+                              ? <span className="text-emerald-500">✓</span>
+                              : <span className="text-slate-300">·</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

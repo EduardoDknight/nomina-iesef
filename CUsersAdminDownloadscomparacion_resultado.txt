@@ -1,0 +1,291 @@
+Conectando a DB...
+163 docentes activos en DB
+
+Leyendo Excel...
+  Excel PREPA: 22 docentes
+  Excel ENFERMERIA: 60 docentes
+  Excel NUTRICION: 55 docentes
+  Excel LENA: 55 docentes
+  Excel ESPECIALIDADES: 40 docentes
+  Excel MAESTRIAS: 13 docentes
+  Excel CAMPO CLINICO: 9 docentes
+
+Calculando nómina del sistema...
+137 docentes con horas/pago calculados
+
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+DOCENTE                             PROG            EXCEL_H   SIS_H    EXCEL_$      SIS_$    DIFF_$ ESTADO
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+── PREPA (tarifa $120/h) ──────────────────────────────────────────────────────────────────────
+  Barrera Reyes Ángel Eduardo         PREPA               4.0     4.0        480        480        +0  ✅
+  Bautista Ramírez Jacob              PREPA               4.0     2.0        480        240      -240  ⬇ sistema da MENOS
+  Estrella Martínez Paulina Noemí     PREPA               5.0     5.0        600        600        +0  ✅
+  Galindo Chávez Gissela              PREPA              20.0    12.0      2,400      1,440      -960  ⬇ sistema da MENOS
+  García Franco Nancy Karina          PREPA               4.0     4.0        480        480        +0  ✅
+  Hernández Bautista Macario          PREPA               6.0     6.0        720        720        +0  ✅
+  Hernández Martínez David Omar       PREPA              12.0     2.0      1,440        240    -1,200  ⬇ sistema da MENOS
+  León Ibarra Axel Ibzan              PREPA               7.0     4.0        840        480      -360  ⬇ sistema da MENOS
+  López Ballesteros Mariel Idelette   PREPA              11.0     8.0      1,320        960      -360  ⬇ sistema da MENOS
+  Martínez Ramírez Jesús              PREPA              16.0     8.0      1,920        960      -960  ⬇ sistema da MENOS
+  Mejía Benítez Flor Yanet            PREPA               9.0     5.0      1,080        600      -480  ⬇ sistema da MENOS
+  Pasalagua Martínez Sandra Itzel     PREPA               7.0     6.0        840        720      -120  ⬇ sistema da MENOS
+  Pérez Quintero Priscila             PREPA               8.0     8.0        960        960        +0  ✅
+  Pérez Sánchez David                 PREPA               9.0     9.0      1,080      1,080        +0  ✅
+  Ramos Arteaga Orlando               PREPA               8.0     7.0        960        840      -120  ⬇ sistema da MENOS
+  Rodríguez Cardona Gloria Ammy       PREPA              13.0    12.0      1,560      1,440      -120  ⬇ sistema da MENOS
+  Santiago Baños Jordan Yared         PREPA              10.0     4.0      1,200        480      -720  ⬇ sistema da MENOS
+  Torres Iglesias Ángela Yazmín       PREPA               0.0     0.0          0          0        +0  ✅
+  Zuñiga Rivera Fernell               PREPA               8.0     6.0        960        720      -240  ⬇ sistema da MENOS
+  del Valle Martínez María Cristina   PREPA              18.0    16.0      2,160      1,920      -240  ⬇ sistema da MENOS
+  Contreras Martínez Ilse Mireya      PREPA               3.0     0.0        360          0      -360  ⬇ sistema da MENOS
+  Moreno Martínez Diego Armando       PREPA              18.0     0.0      2,160          0    -2,160  ⬇ sistema da MENOS
+
+── ENFERMERIA (tarifa $140/h) ──────────────────────────────────────────────────────────────────────
+  Arrazola Mendoza Salma Shaddaí      ENFERMERIA         12.0    10.0      1,680      1,400      -280  ⬇ sistema da MENOS
+  Arvizu Contreras Omar               ENFERMERIA         16.0    14.0      2,240      1,960      -280  ⬇ sistema da MENOS
+  Barrera Jiménez Marco Antonio       ENFERMERIA         35.0    14.0      4,900      1,960    -2,940  ⬇ sistema da MENOS
+  Barrera Reyes Ángel Eduardo         ENFERMERIA         14.0    16.0      1,960      2,240      +280  ⬆ sistema da MÁS
+  Canseco Torres Karla Minoru         ENFERMERIA         14.0    18.0      1,960      2,520      +560  ⬆ sistema da MÁS
+  Chávez Rubio Karina                 ENFERMERIA         10.0     9.0      1,400      1,260      -140  ⬇ sistema da MENOS
+  César Flores Juan Manuel            ENFERMERIA         14.0    16.0      1,960      2,240      +280  ⬆ sistema da MÁS
+  Durán Hernández Alma Laura          ENFERMERIA         37.0    38.0      5,180      5,320      +140  ⬆ sistema da MÁS
+  Escamilla Flores Geraldine          ENFERMERIA         37.0    30.0      5,180      4,200      -980  ⬇ sistema da MENOS
+  Escobar Estrada Itzayana Deyanira   ENFERMERIA         29.0    25.0      4,060      3,500      -560  ⬇ sistema da MENOS
+  Escobar Velázquez Nadia             ENFERMERIA          4.0     4.0        560        560        +0  ✅
+  Escoto Izquierdo Oscar              ENFERMERIA         22.0    10.0      3,080      1,400    -1,680  ⬇ sistema da MENOS
+  Escudero Rubiales Hilda             ENFERMERIA         45.0    35.0      6,300      4,900    -1,400  ⬇ sistema da MENOS
+  García Curiel Laura                 ENFERMERIA         20.0    15.0      2,800      2,100      -700  ⬇ sistema da MENOS
+  García Lavalley Francisco Javier    ENFERMERIA         33.0    28.0      4,620      3,920      -700  ⬇ sistema da MENOS
+  Garzón Quiroz Joshua Gabriel        ENFERMERIA          6.0     4.0        840        560      -280  ⬇ sistema da MENOS
+  González Escalante Erika Yadira     ENFERMERIA         45.0    41.0      6,300      5,740      -560  ⬇ sistema da MENOS
+  González Gabriel Rosalba            ENFERMERIA         32.0    26.0      4,480      3,640      -840  ⬇ sistema da MENOS
+  Granados León Luis Ángel            ENFERMERIA         12.0     8.0      1,680      1,120      -560  ⬇ sistema da MENOS
+  Guzmán Ramírez Mauricio Antonio     ENFERMERIA         10.0     6.0      1,400        840      -560  ⬇ sistema da MENOS
+  Gómez Ibarra Jesús                  ENFERMERIA         18.0    15.0      2,520      2,100      -420  ⬇ sistema da MENOS
+  Hernández Estrada Ana Guadalupe     ENFERMERIA         16.0    15.0      2,240      2,100      -140  ⬇ sistema da MENOS
+  Hernández Hernández Nora Nilda      ENFERMERIA         26.0    20.0      3,640      2,800      -840  ⬇ sistema da MENOS
+  Hernández Rosales Martha Elena      ENFERMERIA         34.0    22.0      4,760      3,080    -1,680  ⬇ sistema da MENOS
+  Juárez Mata Sergio                  ENFERMERIA         44.0    16.0      6,160      2,240    -3,920  ⬇ sistema da MENOS
+  Lara Ramírez Aurelia Eugenia        ENFERMERIA          6.0     0.0        840          0      -840  ⬇ sistema da MENOS
+  Leonardo Verde Bertin               ENFERMERIA          2.0     2.0        280        280        +0  ✅
+  Lozano Pérez Emma                   ENFERMERIA         48.0    31.0      6,720      4,340    -2,380  ⬇ sistema da MENOS
+  López Escudero Alma Belem           ENFERMERIA          8.0     8.0      1,120      1,120        +0  ✅
+  Martínez Alamilla Abigail           ENFERMERIA         19.0    20.0      2,660      2,800      +140  ⬆ sistema da MÁS
+  Martínez Castillo Fabiola           ENFERMERIA         20.0    10.0      2,800      1,400    -1,400  ⬇ sistema da MENOS
+  Martínez Ceja Pia Antonia           ENFERMERIA         21.0    22.0      2,940      3,080      +140  ⬆ sistema da MÁS
+  Martínez Jiménez Beatriz            ENFERMERIA         24.0    17.0      3,360      2,380      -980  ⬇ sistema da MENOS
+  Martínez López Juan Pablo           ENFERMERIA          1.0     1.0        140        140        +0  ✅
+  Martínez Torres Luis Donaldo        ENFERMERIA         20.0    13.0      2,800      1,820      -980  ⬇ sistema da MENOS
+  Morán León José                     ENFERMERIA          6.0     5.0        840        700      -140  ⬇ sistema da MENOS
+  Olvera Antonio Adgine Elitania      ENFERMERIA         20.0    18.0      2,800      2,520      -280  ⬇ sistema da MENOS
+  Pereira Otamendi Edith              ENFERMERIA         17.0    16.0      2,380      2,240      -140  ⬇ sistema da MENOS
+  Pineda Hernández Manuel Fernando    ENFERMERIA          3.0     3.0        420        420        +0  ✅
+  Pérez Hernández Azucena Hidaly      ENFERMERIA         14.0    13.0      1,960      1,820      -140  ⬇ sistema da MENOS
+  Ramírez Cortés Raúl                 ENFERMERIA         41.0    31.0      5,740      4,340    -1,400  ⬇ sistema da MENOS
+  Reyes Alquicirez Roberto Carlos     ENFERMERIA         11.0     8.0      1,540      1,120      -420  ⬇ sistema da MENOS
+  Reyes Hernández Cintia              ENFERMERIA         14.0    14.0      1,960      1,960        +0  ✅
+  Rivas Ortega Diego                  ENFERMERIA         25.0    12.0      3,500      1,680    -1,820  ⬇ sistema da MENOS
+  Rodríguez Cardona Gloria Ammy       ENFERMERIA          9.0     9.0      1,260      1,260        +0  ✅
+  Rodríguez Martínez Marlen           ENFERMERIA         20.0    18.0      2,800      2,520      -280  ⬇ sistema da MENOS
+  Roldán Castañón Luis Ángel          ENFERMERIA         24.0    22.0      3,360      3,080      -280  ⬇ sistema da MENOS
+  Romero Hernández Guadalupe          ENFERMERIA          6.0     6.0        840        840        +0  ✅
+  Santillán Zamudio Rebeca            ENFERMERIA         16.0    15.0      2,240      2,100      -140  ⬇ sistema da MENOS
+  Sánchez Peña Berenice Guadalupe     ENFERMERIA         14.0    12.0      1,960      1,680      -280  ⬇ sistema da MENOS
+  Torres Iglesias Ángela Yazmín       ENFERMERIA          2.0     2.0        280        280        +0  ✅
+  Trejo García Luisa                  ENFERMERIA         34.0    38.0      4,760      5,320      +560  ⬆ sistema da MÁS
+  Vega Serrano Denise                 ENFERMERIA         15.0    10.0      2,100      1,400      -700  ⬇ sistema da MENOS
+  Vera Soberanes Stephanie Yanahí     ENFERMERIA         12.0    12.0      1,680      1,680        +0  ✅
+  Vázquez Martínez Irene              ENFERMERIA         12.0    18.0      1,680      2,520      +840  ⬆ sistema da MÁS
+  Zuñiga Lázaro Roberto               ENFERMERIA         34.0    35.0      4,760      4,900      +140  ⬆ sistema da MÁS
+  de Ita León Rubén                   ENFERMERIA         18.0    16.0      2,520      2,240      -280  ⬇ sistema da MENOS
+  Moreno Martínez Diego Armando       ENFERMERIA         16.0    21.0      2,240      2,940      +700  ⬆ sistema da MÁS
+  Ávila Guerra Blanca Estela          ENFERMERIA          6.0     4.0        840        560      -280  ⬇ sistema da MENOS
+  Austria Carmona Julio Alejandro     ENFERMERIA          2.0     2.0        280        280        +0  ✅
+
+── NUTRICION (tarifa $130/h) ──────────────────────────────────────────────────────────────────────
+  Avendaño Márquez Ricardo            NUTRICION           0.0     0.0        910          0      -910  ⬇ sistema da MENOS
+  Barrera Reyes Ángel Eduardo         NUTRICION           4.0    14.0        520      1,820    +1,300  ⬆ sistema da MÁS
+  Baños Gómez Rocío                   NUTRICION          15.0    35.0      1,950      4,550    +2,600  ⬆ sistema da MÁS
+  Domínguez Sánchez Adriana           NUTRICION          10.0    20.0      1,300      2,600    +1,300  ⬆ sistema da MÁS
+  Escamilla Rosales María Fernanda    NUTRICION          18.0    46.0      3,250      5,980    +2,730  ⬆ sistema da MÁS
+  Escoto Izquierdo Oscar              NUTRICION          10.0    29.0      1,300      3,770    +2,470  ⬆ sistema da MÁS
+  Flores Carrillo Guadalupe del Soco  NUTRICION           7.0    30.0        910      3,900    +2,990  ⬆ sistema da MÁS
+  García Lavalley Francisco Javier    NUTRICION          13.0    51.0      2,210      6,630    +4,420  ⬆ sistema da MÁS
+  Guzmán Ramírez Mauricio Antonio     NUTRICION           9.0    27.0      1,170      3,510    +2,340  ⬆ sistema da MÁS
+  Hernández Bautista Macario          NUTRICION           8.0    32.0      1,508      4,160    +2,652  ⬆ sistema da MÁS
+  Hernández Estrada Ana Guadalupe     NUTRICION           6.0    18.0        780      2,340    +1,560  ⬆ sistema da MÁS
+  Hernández Hernández Nora Nilda      NUTRICION           5.0    16.0        910      2,080    +1,170  ⬆ sistema da MÁS
+  Hernández Martínez Itziar           NUTRICION           4.0    14.0        520      1,820    +1,300  ⬆ sistema da MÁS
+  Hernández Ortega Iris Cristal       NUTRICION          22.0    49.0      2,860      6,370    +3,510  ⬆ sistema da MÁS
+  Hernández Vargas Carmina del Pilar  NUTRICION           8.0    18.0      1,820      2,340      +520  ⬆ sistema da MÁS
+  Lara Gómez Ariadna Bárbara          NUTRICION          32.0     0.0      4,160          0    -4,160  ⬇ sistema da MENOS
+  Lara Ramírez Aurelia Eugenia        NUTRICION           8.0     0.0      1,040          0    -1,040  ⬇ sistema da MENOS
+  Monter Arciniega Araceli            NUTRICION          15.0    30.0      1,950      3,900    +1,950  ⬆ sistema da MÁS
+  Morales Estrada Areli Monserrat     NUTRICION          18.0    45.0      2,340      5,850    +3,510  ⬆ sistema da MÁS
+  Morales García Lorena Ivonne        NUTRICION          35.0    80.0      4,810     10,400    +5,590  ⬆ sistema da MÁS
+  Morán León José                     NUTRICION           6.0    16.0        780      2,080    +1,300  ⬆ sistema da MÁS
+  Pineda Hernández Manuel Fernando    NUTRICION           4.0    10.0        520      1,300      +780  ⬆ sistema da MÁS
+  Pérez Sánchez David                 NUTRICION           1.0     1.0        910        130      -780  ⬇ sistema da MENOS
+  Reyes Hernández Cintia              NUTRICION           8.0    22.0      1,040      2,860    +1,820  ⬆ sistema da MÁS
+  Rodríguez Cardona Gloria Ammy       NUTRICION           2.0     8.0        260      1,040      +780  ⬆ sistema da MÁS
+  Roldan Mendieta Arturo              NUTRICION          10.0     6.0      1,300        780      -520  ⬇ sistema da MENOS
+  Roldán Castañón Luis Ángel          NUTRICION          10.0    24.0      1,300      3,120    +1,820  ⬆ sistema da MÁS
+  Romero Hernández Guadalupe          NUTRICION          25.0    38.0      4,290      4,940      +650  ⬆ sistema da MÁS
+  Ríos Pineda Erick Alberto           NUTRICION           8.0     6.0      1,300        780      -520  ⬇ sistema da MENOS
+  Sánchez Crisóstomo Ma. Isabel       NUTRICION          22.0    60.0      2,860      7,800    +4,940  ⬆ sistema da MÁS
+  Sánchez Peña Berenice Guadalupe     NUTRICION           2.0    26.0      2,080      3,380    +1,300  ⬆ sistema da MÁS
+  Valencia Cordova Mariel Guadalupe   NUTRICION          27.0    70.0      3,510      9,100    +5,590  ⬆ sistema da MÁS
+  Vera Soberanes Stephanie Yanahí     NUTRICION          14.0    36.0      1,820      4,680    +2,860  ⬆ sistema da MÁS
+  Vázquez Martínez Irene              NUTRICION          17.0    55.0      2,210      7,150    +4,940  ⬆ sistema da MÁS
+  Zuñiga Lázaro Roberto               NUTRICION          12.0    23.0      1,560      2,990    +1,430  ⬆ sistema da MÁS
+  del Valle Martínez María Cristina   NUTRICION          10.0     4.0      1,820        520    -1,300  ⬇ sistema da MENOS
+  Ávila Guerra Blanca Estela          NUTRICION          26.0    59.0      3,380      7,670    +4,290  ⬆ sistema da MÁS
+  Olvera Antonio Adgine Elitania      NUTRICION           2.0     0.0        260          0      -260  ⬇ sistema da MENOS
+  Escobar Estrada Itzayana Deyanira   NUTRICION           2.0     0.0        260          0      -260  ⬇ sistema da MENOS
+  Granados León Luis Ángel            NUTRICION           2.0     0.0        260          0      -260  ⬇ sistema da MENOS
+  Barrera Jiménez Marco Antonio       NUTRICION           3.0     0.0        390          0      -390  ⬇ sistema da MENOS
+  Durán Hernández Alma Laura          NUTRICION           4.0     0.0        520          0      -520  ⬇ sistema da MENOS
+  Moreno Martínez Diego Armando       NUTRICION           2.0    17.0      1,300      2,210      +910  ⬆ sistema da MÁS
+  López Escudero Alma Belem           NUTRICION           1.0     0.0        130          0      -130  ⬇ sistema da MENOS
+  Ramírez Cortés Raúl                 NUTRICION           1.0     0.0        130          0      -130  ⬇ sistema da MENOS
+  Austria Carmona Julio Alejandro     NUTRICION           2.0     0.0        260          0      -260  ⬇ sistema da MENOS
+  Garzón Quiroz Joshua Gabriel        NUTRICION           2.0     0.0        260          0      -260  ⬇ sistema da MENOS
+  Rivas Ortega Diego                  NUTRICION           2.0     0.0        260          0      -260  ⬇ sistema da MENOS
+  César Flores Juan Manuel            NUTRICION           2.0     0.0        260          0      -260  ⬇ sistema da MENOS
+  Juárez Mata Sergio                  NUTRICION           1.0     0.0        130          0      -130  ⬇ sistema da MENOS
+  Escudero Rubiales Hilda             NUTRICION           3.0     0.0        390          0      -390  ⬇ sistema da MENOS
+  Reyes Alquicirez Roberto Carlos     NUTRICION           2.0     0.0        260          0      -260  ⬇ sistema da MENOS
+  Pereira Otamendi Edith              NUTRICION           1.0     0.0        130          0      -130  ⬇ sistema da MENOS
+  Mendoza Islas Hilda Graciela        NUTRICION           0.0     0.0        520          0      -520  ⬇ sistema da MENOS
+  Moreno Martínez Diego Armando       NUTRICION          10.0    17.0      1,300      2,210      +910  ⬆ sistema da MÁS
+
+── LENA (tarifa $160/h) ──────────────────────────────────────────────────────────────────────
+  Arzate Muñoz Susana Alejandra       LENA                4.0    10.0        640      1,600      +960  ⬆ sistema da MÁS
+  Campa López Emmanuelle Nemorio      LENA                4.0    16.0      1,280      2,560    +1,280  ⬆ sistema da MÁS
+  Canseco Torres Karla Minoru         LENA               16.0    40.0      3,136      6,400    +3,264  ⬆ sistema da MÁS
+  Contreras González Diana Grisell    LENA                6.0    18.0        960      2,880    +1,920  ⬆ sistema da MÁS
+  Cruz Cruz Eva                       LENA                0.0     0.0          0          0        +0  ✅
+  Cruz Hernández Juana Jazmín         LENA                4.0     8.0        640      1,280      +640  ⬆ sistema da MÁS
+  Diego Marcial Lucero                LENA               14.0    32.0      3,520      5,120    +1,600  ⬆ sistema da MÁS
+  Escalante López Víctor Erwin        LENA                2.0     5.0        320        800      +480  ⬆ sistema da MÁS
+  Escamilla Rosales María Fernanda    LENA                4.0    15.0      1,280      2,400    +1,120  ⬆ sistema da MÁS
+  García Islas Julián Uriel           LENA               11.0    26.0      1,760      4,160    +2,400  ⬆ sistema da MÁS
+  García Lavalley Francisco Javier    LENA                0.0     3.0        576        480       -96  ⬇ sistema da MENOS
+  García Soto Fernando                LENA                0.0     0.0          0          0        +0  ✅
+  González Castelazo Fabiola          LENA                2.0    11.0      1,280      1,760      +480  ⬆ sistema da MÁS
+  Granados León Luis Ángel            LENA                8.0    26.0      2,240      4,160    +1,920  ⬆ sistema da MÁS
+  Gómez Ibarra Jesús                  LENA               16.0    43.0      3,712      6,880    +3,168  ⬆ sistema da MÁS
+  Hernández Bautista Macario          LENA                4.0    10.0        640      1,600      +960  ⬆ sistema da MÁS
+  Hernández Estrada Ana Guadalupe     LENA                4.0    10.0        640      1,600      +960  ⬆ sistema da MÁS
+  Hernández Hernández Nora Nilda      LENA                8.0    20.0      1,280      3,200    +1,920  ⬆ sistema da MÁS
+  Hernández Rosales Martha Elena      LENA                1.0     4.0        160        640      +480  ⬆ sistema da MÁS
+  Hernández Sánchez Nydia Mildred     LENA                0.0    10.0          0      1,600    +1,600  ⬆ sistema da MÁS
+  Hinojosa Hernández Sinaí            LENA                0.0     0.0        288          0      -288  ⬇ sistema da MENOS
+  Lazcano Aguilar Luis Alberto        LENA                5.0    23.0      1,088      3,680    +2,592  ⬆ sistema da MÁS
+  Leonardo Verde Bertin               LENA                9.0    22.0      3,040      3,520      +480  ⬆ sistema da MÁS
+  Lozada García Gloria                LENA                0.0     6.0      1,280        960      -320  ⬇ sistema da MENOS
+  López Ayala Víctor Pedro            LENA                4.0    13.0        928      2,080    +1,152  ⬆ sistema da MÁS
+  Martínez Alamilla Abigail           LENA                0.0    48.0          0      7,680    +7,680  ⬆ sistema da MÁS
+  Martínez Alonso Rodrigo             LENA                8.0    12.0      1,920      1,920        +0  ✅
+  Martínez Jiménez Beatriz            LENA               12.0    28.0      2,496      4,480    +1,984  ⬆ sistema da MÁS
+  Maya Zúñiga Eunice Elena            LENA                0.0     0.0          0          0        +0  ✅
+  Monroy Vargas Jorge Alberto         LENA               14.0    37.0      3,200      5,920    +2,720  ⬆ sistema da MÁS
+  Monter Arciniega Araceli            LENA                0.0     0.0        208          0      -208  ⬇ sistema da MENOS
+  Morán León José                     LENA                0.0     3.0          0        480      +480  ⬆ sistema da MÁS
+  Olvera Antonio Adgine Elitania      LENA                0.0    12.0      1,600      1,920      +320  ⬆ sistema da MÁS
+  Olvera Barrios Nallely              LENA               12.0    30.0      2,880      4,800    +1,920  ⬆ sistema da MÁS
+  Pereira Otamendi Edith              LENA                8.0    17.0      1,856      2,720      +864  ⬆ sistema da MÁS
+  Rodríguez Martínez Marlen           LENA                0.0     0.0          0          0        +0  ✅
+  Romero Ibarra Claudia               LENA                0.0     0.0          0          0        +0  ✅
+  Ruíz Ramírez Jaqueline              LENA                0.0     0.0          0          0        +0  ✅
+  Ríos Guzmán Julio César             LENA                0.0     0.0        640          0      -640  ⬇ sistema da MENOS
+  Ríos Portilla Arely Monserrat       LENA                0.0     6.0      1,280        960      -320  ⬇ sistema da MENOS
+  Santiago Vite Erwi                  LENA                2.0     2.0        960        320      -640  ⬇ sistema da MENOS
+  Santoyo Godínez María del Rocío     LENA                8.0    13.0      1,888      2,080      +192  ⬆ sistema da MÁS
+  Silverio Hernández Bernardo         LENA                0.0     0.0          0          0        +0  ✅
+  Sánchez Casio Pedro Adair           LENA                0.0     0.0          0          0        +0  ✅
+  Sánchez Peña Berenice Guadalupe     LENA                0.0     6.0      1,280        960      -320  ⬇ sistema da MENOS
+  Torres Iglesias Ángela Yazmín       LENA                2.0    23.0        640      3,680    +3,040  ⬆ sistema da MÁS
+  Valencia Cordova Mariel Guadalupe   LENA                2.0    11.0        960      1,760      +800  ⬆ sistema da MÁS
+  Ventura Alonso Jaqueline            LENA                6.0    27.0      1,920      4,320    +2,400  ⬆ sistema da MÁS
+  Vázquez Contreras María Esther      LENA                5.0    19.0      1,440      3,040    +1,600  ⬆ sistema da MÁS
+  Vázquez Martínez Irene              LENA                8.0    32.0      2,432      5,120    +2,688  ⬆ sistema da MÁS
+  de Ita León Rubén                   LENA                0.0    48.0          0      7,680    +7,680  ⬆ sistema da MÁS
+  Moreno Martínez Diego Armando       LENA                8.0    14.0      1,280      2,240      +960  ⬆ sistema da MÁS
+  Téllez Girón Santos Rocío           LENA                0.0     6.0      1,600        960      -640  ⬇ sistema da MENOS
+  Moreno Martínez Diego Armando       LENA                0.0    14.0        576      2,240    +1,664  ⬆ sistema da MÁS
+  Ramírez Melo Lisette Monsibaez      LENA                0.0     0.0        288          0      -288  ⬇ sistema da MENOS
+
+── ESPECIALIDADES (tarifa $200/h) ──────────────────────────────────────────────────────────────────────
+  Arce Gil Karla Higinia              ESPECIALIDADES      2.0     2.0        920        400      -520  ⬇ sistema da MENOS
+  Campa López Emmanuelle Nemorio      ESPECIALIDADES     11.0    20.0      3,280      4,000      +720  ⬆ sistema da MÁS
+  Campa López Gloria Aurora           ESPECIALIDADES      5.0    23.0      4,600      4,600        +0  ✅
+  Canseco Torres Karla Minoru         ESPECIALIDADES      2.0     2.0      1,120        400      -720  ⬇ sistema da MENOS
+  Contreras González Diana Grisell    ESPECIALIDADES     10.0    21.0      2,000      4,200    +2,200  ⬆ sistema da MÁS
+  Cruz Zamudio Rubén                  ESPECIALIDADES      0.0     0.0          0          0        +0  ✅
+  Cruz de los Santos Jhoana Paola     ESPECIALIDADES      5.0     5.0      1,400      1,000      -400  ⬇ sistema da MENOS
+  Durán Hernández Alma Laura          ESPECIALIDADES      4.0     4.0      1,060        800      -260  ⬇ sistema da MENOS
+  Enzástiga Gutiérrez Adrián          ESPECIALIDADES      2.0     2.0        660        400      -260  ⬇ sistema da MENOS
+  García Curiel Laura                 ESPECIALIDADES      0.0     0.0          0          0        +0  ✅
+  Garzón Quiroz Joshua Gabriel        ESPECIALIDADES      6.0     6.0      1,200      1,200        +0  ✅
+  González Escalante Erika Yadira     ESPECIALIDADES     10.0     8.0      3,200      1,600    -1,600  ⬇ sistema da MENOS
+  González Figueroa Fernando          ESPECIALIDADES      2.0     1.0        400        200      -200  ⬇ sistema da MENOS
+  Hernández Rosales Martha Elena      ESPECIALIDADES      4.0    13.0        800      2,600    +1,800  ⬆ sistema da MÁS
+  Hernández Villegas Jair de Jesús    ESPECIALIDADES      7.0    15.0      4,280      3,000    -1,280  ⬇ sistema da MENOS
+  Illescas Hernández Mayte Corazón    ESPECIALIDADES      1.0     1.0      1,800        200    -1,600  ⬇ sistema da MENOS
+  Jiménez Adame María Beatriz         ESPECIALIDADES      8.0    13.0      2,000      2,600      +600  ⬆ sistema da MÁS
+  Leonardo Verde Bertin               ESPECIALIDADES      4.0     4.0      1,200        800      -400  ⬇ sistema da MENOS
+  Martínez Ceja Pia Antonia           ESPECIALIDADES      6.0     2.0      1,200        400      -800  ⬇ sistema da MENOS
+  Martínez Cortés Verónica            ESPECIALIDADES     12.0    47.0      2,920      9,400    +6,480  ⬆ sistema da MÁS
+  Martínez López Juan Pablo           ESPECIALIDADES      0.0    10.0        520      2,000    +1,480  ⬆ sistema da MÁS
+  Moedano Álvarez Erika Belem         ESPECIALIDADES      1.0     1.0        600        200      -400  ⬇ sistema da MENOS
+  Morales Zacarias Victor Antonio     ESPECIALIDADES     10.0    40.0      3,400      8,000    +4,600  ⬆ sistema da MÁS
+  Morán León José                     ESPECIALIDADES      1.0     0.0        200          0      -200  ⬇ sistema da MENOS
+  Olivares Illezcas Antonio Román     ESPECIALIDADES      8.0    19.0      3,040      3,800      +760  ⬆ sistema da MÁS
+  Olvera Barrios Nallely              ESPECIALIDADES      4.0    19.0      2,000      3,800    +1,800  ⬆ sistema da MÁS
+  Reyes Hernández Cintia              ESPECIALIDADES      0.0     0.0      1,200          0    -1,200  ⬇ sistema da MENOS
+  Rivas Ortega Diego                  ESPECIALIDADES      2.0     6.0      1,120      1,200       +80  ⬆ sistema da MÁS
+  Rivera Torres Ileana                ESPECIALIDADES     14.0    24.0      2,800      4,800    +2,000  ⬆ sistema da MÁS
+  Rodríguez Martínez Marlen           ESPECIALIDADES      0.0     0.0        520          0      -520  ⬇ sistema da MENOS
+  Romero Vargas Gabriela Soledad      ESPECIALIDADES      0.0     0.0      1,200          0    -1,200  ⬇ sistema da MENOS
+  Santillán Zamudio Rebeca            ESPECIALIDADES      6.0     4.0      1,200        800      -400  ⬇ sistema da MENOS
+  Sánchez Molina Naraí                ESPECIALIDADES      2.0    20.0        400      4,000    +3,600  ⬆ sistema da MÁS
+  Villaseñor Fernández María Nora     ESPECIALIDADES      3.0     3.0      1,000        600      -400  ⬇ sistema da MENOS
+  Vite López Dorlin Magnolia          ESPECIALIDADES      4.0     0.0      1,400          0    -1,400  ⬇ sistema da MENOS
+  Vázquez Contreras María Esther      ESPECIALIDADES      3.0     8.0      1,000      1,600      +600  ⬆ sistema da MÁS
+  Zuñiga Lázaro Roberto               ESPECIALIDADES      2.0     8.0      2,400      1,600      -800  ⬇ sistema da MENOS
+  Ángeles Alamilla Joselin Belén      ESPECIALIDADES     14.0    28.0      3,920      5,600    +1,680  ⬆ sistema da MÁS
+  Ávila Pineda Shakira                ESPECIALIDADES      4.0    17.0        800      3,400    +2,600  ⬆ sistema da MÁS
+  Roldán Muñoz Christian Fabian       ESPECIALIDADES      0.0     0.0          0          0        +0  ✅
+
+── MAESTRIAS (tarifa $220/h) ──────────────────────────────────────────────────────────────────────
+  Arroyo Ramírez Maribel              MAESTRIAS           4.0     0.0        880          0      -880  ⬇ sistema da MENOS
+  Campa López Emmanuelle Nemorio      MAESTRIAS          10.0     9.0      2,200      1,980      -220  ⬇ sistema da MENOS
+  Campa López Gloria Aurora           MAESTRIAS           6.0     0.0      1,320          0    -1,320  ⬇ sistema da MENOS
+  Estrella Martínez Paulina Noemí     MAESTRIAS           6.0     0.0      1,320          0    -1,320  ⬇ sistema da MENOS
+  Galindo Chávez Gissela              MAESTRIAS           6.0     0.0      1,320          0    -1,320  ⬇ sistema da MENOS
+  González Figueroa Fernando          MAESTRIAS           6.0     0.0      1,320          0    -1,320  ⬇ sistema da MENOS
+  Hernández Villegas Jair de Jesús    MAESTRIAS           6.0     0.0      1,320          0    -1,320  ⬇ sistema da MENOS
+  Martínez López Juan Pablo           MAESTRIAS           6.0     0.0      1,320          0    -1,320  ⬇ sistema da MENOS
+  Monroy Vargas Jorge Alberto         MAESTRIAS           6.0     0.0      1,320          0    -1,320  ⬇ sistema da MENOS
+  Romero Montalvo Armando Jonatan     MAESTRIAS           8.0     0.0      1,760          0    -1,760  ⬇ sistema da MENOS
+  Romero Vargas Gabriela Soledad      MAESTRIAS           4.0     0.0        880          0      -880  ⬇ sistema da MENOS
+  Santillán Zamudio Rebeca            MAESTRIAS           2.0     2.0        440        440        +0  ✅
+  Téllez Girón Santos Rocío           MAESTRIAS           6.0     0.0      1,320          0    -1,320  ⬇ sistema da MENOS
+
+── CAMPO CLINICO (tarifa $2500/h) ──────────────────────────────────────────────────────────────────────
+  Martínez Alamilla Abigail           CAMPO CLINICO       0.0     0.0      2,500      2,500        +0  ✅
+  Ruíz Ramírez Jaqueline              CAMPO CLINICO       0.0     0.0      2,500      2,500        +0  ✅
+  de Ita León Rubén                   CAMPO CLINICO       0.0     0.0      2,500      2,500        +0  ✅
+  Sánchez Casio Pedro Adair           CAMPO CLINICO       0.0     0.0      2,500      2,500        +0  ✅
+  Cruz Cruz Eva                       CAMPO CLINICO       0.0     0.0      2,500      2,500        +0  ✅
+  Maya Zúñiga Eunice Elena            CAMPO CLINICO       0.0     0.0      2,500      2,500        +0  ✅
+  Romero Ibarra Claudia               CAMPO CLINICO       0.0     0.0      2,500      2,500        +0  ✅
+  García Soto Fernando                CAMPO CLINICO       0.0     0.0      1,250      1,250        +0  ✅
+  Pavana Alonso Yessica Fernanda      CAMPO CLINICO       0.0     0.0      1,250      1,250        +0  ✅
+
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+TOTALES  Excel: $     419,990  |  Sistema: $     509,840  |  Diff: $     +89,850
+Coincidencias: 42  |  Sistema<Excel: 119  |  Sistema>Excel: 93  |  Sin match: 0
+

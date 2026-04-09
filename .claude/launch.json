@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "FastAPI (nomina-iesef)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "uvicorn", "main_nomina:app", "--reload", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "Vite (React frontend)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
+      "port": 5173
+    }
+  ]
+}

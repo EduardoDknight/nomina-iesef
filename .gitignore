@@ -1,0 +1,61 @@
+# ── Entorno y secretos ───────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+node_modules/
+
+# ── Base de datos local ───────────────────────────────────────────────────────
+*.sql.gz
+*.dump
+backups/
+
+# ── OS / Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/settings.json
+.idea/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Claude Code ───────────────────────────────────────────────────────────────
+.claude/settings.local.json
+.claude/todos/
+.claude/skills/
+.claude/skills/continuous-learning-workspace/
+.agents/
+
+# ── Archivos temporales y fuera de lugar ──────────────────────────────────────
+comp_out.txt
+comparacion_resultado.txt
+*comparacion*.txt
+
+# ── Datos sensibles / dumps ────────────────────────────────────────────────────
+dump_nomina.sql
+*.dump
+*.sql.gz
+run_migration_*.py
