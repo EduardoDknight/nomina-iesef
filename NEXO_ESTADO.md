@@ -5,9 +5,72 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-14 (tarde — PC trabajo)  
-**Rama:** `main`  
-**Último commit:** `d374d52` — feat: estadísticas + horarios por grupo + fixes ciclo/checadas
+**Fecha:** 2026-04-14 (tarde — PC trabajo)
+**Rama:** `main`
+**Último commit:** `8150183` — feat: webhook /deploy para auto-pull desde GitHub
+
+---
+
+## ⚠️ TAREAS PENDIENTES AL LLEGAR A CASA — HACER ANTES DE CUALQUIER OTRA COSA
+
+### 1. git pull (aplica 2 fixes críticos de hoy)
+```bash
+cd C:\Proyectos\nomina-iesef
+git pull
+```
+Uvicorn con `--reload` se reinicia solo. Los fixes que se aplican:
+- **fix exportar_nomina_resumen:** `a.ciclo` → `vigente_desde/vigente_hasta` (el Excel ya no dará error)
+- **feat deploy webhook:** nuevo endpoint `POST /deploy` para auto-pull desde GitHub
+
+### 2. Agregar DEPLOY_SECRET al .env
+Edita `C:\Proyectos\nomina-iesef\.env` y agrega:
+```
+DEPLOY_SECRET=iesef-deploy-2026
+```
+
+### 3. Configurar webhook en GitHub
+Ve a: **github.com/EduardoDknight/nomina-iesef → Settings → Webhooks → Add webhook**
+
+| Campo | Valor |
+|---|---|
+| Payload URL | `https://nexo.iesef.edu.mx/deploy` |
+| Content type | `application/json` |
+| Secret | `iesef-deploy-2026` |
+| Events | Just the push event |
+
+### 4. Verificar que el Excel de nómina funciona
+Entra a nexo.iesef.edu.mx → Quincena Q4 (26 mar – 10 abr) → Exportar Nómina.
+Ya no debe aparecer el error `no existe la columna a.ciclo`.
+
+### 5. Corregir zona horaria de la PC de casa
+El servidor guarda timestamps 2 horas adelantados (el reloj está mal).
+```powershell
+Set-TimeZone -Id "Central Standard Time (Mexico)"
+```
+
+### 6. Verificar checadas del MB360 — diagnóstico pendiente
+Eduardo iba a conectarse a la laptop Ubuntu por SSH para ver si el MB360
+tiene registros de ayer y hoy. Correr esto en la laptop Ubuntu:
+```bash
+cd $HOME/agente_nomina
+/home/nomina/venv_zk/bin/python3 - << 'EOF'
+from zk import ZK
+from datetime import date, timedelta
+zk = ZK('192.168.1.201', port=4370, timeout=10)
+conn = zk.connect()
+registros = conn.get_attendance()
+hoy = date.today()
+ayer = hoy - timedelta(days=1)
+recientes = [r for r in registros if r.timestamp.date() >= ayer]
+print(f"Total en checador: {len(registros)}")
+print(f"Registros de ayer y hoy: {len(recientes)}")
+for r in sorted(recientes, key=lambda x: x.timestamp):
+    print(f"  user_id={r.user_id}  {r.timestamp}  punch={r.punch}")
+conn.disconnect()
+EOF
+```
+Objetivo: confirmar si los docentes tienen checadas recientes en el MB360
+y si sus user_ids coinciden con los `chec_id` en la tabla `docentes`.
 
 ---
 
@@ -22,116 +85,100 @@
 | Quincenas: crear, cambiar estado, listar | ✅ |
 | QuincenaDetalle: docentes + campo clínico + evaluación virtual | ✅ |
 | Evaluación virtual (CA 40% + EV 60%) | ✅ |
-| Exportación Excel nómina | ✅ |
+| Exportación Excel nómina | ✅ (fix pendiente de git pull en casa) |
 | Personal Administrativo: CRUD + asistencia quincena | ✅ |
 | Portal docente/trabajador: checadas, credenciales | ✅ |
-| **Estadísticas** — KPIs animados + gráficas recharts | ✅ nuevo |
-| MB360 → Ubuntu laptop → nexo (26k+ checadas) | ✅ cron activo |
+| Estadísticas — KPIs animados + gráficas recharts | ✅ |
+| MB360 → Ubuntu laptop → nexo (28k+ checadas) | ✅ cron cada 30min con flock |
 | Cloudflare Tunnel (nexo.iesef.edu.mx → localhost:8000) | ✅ |
+| Auto-deploy via GitHub webhook | ⏳ pendiente configurar (ver arriba) |
 
 ---
 
-## Tarea inmediata — Laptop Ubuntu (en ~1 hora)
+## Lo hecho en la sesión de hoy (PC trabajo, 2026-04-14)
 
-### Problema diagnosticado: cron con instancias simultáneas + colisión MB360
-- El cron de 5 min lanza múltiples instancias a la vez (46 runs en 2 segundos, confirmado en sync_log)
-- El MB360 solo acepta UNA conexión TCP a la vez → colisiona con sistema v1 y con procesos del dispositivo
-- El 13 abr a la 1pm alguien intentó respaldar MB360 a USB → bloqueó TCP 6 horas → gap total de checadas 13:04–19:41
+### Setup PC trabajo
+- Repo clonado en `C:/nomina-iesef`
+- Python 3.12 instalado en `C:/Python312`
+- Dependencias instaladas (`pip install -r requirements.txt`)
+- Git configurado: `EduardoDknight` / `eperez.ig@gmail.com`
+- Claude Code en modo automático (`bypassPermissions`)
+- Memoria del proyecto guardada en `C:/Users/IESEF/.claude/projects/.../memory/`
 
-### Fix a aplicar en la laptop Ubuntu:
+### Diagnóstico del sistema de checadas
+- Confirmado: registros en `asistencias_checadas` llegan bien hasta hoy (28,097)
+- Vacaciones Semana Santa (1-9 abr): counts bajos son NORMALES, no bug
+- Cron del agente tenía 46 instancias simultáneas → **corregido a */30 con flock**
+- Reloj PC de casa 2 horas adelantado → timestamps se ven desincronizados pero son correctos
+- Gap permanente Abr 13 13:04–19:41: backup USB bloqueó el MB360, datos perdidos
+- Sistema v1 sin checadas de docentes: pendiente verificar MB360 directamente
 
-```bash
-crontab -e
-```
-
-**Cambiar la línea actual** (probablemente `*/5 * * * * ...agente.py`) **por:**
-
-```
-*/30 * * * * /usr/bin/flock -n /tmp/agente_nomina.lock /home/nomina/venv_zk/bin/python3 $HOME/agente_nomina/agente.py >> $HOME/agente_nomina/agente.log 2>&1
-```
-
-- `flock -n` → si ya hay una instancia corriendo, la nueva no inicia (elimina los 46 runs simultáneos)
-- `*/30` → cada 30 minutos en lugar de cada 5 (reduce colisiones con v1 y procesos del MB360)
-- `>> agente.log 2>&1` → log de errores para diagnóstico futuro
-
-**Verificar que flock existe:**
-```bash
-which flock   # debe devolver /usr/bin/flock
-```
-
-**Verificar crontab actual antes de cambiar:**
-```bash
-crontab -l
-```
+### Fixes pusheados hoy
+| Commit | Descripción |
+|---|---|
+| `19367f7` | fix: `a.ciclo` → `vigente_desde/vigente_hasta` en exportar_nomina_resumen |
+| `8150183` | feat: webhook `/deploy` para auto-pull desde GitHub |
 
 ---
 
-## Diagnóstico completo del cron y checadas (sesión de hoy)
-
-### sync_log — historial real del cron
+## Diagnóstico checadas — historial del cron (sync_log)
 | Fecha | Estado |
 |---|---|
-| Mar 26 | Primera corrida: descargó 26,257 registros históricos de golpe |
+| Mar 26 | Primera corrida: descargó 26,257 registros históricos |
 | Mar 27–28 | Normal (300–456 nuevos/día) |
-| Mar 29–31 | Muy esporádico, gaps grandes |
-| **Abr 1–9** | **COMPLETAMENTE APAGADO** (Semana Santa + laptop off) |
-| Abr 10 | 3 runs a las 23:11, 164 nuevos |
-| **Abr 11–12** | Sin runs |
-| Abr 13 | 16:00 → 631 nuevos; 19:08 → 752 nuevos (46 runs simultáneos) |
-| Abr 14 | 2 runs normales |
+| Mar 29–31 | Muy esporádico |
+| Abr 1–9 | APAGADO (Semana Santa + laptop off) — NORMAL |
+| Abr 10 | 3 runs, 164 nuevos (regreso vacaciones) |
+| Abr 11–12 | Sin runs |
+| Abr 13 | 631 + 752 nuevos (46 instancias simultáneas) |
+| Abr 14 | Cron corregido a */30 con flock ✅ |
 
-### Gaps de datos confirmados en asistencias_checadas
-- **Abr 1–9**: vacío para la mayoría (Semana Santa real + cron apagado)
-- **Abr 13 13:04–19:41**: CERO checadas para cualquier usuario (backup USB bloqueó el MB360)
-- Las salidas de esa tarde (incluyendo la de Eduardo) se perdieron permanentemente — el dispositivo las registró pero no pudo ser consultado y al reiniciarse las perdió
-
-### tipo_punch es NO confiable
-El MB360 envía todos los punches como tipo=0 o todos como tipo=1 dependiendo del modo, sin distinguir entrada/salida. El código ya lo maneja: usa **posición temporal** (primera del día = entrada, última = salida), no tipo_punch. Dedup window: 180 segundos para colapsar duplicados físicos del mismo evento.
+### tipo_punch NO confiable
+El MB360 envía todos los punches como tipo=0 o tipo=1 sin distinguir entrada/salida.
+El código usa **posición temporal** (primera del día = entrada, última = salida). Dedup: 180 seg.
 
 ---
 
-## Estado de la DB — Datos reales hoy
+## Estado de la DB
 - **Docentes activos:** 162
-- **Asignaciones activas:** (ver /api/estadisticas/resumen)
-- **Checadas totales:** 28,000+
-- **Quincenas:** 5 (Q3 pagada, Q4 en revisión, Q5 abierta)
+- **Checadas totales:** 28,097 (al 2026-04-14 ~10:35 CST)
+- **Quincenas:** Q3 pagada · Q4 en revisión · Q5 abierta
 - **Evaluaciones virtuales:** 280 registros
 
 ---
 
-## Servidor local (esta PC)
-- FastAPI corre con: `nohup python -m uvicorn main_nomina:app --reload --host 0.0.0.0 --port 8000 >> logs/uvicorn.log 2>&1 &`
+## Servidor local (PC casa)
+- FastAPI: `nohup python -m uvicorn main_nomina:app --reload --host 0.0.0.0 --port 8000 >> logs/uvicorn.log 2>&1 &`
 - Logs: `C:\Proyectos\nomina-iesef\logs\uvicorn.log`
-- **IMPORTANTE:** el proceso NO tiene `systemctl` — es un `nohup` en bash. Si se cae, relanzar con el comando anterior.
-- Para verificar que corre: `netstat -ano | grep :8000`
-- Para matar: buscar PID con `wmic process get ProcessId,CommandLine | grep uvicorn` y usar `os.kill(PID, signal.SIGTERM)` desde Python
+- **No usa systemctl** — es un nohup en bash. Si se cae, relanzar con el comando anterior.
+- Verificar que corre: `netstat -ano | grep :8000`
 
 ---
 
 ## Siguiente sprint — Funcionalidades pendientes
 
 ### Alta prioridad
-- [ ] **Motor de cálculo fiscal completo** — horas × tarifa → honorarios, IVA, ISR, retenciones (fórmula ya definida en CLAUDE.md §12)
-- [ ] **Generación Excel HONORARIOS CENTRO y HONORARIOS INSTITUTO** — formato exacto del Excel actual
-- [ ] **Módulo de incidencias y suplencias** — flujo: coord_academica registra → coord_docente valida → cap_humano aprueba
+- [ ] **Verificar MB360** — conectar via SSH a laptop Ubuntu y confirmar checadas de docentes recientes
+- [ ] **Nómina Q4 (26 mar–10 abr)** — Eduardo necesita exportar Excel hoy. Requiere git pull en casa primero.
+- [ ] **Módulo de incidencias y suplencias** — flujo: coord_academica → coord_docente → cap_humano
 
 ### Media prioridad
-- [ ] **Cargar horarios desde PDF aSc** — Eduardo pasa el PDF, Claude parsea y genera SQL de INSERT
-- [ ] **Clasificador de checadas** con ventanas de horario (asistencia/retardo/incompleta) para docentes
-- [ ] **Eliminar grupo "Segundo 1" de PREPA** — Eduardo lo identificó como inexistente (hacerlo desde Horarios Por Grupo)
+- [ ] **Cargar horarios desde PDF aSc** — Eduardo pasa el PDF, Claude parsea y genera SQL
+- [ ] **Clasificador de checadas** con ventanas de horario para docentes
+- [ ] **Eliminar grupo "Segundo 1" de PREPA** — identificado como inexistente
 
 ### Baja prioridad
-- [ ] Estadísticas: agregar más indicadores conforme crezca el sistema
-- [ ] Integración Aspel NOI (formato de exportación pendiente de definir con Finanzas)
+- [ ] Estadísticas: más indicadores
+- [ ] Integración Aspel NOI
 
 ---
 
 ## Arquitectura clave — recordatorios
 
 ### Infraestructura
-- **No está en HostGator todavía** — todo corre local con Cloudflare Tunnel
-- `nexo.iesef.edu.mx` → Cloudflare → túnel → `localhost:8000` en esta PC
-- PostgreSQL local, `iesef_nomina` (NUNCA tocar `iesef_chatbot`)
+- **No está en HostGator** — todo corre local con Cloudflare Tunnel en PC casa
+- `nexo.iesef.edu.mx` → Cloudflare → túnel → `localhost:8000` PC casa
+- PostgreSQL local `iesef_nomina` — NUNCA tocar `iesef_chatbot`
 - psycopg2 directo, sin SQLAlchemy, sin Docker
 
 ### Asignaciones — JOIN por fechas (NO por ciclo string)
@@ -142,7 +189,7 @@ JOIN asignaciones a ON a.docente_id = d.id
   AND a.activa = true
 ```
 
-### Cálculo fiscal (Art. 106 LISR) — fórmula fija
+### Cálculo fiscal (Art. 106 LISR)
 ```
 honorarios     = horas_reales × costo_hora
 iva            = honorarios × 0.16
@@ -158,16 +205,15 @@ total_a_pagar  = sub_total - retencion_isr - retencion_iva
 
 ### Al EMPEZAR una sesión (cualquier PC)
 ```bash
-cd /ruta/del/repo   # o C:\Proyectos\nomina-iesef en Windows
+cd C:\Proyectos\nomina-iesef   # o C:/nomina-iesef en PC trabajo
 git pull
-# Claude Code leerá NEXO_ESTADO.md automáticamente
+# Claude Code leerá NEXO_ESTADO.md automáticamente y tendrá todo el contexto
 ```
 
 ### Al TERMINAR una sesión
-El asistente actualiza este archivo y hace push. Tú solo haces `git pull` en la siguiente PC.
+Claude actualiza este archivo y hace push. En la siguiente PC solo haz `git pull`.
 
 ---
 
 ## Credenciales y accesos rápidos
-Ver: `~/.claude/projects/.../memory/reference_hostgator_credentials.md`  
-(No se guarda aquí por seguridad)
+Ver: `~/.claude/projects/.../memory/` — no se guardan aquí por seguridad.
