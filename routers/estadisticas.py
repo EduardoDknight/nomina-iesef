@@ -152,7 +152,7 @@ async def quincenas_historial(_: UsuarioActual = Depends(get_usuario_actual)):
     conn = get_conn()
     cur  = conn.cursor()
     cur.execute("""
-        SELECT id, fecha_inicio, fecha_fin, estado, ciclo_label, razon_social
+        SELECT id, fecha_inicio, fecha_fin, estado, ciclo AS ciclo_label, razon_social
         FROM quincenas
         ORDER BY fecha_inicio DESC
         LIMIT 20
@@ -174,14 +174,14 @@ async def evaluacion_virtual(_: UsuarioActual = Depends(get_usuario_actual)):
             q.id AS quincena_id,
             q.fecha_inicio,
             q.fecha_fin,
-            q.ciclo_label,
+            q.ciclo AS ciclo_label,
             COUNT(*) AS total,
             SUM(CASE WHEN evr.aprobada THEN 1 ELSE 0 END) AS aprobadas,
             SUM(CASE WHEN NOT evr.aprobada THEN 1 ELSE 0 END) AS rechazadas,
             ROUND(AVG(evr.pct_cumplimiento) * 100, 1) AS pct_promedio
         FROM evaluacion_virtual_resultado evr
         JOIN quincenas q ON evr.quincena_id = q.id
-        GROUP BY q.id, q.fecha_inicio, q.fecha_fin, q.ciclo_label
+        GROUP BY q.id, q.fecha_inicio, q.fecha_fin, q.ciclo
         ORDER BY q.fecha_inicio
     """)
     rows = cur.fetchall()
