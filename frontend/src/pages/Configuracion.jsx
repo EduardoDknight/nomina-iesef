@@ -776,8 +776,8 @@ export default function Configuracion() {
   const { usuario } = useAuth()
   const [tab, setTab] = useState('programas')
 
-  const puedeEditarTarifas = ['director_cap_humano', 'finanzas'].includes(usuario?.rol)
-  const puedeEditarTolerencias = ['director_cap_humano', 'cap_humano'].includes(usuario?.rol)
+  const puedeEditarTarifas = ['superadmin', 'director_cap_humano', 'finanzas'].includes(usuario?.rol)
+  const puedeEditarTolerencias = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
 
   // Solo director y cap_humano acceden a esta página (restringido en nav)
   return (

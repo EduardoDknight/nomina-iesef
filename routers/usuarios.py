@@ -82,7 +82,7 @@ async def crear_usuario(
     body: UsuarioCreate,
     usuario: UsuarioActual = Depends(get_usuario_actual)
 ):
-    if usuario.rol != "director_cap_humano":
+    if usuario.rol not in ("director_cap_humano", "superadmin"):
         raise HTTPException(status_code=403, detail="Solo el Director de Capital Humano puede crear usuarios")
     if body.rol not in ROLES_VALIDOS:
         raise HTTPException(status_code=400, detail=f"Rol inválido")
@@ -118,7 +118,7 @@ async def actualizar_usuario(
     request: Request,
     usuario: UsuarioActual = Depends(get_usuario_actual)
 ):
-    if usuario.rol != "director_cap_humano":
+    if usuario.rol not in ("director_cap_humano", "superadmin"):
         raise HTTPException(status_code=403, detail="Solo el Director de Capital Humano puede modificar usuarios")
     if body.rol and body.rol not in ROLES_VALIDOS:
         raise HTTPException(status_code=400, detail="Rol inválido")

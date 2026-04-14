@@ -674,7 +674,7 @@ export default function AdminQuincenaDetalle() {
   const [loading, setLoading]   = useState(true)
   const [tab, setTab]           = useState('asistencia')
 
-  const canEdit = ['director_cap_humano', 'cap_humano'].includes(usuario?.rol)
+  const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
 
   useEffect(() => {
     api.get(`/admin/periodos/${id}`)

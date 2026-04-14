@@ -226,7 +226,7 @@ async def actualizar_docente(
             raise HTTPException(status_code=403, detail="Finanzas solo puede actualizar NOI, RFC, régimen fiscal y adscripción")
     elif usuario.rol == "coord_docente":
         pass  # coord_docente puede editar todo de docentes
-    elif usuario.rol not in ("director_cap_humano", "cap_humano"):
+    elif usuario.rol not in ("director_cap_humano", "cap_humano", "superadmin"):
         raise HTTPException(status_code=403, detail="Sin permiso para editar docentes")
 
     updates = {k: v for k, v in body.model_dump(exclude_none=True).items()}

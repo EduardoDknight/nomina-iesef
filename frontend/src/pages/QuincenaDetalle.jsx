@@ -134,7 +134,7 @@ function TabNomina({ quincena, canEdit }) {
             </button>
           )}
           {['en_revision', 'cerrada', 'pagada'].includes(quincena.estado)
-            && ['director_cap_humano', 'cap_humano', 'finanzas', 'coord_docente'].includes(usuario?.rol)
+            && ['superadmin', 'director_cap_humano', 'cap_humano', 'finanzas', 'coord_docente'].includes(usuario?.rol)
             && (
             <button onClick={exportarResumen} disabled={!!exportando}
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors"
@@ -312,7 +312,7 @@ function BadgeChk({ info }) {
 
 // ── Modal de ajuste manual de pago por clase ─────────────────────────────────
 
-const ROLES_OVERRIDE = new Set(['director_cap_humano', 'cap_humano', 'coord_docente', 'admin'])
+const ROLES_OVERRIDE = new Set(['superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente', 'admin'])
 
 function OverrideModal({ clases, quincenaId, docenteId, docenteNombre, onClose, onSaved }) {
   // cambios: key="fecha_horario" → { decision, motivo }
@@ -983,8 +983,8 @@ function AsignacionVirtualCard({ asig, quincenaId, quincenaEstado, usuario, onRe
   const [savingCompleto, setSavingCompleto] = useState(null) // semana_num que está guardando
   const [error, setError] = useState('')
 
-  const puedeCA = ['coord_academica', 'director_cap_humano', 'cap_humano'].includes(usuario.rol)
-  const puedeEV = ['educacion_virtual', 'director_cap_humano', 'cap_humano'].includes(usuario.rol)
+  const puedeCA = ['superadmin', 'coord_academica', 'director_cap_humano', 'cap_humano'].includes(usuario.rol)
+  const puedeEV = ['superadmin', 'educacion_virtual', 'director_cap_humano', 'cap_humano'].includes(usuario.rol)
   const editable = quincenaEstado === 'abierta' || quincenaEstado === 'en_revision'
 
   const setCriterio = async (semanaNum, campo, valor) => {
@@ -1308,7 +1308,7 @@ function TabVirtual({ quincena, usuario }) {
               {grupos.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           )}
-          {['director_cap_humano', 'cap_humano', 'educacion_virtual'].includes(usuario.rol) && (
+          {['superadmin', 'director_cap_humano', 'cap_humano', 'educacion_virtual'].includes(usuario.rol) && (
             <button onClick={calcularResultados} disabled={calculando}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-lg disabled:opacity-50">
               {calculando ? 'Calculando...' : 'Guardar resultados'}
@@ -1600,8 +1600,8 @@ function TabIncidencias({ quincena, usuario }) {
   }
 
   const puedeRegistrar = ['director_cap_humano', 'cap_humano', 'coord_docente',
-                          'coord_academica', 'servicios_escolares'].includes(usuario.rol)
-  const puedeAprobar   = ['director_cap_humano', 'cap_humano', 'coord_docente'].includes(usuario.rol)
+                          'superadmin', 'coord_academica', 'servicios_escolares'].includes(usuario.rol)
+  const puedeAprobar   = ['superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente'].includes(usuario.rol)
 
   // Derivar catálogo de programas únicos del listado cargado
   const programasEnLista = [...new Set(incidencias.map(i => i.programa_nombre).filter(Boolean))].sort()
@@ -2053,7 +2053,7 @@ function TabCampoClinico({ quincena, usuario }) {
   const [bajaLoading, setBajaLoading] = useState({})
   const [confirmarEliminar, setConfirmarEliminar] = useState(null) // { docente_id, nombre }
 
-  const ROLES_EDIT = ['director_cap_humano', 'cap_humano', 'coord_docente', 'admin']
+  const ROLES_EDIT = ['superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente', 'admin']
   const puedeEditar = ROLES_EDIT.includes(usuario?.rol)
 
   const cargar = useCallback(async () => {
@@ -2448,7 +2448,7 @@ export default function QuincenaDetalle() {
   const [tab, setTab] = useState('nomina')
   const [cambiandoEstado, setCambiandoEstado] = useState(false)
 
-  const canEdit = ['director_cap_humano', 'cap_humano'].includes(usuario?.rol)
+  const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
 
   useEffect(() => {
     api.get(`/quincenas/${id}`)

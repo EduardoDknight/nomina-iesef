@@ -93,7 +93,7 @@ export default function Dashboard() {
       ) : (
         <div className="bg-white rounded-xl border border-dashed border-slate-300 p-6 mb-6 text-center">
           <p className="text-slate-400 text-sm">No hay quincena activa.</p>
-          {['director_cap_humano', 'cap_humano'].includes(usuario?.rol) && (
+          {['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol) && (
             <button
               onClick={() => navigate('/quincenas')}
               className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
@@ -145,7 +145,7 @@ export default function Dashboard() {
       <div>
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Accesos rápidos</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {['director_cap_humano', 'cap_humano'].includes(usuario?.rol) && (
+          {['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol) && (
             <button
               onClick={() => navigate('/docentes')}
               className="bg-white border border-slate-200 rounded-xl p-4 text-left hover:border-blue-300 hover:shadow-md transition-all group"
@@ -154,7 +154,7 @@ export default function Dashboard() {
               <p className="text-xs text-slate-400 mt-0.5">Alta, baja, modificación y carga masiva</p>
             </button>
           )}
-          {['director_cap_humano', 'cap_humano', 'finanzas'].includes(usuario?.rol) && (
+          {['superadmin', 'director_cap_humano', 'cap_humano', 'finanzas'].includes(usuario?.rol) && (
             <button
               onClick={() => navigate('/quincenas')}
               className="bg-white border border-slate-200 rounded-xl p-4 text-left hover:border-blue-300 hover:shadow-md transition-all group"

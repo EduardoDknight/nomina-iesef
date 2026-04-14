@@ -14,6 +14,14 @@ function Modal({ onClose, onSave }) {
   const [form, setForm] = useState({ fecha_inicio: '', fecha_fin: '', ciclo: '', razon_social: 'ambas' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [ciclos, setCiclos] = useState([])
+
+  useEffect(() => {
+    api.get('/quincenas/ciclos-disponibles').then(r => {
+      setCiclos(r.data)
+      if (r.data.length === 1) setForm(f => ({ ...f, ciclo: r.data[0] }))
+    }).catch(() => {})
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -56,10 +64,18 @@ function Modal({ onClose, onSave }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Ciclo</label>
-            <input type="text" required placeholder="Ej. 2026-1" value={form.ciclo}
-              onChange={e => setForm(f => ({ ...f, ciclo: e.target.value }))}
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label className="block text-xs font-medium text-slate-500 mb-1">Ciclo académico</label>
+            {ciclos.length > 0 ? (
+              <select required value={form.ciclo} onChange={e => setForm(f => ({ ...f, ciclo: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Selecciona un ciclo…</option>
+                {ciclos.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            ) : (
+              <input type="text" required placeholder="Ej. 2026-1" value={form.ciclo}
+                onChange={e => setForm(f => ({ ...f, ciclo: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Razón social</label>
@@ -96,7 +112,7 @@ export default function Quincenas() {
   const [quincenas, setQuincenas] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const canEdit = ['director_cap_humano', 'cap_humano', 'coord_docente'].includes(usuario?.rol)
+  const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente'].includes(usuario?.rol)
 
   const cargar = async () => {
     setLoading(true)

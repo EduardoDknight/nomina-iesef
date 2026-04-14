@@ -228,11 +228,27 @@ def _calcular_asistencia_trabajador(cur, trabajador: dict, fecha_inicio: date, f
     )
     raw_checadas = cur.fetchall()
 
-    # Agrupar checadas por fecha
+    # Agrupar checadas por fecha (con dedup 3 min)
     from collections import defaultdict
+
+    def _hora_seg(t):
+        if isinstance(t, timedelta):
+            return int(t.total_seconds())
+        return t.hour * 3600 + t.minute * 60 + t.second
+
+    def _dedup_horas(horas):
+        if not horas:
+            return []
+        result = [horas[0]]
+        for h in horas[1:]:
+            if _hora_seg(h) - _hora_seg(result[-1]) >= 180:
+                result.append(h)
+        return result
+
     checadas_por_dia = defaultdict(list)
     for c in raw_checadas:
         checadas_por_dia[c["fecha_dia"]].append(c["hora"])
+    checadas_por_dia = {k: _dedup_horas(v) for k, v in checadas_por_dia.items()}
 
     for sd in scheduled_days:
         fecha         = sd["fecha"]
@@ -721,7 +737,7 @@ def asistencia_detalle(
 
         chec_id = t.get("chec_id")
 
-        # Checadas del período
+        # Checadas del período (con dedup 3 min)
         checadas_por_dia = {}
         if chec_id is not None:
             cur.execute(
@@ -737,10 +753,25 @@ def asistencia_detalle(
                 (chec_id, fecha_inicio, fecha_fin)
             )
             from collections import defaultdict
+
+            def _det_hora_seg(t):
+                if isinstance(t, timedelta):
+                    return int(t.total_seconds())
+                return t.hour * 3600 + t.minute * 60 + t.second
+
+            def _det_dedup(horas):
+                if not horas:
+                    return []
+                result = [horas[0]]
+                for h in horas[1:]:
+                    if _det_hora_seg(h) - _det_hora_seg(result[-1]) >= 180:
+                        result.append(h)
+                return result
+
             tmp = defaultdict(list)
             for c in cur.fetchall():
                 tmp[c["fecha_dia"]].append(c["hora"])
-            checadas_por_dia = dict(tmp)
+            checadas_por_dia = {k: _det_dedup(v) for k, v in tmp.items()}
 
         py_dow_to_col = {
             0: "lunes", 1: "martes", 2: "miercoles", 3: "jueves",

@@ -270,7 +270,7 @@ export default function PersonalAdmin() {
   const [modal, setModal]         = useState(null) // null | 'nuevo' | {trabajador}
   const [toggling, setToggling]   = useState(null) // id en proceso
 
-  const canEdit = ['director_cap_humano', 'cap_humano'].includes(usuario?.rol)
+  const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
 
   const cargar = async () => {
     setLoading(true)

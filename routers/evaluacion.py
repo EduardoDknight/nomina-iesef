@@ -161,13 +161,13 @@ async def listar_virtual(
         JOIN docentes d   ON a.docente_id  = d.id
         JOIN materias mat ON a.materia_id  = mat.id
         JOIN programas p  ON mat.programa_id = p.id
-        WHERE a.ciclo = %s
+        WHERE a.vigente_desde <= %s AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
           AND a.activa = true
           AND a.modalidad IN ('virtual', 'mixta')
           AND d.activo = true
           {prog_filter}
         ORDER BY p.nombre, d.nombre_completo, mat.nombre
-    """, [q['ciclo']] + prog_params)
+    """, [q['fecha_fin'], q['fecha_inicio']] + prog_params)
 
     asignaciones = cur.fetchall()
     resultado = []
@@ -375,9 +375,10 @@ async def calcular_resultados_virtual(
         FROM asignaciones a
         JOIN materias m ON a.materia_id = m.id
         JOIN programas p ON m.programa_id = p.id
-        WHERE a.ciclo = %s AND a.activa = true
+        WHERE a.vigente_desde <= %s AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
+          AND a.activa = true
           AND a.modalidad IN ('virtual', 'mixta')
-    """, (q['ciclo'],))
+    """, (q['fecha_fin'], q['fecha_inicio']))
     asignaciones = cur.fetchall()
 
     procesados = 0

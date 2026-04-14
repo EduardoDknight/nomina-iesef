@@ -552,6 +552,21 @@ async def mi_asistencia(
 
         DIAS_ES_TW = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
+        def _hora_a_seg(t):
+            if isinstance(t, timedelta):
+                return int(t.total_seconds())
+            return t.hour * 3600 + t.minute * 60 + t.second
+
+        def _dedup(checadas):
+            """Elimina duplicados dentro de 3 min (MB360 registra la misma checada varias veces)."""
+            if not checadas:
+                return []
+            result = [checadas[0]]
+            for c in checadas[1:]:
+                if _hora_a_seg(c["hora"]) - _hora_a_seg(result[-1]["hora"]) >= 180:
+                    result.append(c)
+            return result
+
         # Acumular todas las checadas por fecha
         por_fecha: dict = {}
         for r in cur.fetchall():
@@ -563,19 +578,30 @@ async def mi_asistencia(
         # Construir lista de días lunes→sábado para cada semana del rango
         dias = []
         current = fi
-        # Avanzar hasta el lunes de la semana de fi
         while current <= ff:
             wd = current.weekday()
             if wd <= 5:  # 0=lun … 5=sáb, omitir domingo
                 fecha_str    = str(current)
-                checadas_dia = por_fecha.get(fecha_str, [])
+                checadas_dia = _dedup(por_fecha.get(fecha_str, []))
 
-                entrada = next((str(c["hora"])[:5] for c in checadas_dia if c["tipo"] == 0), None)
-                salida  = next((str(c["hora"])[:5] for c in reversed(checadas_dia) if c["tipo"] == 1), None)
-                todas   = [
-                    {"hora": str(c["hora"])[:5], "tipo": "entrada" if c["tipo"] == 0 else "salida"}
-                    for c in checadas_dia
-                ]
+                # Posición determina entrada/salida — tipo_punch del MB360 no es confiable
+                n = len(checadas_dia)
+                if n == 0:
+                    entrada = None
+                    salida  = None
+                    todas   = []
+                elif n == 1:
+                    entrada = str(checadas_dia[0]["hora"])[:5]
+                    salida  = None
+                    todas   = [{"hora": entrada, "tipo": "entrada"}]
+                else:
+                    entrada = str(checadas_dia[0]["hora"])[:5]
+                    salida  = str(checadas_dia[-1]["hora"])[:5]
+                    todas   = (
+                        [{"hora": str(checadas_dia[0]["hora"])[:5],  "tipo": "entrada"}]
+                        + [{"hora": str(c["hora"])[:5], "tipo": "entrada"} for c in checadas_dia[1:-1]]
+                        + [{"hora": str(checadas_dia[-1]["hora"])[:5], "tipo": "salida"}]
+                    )
 
                 dias.append({
                     "fecha":          fecha_str,

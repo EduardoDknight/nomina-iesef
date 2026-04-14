@@ -14,6 +14,7 @@ import AdminQuincenaDetalle from './pages/AdminQuincenaDetalle'
 import CambiarPassword from './pages/CambiarPassword'
 import PortalDocente from './pages/PortalDocente'
 import PortalTrabajador from './pages/PortalTrabajador'
+import Estadisticas from './pages/Estadisticas'
 
 // Ruta que requiere autenticación — si debe cambiar password redirige ahí primero
 function PrivateRoute({ children }) {
@@ -72,6 +73,7 @@ export default function App() {
           <Route path="quincenas" element={<Quincenas />} />
           <Route path="quincenas/:id" element={<QuincenaDetalle />} />
           <Route path="horarios" element={<Horarios />} />
+          <Route path="estadisticas" element={<Estadisticas />} />
           <Route path="configuracion" element={<Configuracion />} />
           <Route path="admin/personal" element={<PersonalAdmin />} />
           <Route path="admin/nomina" element={<AdminQuincenas />} />

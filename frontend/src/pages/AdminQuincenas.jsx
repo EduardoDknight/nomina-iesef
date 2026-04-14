@@ -87,7 +87,7 @@ export default function AdminQuincenas() {
   const [eliminando, setEliminando] = useState(null)
   const { usuario } = useAuth()
   const navigate = useNavigate()
-  const canEdit = ['director_cap_humano', 'cap_humano'].includes(usuario?.rol)
+  const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
 
   const cargar = () => {
     setLoading(true)

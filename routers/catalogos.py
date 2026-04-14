@@ -38,13 +38,14 @@ class MateriaOut(MateriaCreate):
     activa: bool
 
 class AsignacionCreate(BaseModel):
-    docente_id:   int
-    materia_id:   int
-    grupo:        Optional[str]  = None
-    horas_semana: float
-    modalidad:    str = "presencial"
-    costo_hora:   Optional[float] = None  # None = usa tarifa del programa
-    ciclo:        str
+    docente_id:    int
+    materia_id:    int
+    grupo:         Optional[str]  = None
+    horas_semana:  float
+    modalidad:     str = "presencial"
+    costo_hora:    Optional[float] = None  # None = usa tarifa del programa
+    ciclo:         str
+    vigente_desde: Optional[str]  = None   # ISO date, default = hoy
 
 class AsignacionOut(AsignacionCreate):
     id: int
@@ -91,7 +92,7 @@ async def actualizar_tarifa(
     usuario: UsuarioActual = Depends(get_usuario_actual)
 ):
     """Solo director_cap_humano puede cambiar tarifas."""
-    if usuario.rol not in ("director_cap_humano", "finanzas"):
+    if usuario.rol not in ("director_cap_humano", "finanzas", "superadmin"):
         raise HTTPException(status_code=403, detail="Solo Finanzas o el Director de Capital Humano pueden cambiar tarifas")
     conn = get_conn()
     cur = conn.cursor()
@@ -165,7 +166,7 @@ async def listar_asignaciones(
         JOIN programas p ON m.programa_id = p.id
         WHERE a.activa = %s
           AND (%s IS NULL OR a.docente_id = %s)
-          AND (%s IS NULL OR a.ciclo = %s)
+          AND (%s IS NULL OR a.ciclo_label = %s)
         ORDER BY d.nombre_completo, p.nombre
     """, (activa, docente_id, docente_id, ciclo, ciclo))
     rows = cur.fetchall()
@@ -178,16 +179,18 @@ async def crear_asignacion(
     body: AsignacionCreate,
     _: UsuarioActual = Depends(puede_horarios)
 ):
+    from datetime import date
+    vigente = body.vigente_desde or str(date.today())
     conn = get_conn()
     cur = conn.cursor()
     try:
         cur.execute("""
             INSERT INTO asignaciones
-                (docente_id, materia_id, grupo, horas_semana, modalidad, costo_hora, ciclo)
-            VALUES (%s,%s,%s,%s,%s,%s,%s)
+                (docente_id, materia_id, grupo, horas_semana, modalidad, costo_hora, ciclo_label, vigente_desde)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING *
         """, (body.docente_id, body.materia_id, body.grupo, body.horas_semana,
-              body.modalidad, body.costo_hora, body.ciclo))
+              body.modalidad, body.costo_hora, body.ciclo, vigente))
         row = cur.fetchone()
         conn.commit()
     except psycopg2.Error as e:
@@ -226,7 +229,7 @@ async def asignaciones_por_programa(
     cur = conn.cursor()
     cur.execute("""
         SELECT
-            a.id AS asignacion_id, a.grupo, a.horas_semana, a.modalidad, a.ciclo,
+            a.id AS asignacion_id, a.grupo, a.horas_semana, a.modalidad, a.ciclo_label AS ciclo,
             COALESCE(a.costo_hora, p.costo_hora) AS tarifa,
             d.id AS docente_id, d.nombre_completo AS docente_nombre,
             m.id AS materia_id, m.nombre AS materia_nombre,
@@ -239,7 +242,7 @@ async def asignaciones_por_programa(
         LEFT JOIN horario_clases hc ON hc.asignacion_id = a.id AND hc.activo = true
         WHERE a.activa = true
           AND (%s IS NULL OR p.id = %s)
-          AND (%s IS NULL OR a.ciclo = %s)
+          AND (%s IS NULL OR a.ciclo_label = %s)
         ORDER BY d.nombre_completo, p.nombre, a.grupo, hc.dia_semana, hc.hora_inicio
     """, (programa_id, programa_id, ciclo, ciclo))
     rows = cur.fetchall()
@@ -432,7 +435,7 @@ async def carga_masiva_horarios(
 
             # Crear o actualizar asignación
             cur.execute("""
-                INSERT INTO asignaciones (docente_id, materia_id, grupo, horas_semana, ciclo, modificado_por)
+                INSERT INTO asignaciones (docente_id, materia_id, grupo, horas_semana, ciclo_label, modificado_por)
                 VALUES (%s,%s,%s,%s,%s,%s)
                 ON CONFLICT DO NOTHING
                 RETURNING id, (xmax = 0) AS es_insert
@@ -447,7 +450,7 @@ async def carga_masiva_horarios(
             else:
                 # Ya existía, buscar id
                 cur.execute(
-                    "SELECT id FROM asignaciones WHERE docente_id=%s AND materia_id=%s AND ciclo=%s",
+                    "SELECT id FROM asignaciones WHERE docente_id=%s AND materia_id=%s AND ciclo_label=%s",
                     (doc["id"], mat["id"], ciclo)
                 )
                 asig = cur.fetchone()
@@ -487,6 +490,149 @@ class ConfigAsistenciaUpdate(BaseModel):
     minutos_falta:             Optional[int] = None
     retardos_por_falta:        Optional[int] = None
 
+# ── HORARIOS POR GRUPO ─────────────────────────────────────────────────────────
+
+@router.get("/grupos-lista")
+async def grupos_lista(
+    programa_id:  Optional[int] = None,
+    ciclo_label:  Optional[str] = None,
+    _: UsuarioActual = Depends(get_usuario_actual)
+):
+    """Lista todos los grupos activos, con su programa. Usado para el selector en la vista Por Grupo."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT DISTINCT a.grupo,
+               p.id   AS programa_id,
+               p.nombre AS programa_nombre,
+               p.codigo AS programa_codigo
+        FROM asignaciones a
+        JOIN materias  m ON a.materia_id  = m.id
+        JOIN programas p ON m.programa_id = p.id
+        WHERE a.activa = true
+          AND (%s IS NULL OR p.id = %s)
+          AND (%s IS NULL OR a.ciclo_label = %s)
+          AND a.grupo IS NOT NULL AND a.grupo <> ''
+        ORDER BY p.nombre, a.grupo
+    """, (programa_id, programa_id, ciclo_label, ciclo_label))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+@router.get("/horarios/por-grupo")
+async def horarios_por_grupo(
+    grupo:       str,
+    ciclo_label: Optional[str] = None,
+    _: UsuarioActual = Depends(get_usuario_actual)
+):
+    """Devuelve todas las asignaciones + bloques de un grupo específico para la grilla semanal."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT
+            a.id            AS asignacion_id,
+            a.grupo,
+            a.horas_semana,
+            m.nombre        AS materia,
+            d.id            AS docente_id,
+            d.nombre_completo AS docente,
+            p.id            AS programa_id,
+            p.nombre        AS programa,
+            p.codigo        AS programa_codigo,
+            hc.id           AS bloque_id,
+            hc.dia_semana,
+            hc.hora_inicio,
+            hc.hora_fin,
+            hc.horas_bloque
+        FROM asignaciones a
+        JOIN materias  m  ON a.materia_id  = m.id
+        JOIN programas p  ON m.programa_id = p.id
+        JOIN docentes  d  ON a.docente_id  = d.id
+        LEFT JOIN horario_clases hc ON hc.asignacion_id = a.id AND hc.activo = true
+        WHERE a.activa = true
+          AND a.grupo = %s
+          AND (%s IS NULL OR a.ciclo_label = %s)
+        ORDER BY hc.dia_semana, hc.hora_inicio
+    """, (grupo, ciclo_label, ciclo_label))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    from collections import OrderedDict
+    asigs = OrderedDict()
+    for r in rows:
+        ak = r['asignacion_id']
+        if ak not in asigs:
+            asigs[ak] = {
+                'asignacion_id': r['asignacion_id'],
+                'materia':       r['materia'],
+                'docente':       r['docente'],
+                'docente_id':    r['docente_id'],
+                'programa':      r['programa'],
+                'programa_id':   r['programa_id'],
+                'programa_codigo': r['programa_codigo'],
+                'horas_semana':  float(r['horas_semana'] or 0),
+                'bloques': [],
+            }
+        if r['bloque_id']:
+            asigs[ak]['bloques'].append({
+                'id':    r['bloque_id'],
+                'dia':   r['dia_semana'],
+                'inicio': str(r['hora_inicio'])[:5],
+                'fin':    str(r['hora_fin'])[:5],
+                'horas':  float(r['horas_bloque'] or 0),
+            })
+    return list(asigs.values())
+
+
+@router.delete("/grupos")
+async def eliminar_grupo(
+    grupo:       str,
+    ciclo_label: Optional[str] = None,
+    usuario: UsuarioActual = Depends(puede_horarios)
+):
+    """Desactiva todas las asignaciones de un grupo (eliminación lógica)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE asignaciones SET activa = false
+        WHERE grupo = %s AND (%s IS NULL OR ciclo_label = %s)
+    """, (grupo, ciclo_label, ciclo_label))
+    affected = cur.rowcount
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"eliminadas": affected}
+
+
+@router.patch("/grupos/renombrar")
+async def renombrar_grupo(
+    grupo_actual: str,
+    grupo_nuevo:  str,
+    ciclo_label:  Optional[str] = None,
+    usuario: UsuarioActual = Depends(puede_horarios)
+):
+    """Renombra un grupo en todas sus asignaciones activas."""
+    if not grupo_nuevo.strip():
+        raise HTTPException(status_code=400, detail="El nombre nuevo no puede estar vacío")
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE asignaciones SET grupo = %s
+        WHERE grupo = %s AND activa = true
+          AND (%s IS NULL OR ciclo_label = %s)
+    """, (grupo_nuevo.strip(), grupo_actual, ciclo_label, ciclo_label))
+    affected = cur.rowcount
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"actualizadas": affected}
+
+
+# ── CONFIGURACIÓN DE ASISTENCIA ────────────────────────────────────────────────
+
 @router.get("/config-asistencia", response_model=ConfigAsistenciaOut)
 async def get_config_asistencia(_: UsuarioActual = Depends(get_usuario_actual)):
     conn = get_conn()
@@ -504,7 +650,7 @@ async def actualizar_config_asistencia(
     body: ConfigAsistenciaUpdate,
     usuario: UsuarioActual = Depends(get_usuario_actual)
 ):
-    if usuario.rol not in ("director_cap_humano", "cap_humano"):
+    if usuario.rol not in ("director_cap_humano", "cap_humano", "superadmin"):
         raise HTTPException(status_code=403, detail="Sin permiso para modificar configuración")
     updates = {k: v for k, v in body.model_dump(exclude_none=True).items()}
     if not updates:

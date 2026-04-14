@@ -61,6 +61,17 @@ async def listar_quincenas(
     conn.close()
     return [QuincenaOut(**r) for r in rows]
 
+@router.get("/ciclos-disponibles")
+async def get_ciclos_disponibles(_: UsuarioActual = Depends(get_usuario_actual)):
+    """Ciclos distintos en asignaciones activas (para el selector al crear quincena)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT ciclo_label FROM asignaciones WHERE activa = true ORDER BY ciclo_label")
+    ciclos = [r["ciclo_label"] for r in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return ciclos
+
 @router.get("/activa")
 async def get_quincena_activa(_: UsuarioActual = Depends(get_usuario_actual)):
     """Retorna la quincena en estado abierta o en_revision."""
@@ -256,7 +267,8 @@ async def get_asistencia_quincena(
             nq.estado AS nomina_estado
         FROM docentes d
         JOIN asignaciones a   ON a.docente_id   = d.id
-                              AND a.ciclo        = %s
+                              AND a.vigente_desde <= %s
+                              AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
                               AND a.activa       = true
         JOIN materias mat     ON a.materia_id    = mat.id
         JOIN programas p      ON mat.programa_id = p.id
@@ -270,7 +282,8 @@ async def get_asistencia_quincena(
                  nq.horas_descuento, nq.estado
         ORDER BY d.nombre_completo
     """, (q['fecha_inicio'], q['fecha_fin'],   # total_checadas subquery
-          q['ciclo'], quincena_id))
+          q['fecha_fin'], q['fecha_inicio'],   # vigente_desde <= fecha_fin, vigente_hasta >= fecha_inicio
+          quincena_id))
 
     rows = cur.fetchall()
     cur.close(); conn.close()
@@ -348,7 +361,7 @@ async def crear_incidencia(
     body: IncidenciaCreate,
     usuario: UsuarioActual = Depends(get_usuario_actual)
 ):
-    roles_ok = ('director_cap_humano', 'cap_humano', 'coord_docente',
+    roles_ok = ('superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente',
                 'coord_academica', 'servicios_escolares')
     if usuario.rol not in roles_ok:
         raise HTTPException(status_code=403, detail="Sin permiso para registrar incidencias")
@@ -392,7 +405,7 @@ async def editar_incidencia(
     usuario: UsuarioActual = Depends(get_usuario_actual)
 ):
     """Editar campos de una incidencia existente (solo si está en estado pendiente)."""
-    roles_ok = ('director_cap_humano', 'cap_humano', 'coord_docente',
+    roles_ok = ('superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente',
                 'coord_academica', 'servicios_escolares')
     if usuario.rol not in roles_ok:
         raise HTTPException(status_code=403, detail="Sin permiso para editar incidencias")
@@ -405,7 +418,7 @@ async def editar_incidencia(
     if not row:
         cur.close(); conn.close()
         raise HTTPException(status_code=404, detail="Incidencia no encontrada")
-    if row['estado'] not in ('pendiente',) and usuario.rol not in ('director_cap_humano', 'cap_humano'):
+    if row['estado'] not in ('pendiente',) and usuario.rol not in ('superadmin', 'director_cap_humano', 'cap_humano'):
         cur.close(); conn.close()
         raise HTTPException(status_code=409, detail="Solo Capital Humano puede editar incidencias ya validadas")
 
@@ -495,7 +508,7 @@ async def listar_campo_clinico(
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute("SELECT ciclo FROM quincenas WHERE id = %s", (quincena_id,))
+    cur.execute("SELECT ciclo, fecha_inicio, fecha_fin FROM quincenas WHERE id = %s", (quincena_id,))
     q = cur.fetchone()
     if not q:
         cur.close(); conn.close()
@@ -515,7 +528,9 @@ async def listar_campo_clinico(
             COALESCE(cc.pago_completo, false) AS pagado,
             cc.id              AS registro_id
         FROM docentes d
-        JOIN asignaciones a   ON a.docente_id = d.id AND a.ciclo = %s AND a.activa = true
+        JOIN asignaciones a   ON a.docente_id = d.id
+                              AND a.vigente_desde <= %s AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
+                              AND a.activa = true
         JOIN materias mat     ON a.materia_id = mat.id AND mat.programa_id = 7
         JOIN programas p      ON p.id = mat.programa_id
         LEFT JOIN campo_clinico_quincena cc
@@ -542,11 +557,15 @@ async def listar_campo_clinico(
           AND NOT EXISTS (
               SELECT 1 FROM asignaciones ax
               JOIN materias mx ON ax.materia_id = mx.id AND mx.programa_id = 7
-              WHERE ax.docente_id = d.id AND ax.ciclo = %s AND ax.activa = true
+              WHERE ax.docente_id = d.id
+                AND ax.vigente_desde <= %s AND (ax.vigente_hasta IS NULL OR ax.vigente_hasta >= %s)
+                AND ax.activa = true
           )
 
         ORDER BY nombre_completo
-    """, (q['ciclo'], quincena_id, quincena_id, q['ciclo']))
+    """, (q['fecha_fin'], q['fecha_inicio'], quincena_id,
+          quincena_id,
+          q['fecha_fin'], q['fecha_inicio']))
 
     rows = cur.fetchall()
     cur.close(); conn.close()
@@ -561,7 +580,7 @@ async def actualizar_campo_clinico(
     usuario: UsuarioActual = Depends(get_usuario_actual)
 ):
     """Permite a cap_humano, coord_docente y director_cap_humano editar campo clínico."""
-    ROLES_PERMITIDOS = {'cap_humano', 'director_cap_humano', 'coord_docente'}
+    ROLES_PERMITIDOS = {'superadmin', 'cap_humano', 'director_cap_humano', 'coord_docente'}
     if usuario.rol not in ROLES_PERMITIDOS:
         raise HTTPException(status_code=403, detail="Sin permiso para editar campo clínico")
 
@@ -607,7 +626,7 @@ async def agregar_campo_clinico(
     """Agrega un supervisor a campo clínico para esta quincena.
     Si el docente no tiene asignación activa para campo clínico en el ciclo, la crea.
     """
-    ROLES_PERMITIDOS = {'cap_humano', 'director_cap_humano', 'coord_docente'}
+    ROLES_PERMITIDOS = {'superadmin', 'cap_humano', 'director_cap_humano', 'coord_docente'}
     if usuario.rol not in ROLES_PERMITIDOS:
         raise HTTPException(status_code=403, detail="Sin permiso para agregar supervisor")
 
@@ -634,19 +653,21 @@ async def agregar_campo_clinico(
     cur.execute("""
         SELECT a.id FROM asignaciones a
         JOIN materias mat ON a.materia_id = mat.id AND mat.programa_id = 7
-        WHERE a.docente_id = %s AND a.ciclo = %s AND a.activa = true
+        WHERE a.docente_id = %s
+          AND a.vigente_desde <= %s AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
+          AND a.activa = true
         LIMIT 1
-    """, (body.docente_id, ciclo))
+    """, (body.docente_id, q['fecha_fin'], q['fecha_inicio']))
     asig = cur.fetchone()
 
     if not asig:
         # Crear asignación a campo clínico
         cur.execute("""
             INSERT INTO asignaciones
-                (docente_id, materia_id, grupo, horas_semana, modalidad, costo_hora, ciclo, activa)
-            VALUES (%s, 289, 'Campo Clínico', 0, 'presencial', 0, %s, true)
+                (docente_id, materia_id, grupo, horas_semana, modalidad, costo_hora, ciclo_label, activa, vigente_desde)
+            VALUES (%s, 289, 'Campo Clínico', 0, 'presencial', 0, %s, true, %s)
             RETURNING id
-        """, (body.docente_id, ciclo))
+        """, (body.docente_id, ciclo, q['fecha_inicio']))
         asig = cur.fetchone()
 
     # Monto: usar el del body, o el del docente, o $2,500 por defecto
@@ -686,7 +707,7 @@ async def baja_campo_clinico(
     """Marca al supervisor como 'sin prácticas esta quincena' (monto=0, pago_completo=false).
     No elimina la asignación — seguirá apareciendo en quincenas futuras.
     """
-    ROLES_PERMITIDOS = {'cap_humano', 'director_cap_humano', 'coord_docente'}
+    ROLES_PERMITIDOS = {'superadmin', 'cap_humano', 'director_cap_humano', 'coord_docente'}
     if usuario.rol not in ROLES_PERMITIDOS:
         raise HTTPException(status_code=403, detail="Sin permiso")
 
@@ -726,7 +747,7 @@ async def eliminar_campo_clinico(
     Si permanente=true, además desactiva su(s) asignación(es) de campo clínico
     (programa_id=7) para que no aparezca en quincenas futuras.
     """
-    ROLES = ['director_cap_humano', 'cap_humano', 'coord_docente', 'admin']
+    ROLES = ['superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente', 'admin']
     if usuario.rol not in ROLES:
         raise HTTPException(403, "Sin permisos")
 
@@ -817,8 +838,10 @@ async def get_checadas_docente(
         JOIN asignaciones a  ON hc.asignacion_id = a.id
         JOIN materias mat    ON a.materia_id = mat.id
         JOIN programas p     ON mat.programa_id = p.id
-        WHERE a.docente_id = %s AND a.ciclo = %s AND a.activa = true
-    """, (docente_id, q['ciclo']))
+        WHERE a.docente_id = %s
+          AND a.vigente_desde <= %s AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
+          AND a.activa = true
+    """, (docente_id, q['fecha_fin'], q['fecha_inicio']))
     horarios = list(cur.fetchall())
 
     cur.close(); conn.close()
@@ -1191,7 +1214,7 @@ class OverrideBody(BaseModel):
     decision: str              # 'pagar' | 'no_pagar' | 'auto' (elimina el override)
     motivo:   Optional[str] = None
 
-ROLES_OVERRIDE = {'director_cap_humano', 'cap_humano', 'coord_docente', 'admin'}
+ROLES_OVERRIDE = {'superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente', 'admin'}
 
 @router.post("/{quincena_id}/asistencia/{docente_id}/override")
 async def set_override_clase(

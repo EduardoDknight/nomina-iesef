@@ -37,7 +37,7 @@ const EMPTY_FORM = {
 function Drawer({ docente, onClose, onSaved }) {
   const esNuevo = !docente
   const { usuario } = useAuth()
-  const canEditJornada = ['director_cap_humano', 'cap_humano', 'coord_docente'].includes(usuario?.rol)
+  const canEditJornada = ['superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente'].includes(usuario?.rol)
 
   const [form, setForm] = useState(esNuevo ? EMPTY_FORM : {
     numero_docente:  docente.numero_docente || '',
