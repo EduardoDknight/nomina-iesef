@@ -7,7 +7,25 @@
 ## Última sesión
 **Fecha:** 2026-04-14 (tarde — PC trabajo)
 **Rama:** `main`
-**Último commit:** `8150183` — feat: webhook /deploy para auto-pull desde GitHub
+**Último commit:** `36d36be` — docs: actualizar NEXO_ESTADO sesión PC trabajo
+
+---
+
+## CHANGELOG — Historial de cambios importantes
+> Formato: `YYYY-MM-DD HH:MM | PC | Cambio | Motivo`
+> Agregar aquí cualquier cambio crítico en infraestructura, BD, cron, o lógica de negocio.
+
+| Fecha/Hora (CST) | PC | Cambio | Motivo |
+|---|---|---|---|
+| 2026-03-26 ~AM | Ubuntu laptop | Primera corrida del agente pyzk → 26,257 registros históricos del MB360 | Inicio de sincronización automática |
+| 2026-03-29 (sábado) | Ubuntu laptop | Agente apuntado de `api.iesef.edu.mx` → `nexo.iesef.edu.mx` | Migración a servidor local con tunnel |
+| 2026-04-01 al 09 | Ubuntu laptop | Cron APAGADO | Semana Santa, laptop apagada |
+| 2026-04-13 ~13:04 | MB360 | Alguien intentó respaldar MB360 a USB → puerto TCP bloqueado | Backup manual no coordinado |
+| 2026-04-13 13:04–19:41 | MB360 | **GAP TOTAL de checadas** — CERO registros para cualquier usuario | TCP bloqueado por backup USB |
+| 2026-04-13 ~19:00 | Ubuntu laptop | 46 instancias del cron corriendo simultáneamente (confirmado en sync_log) | Bug: flock no configurado |
+| 2026-04-14 ~AM | Ubuntu laptop | **Cron corregido: `*/5` → `*/30 con flock`** | Eliminar colisiones con v1 y MB360 |
+| 2026-04-14 10:35 CST | PC trabajo | Fix `a.ciclo` → `vigente_desde/vigente_hasta` en exportar_nomina_resumen | Error al exportar Excel nómina |
+| 2026-04-14 10:40 CST | PC trabajo | Webhook `/deploy` agregado para auto-pull desde GitHub | Eliminar necesidad de ir a casa para aplicar fixes |
 
 ---
 
@@ -170,6 +188,7 @@ El código usa **posición temporal** (primera del día = entrada, última = sal
 ### Baja prioridad
 - [ ] Estadísticas: más indicadores
 - [ ] Integración Aspel NOI
+- [ ] **PWA (Progressive Web App)** — convertir el frontend React en app instalable para Android/iOS sin App Store. Requiere: `manifest.json` + Service Worker + íconos. Estimado: 1-2 días cuando el sistema esté estable.
 
 ---
 
