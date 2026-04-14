@@ -190,7 +190,8 @@ FROM asignaciones a
 JOIN materias  m ON m.id = a.materia_id
 JOIN programas p ON p.id = m.programa_id
 LEFT JOIN horario_clases hc ON hc.asignacion_id = a.id
-WHERE a.ciclo = %s
+WHERE a.vigente_desde <= %s
+  AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
   AND a.activa = true
   AND a.docente_id = ANY(%s)
 GROUP BY a.docente_id, p.id, p.nombre, p.razon_social, p.nivel,
@@ -400,8 +401,8 @@ def generar_nomina_resumen_excel(conn, quincena_id: int) -> bytes:
         )
 
     ids = list({n["docente_id"] for n in nominas})
-    if ids and ciclo:
-        cur.execute(SQL_ASIGNACIONES, (ciclo, ids))
+    if ids:
+        cur.execute(SQL_ASIGNACIONES, (quincena["fecha_fin"], quincena["fecha_inicio"], ids))
         asig_por_doc = {}
         for row in cur.fetchall():
             asig_por_doc.setdefault(row["docente_id"], []).append(dict(row))
