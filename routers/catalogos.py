@@ -156,7 +156,17 @@ async def listar_asignaciones(
     cur = conn.cursor()
     cur.execute("""
         SELECT
-            a.*,
+            a.id,
+            a.docente_id,
+            a.materia_id,
+            a.grupo,
+            a.horas_semana,
+            a.modalidad,
+            a.costo_hora,
+            a.ciclo_label   AS ciclo,
+            a.vigente_desde,
+            a.vigente_hasta,
+            a.activa,
             d.nombre_completo AS docente_nombre,
             m.nombre          AS materia_nombre,
             p.nombre          AS programa_nombre
