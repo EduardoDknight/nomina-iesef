@@ -101,14 +101,26 @@ async def get_quincena(
         conn.close()
         raise HTTPException(status_code=404, detail="Quincena no encontrada")
 
-    # Resumen de nómina
-    cur.execute("""
-        SELECT
-            COUNT(*)           AS total_docentes,
-            COALESCE(SUM(total_final), 0) AS total_honorarios
-        FROM nomina_quincena
-        WHERE quincena_id = %s
-    """, (quincena_id,))
+    # Resumen de nómina — filtrado por razon_social de la quincena
+    rs = q['razon_social']
+    if rs == 'ambas':
+        cur.execute("""
+            SELECT
+                COUNT(*)           AS total_docentes,
+                COALESCE(SUM(total_final), 0) AS total_honorarios
+            FROM nomina_quincena nq
+            WHERE nq.quincena_id = %s
+        """, (quincena_id,))
+    else:
+        cur.execute("""
+            SELECT
+                COUNT(*)           AS total_docentes,
+                COALESCE(SUM(nq.total_final), 0) AS total_honorarios
+            FROM nomina_quincena nq
+            JOIN docentes d ON d.id = nq.docente_id
+            WHERE nq.quincena_id = %s
+              AND d.adscripcion IN (%s, 'ambos')
+        """, (quincena_id, rs))
     resumen = cur.fetchone()
 
     # Incidencias pendientes
@@ -335,13 +347,15 @@ async def get_asistencia_quincena(
                              AND nq.quincena_id = %s
         WHERE d.activo = true
           AND d.chec_id IS NOT NULL
+          AND (%s = 'ambas' OR d.adscripcion IN (%s, 'ambos'))
         GROUP BY d.id, d.nombre_completo, d.chec_id, d.tipo,
                  nq.horas_presenciales, nq.horas_virtuales,
                  nq.horas_descuento, nq.estado
         ORDER BY d.nombre_completo
     """, (q['fecha_inicio'], q['fecha_fin'],   # total_checadas subquery
           q['fecha_fin'], q['fecha_inicio'],   # vigente_desde <= fecha_fin, vigente_hasta >= fecha_inicio
-          quincena_id))
+          quincena_id,
+          q['razon_social'], q['razon_social']))
 
     rows = cur.fetchall()
     cur.close(); conn.close()
