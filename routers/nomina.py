@@ -147,11 +147,19 @@ async def generar_nomina(
 @router.get("/quincenas/{quincena_id}", response_model=List[NominaResumenDocente])
 async def get_nomina_quincena(
     quincena_id: int,
-    razon_social: Optional[str] = None,  # 'centro', 'instituto'
     _: UsuarioActual = Depends(admin_o_finanzas)
 ):
     conn = get_conn()
     cur = conn.cursor()
+
+    # Leer razon_social de la propia quincena para filtrar automáticamente
+    cur.execute("SELECT razon_social FROM quincenas WHERE id = %s", (quincena_id,))
+    q = cur.fetchone()
+    if not q:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Quincena no encontrada")
+    rs = q["razon_social"]  # 'centro', 'instituto', 'ambas'
+
     sql = """
         SELECT
             nq.docente_id,
@@ -167,9 +175,9 @@ async def get_nomina_quincena(
         WHERE nq.quincena_id = %s
     """
     params = [quincena_id]
-    if razon_social:
+    if rs != "ambas":
         sql += " AND d.adscripcion IN (%s, 'ambos')"
-        params.append(razon_social)
+        params.append(rs)
     sql += " ORDER BY d.nombre_completo"
     cur.execute(sql, params)
     rows = cur.fetchall()
