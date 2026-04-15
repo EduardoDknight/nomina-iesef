@@ -33,15 +33,9 @@ PC trabajo (Claude Code)
   nexo.iesef.edu.mx actualizado (~5 seg, sin tocar PC casa)
 ```
 
-### ⚠️ Webhook pendiente de configurar (una sola vez en el browser)
-> github.com/EduardoDknight/nomina-iesef → Settings → Webhooks → Add webhook
-
-| Campo | Valor |
-|---|---|
-| Payload URL | `https://nexo.iesef.edu.mx/deploy` |
-| Content type | `application/json` |
-| Secret | `iesef-deploy-2026` |
-| Events | Just the push event |
+### ✅ Webhook configurado (ID: 606281234)
+- URL: `https://nexo.iesef.edu.mx/deploy`
+- Ping de prueba: **200 OK** — funciona correctamente
 
 ### Flujo en PC trabajo (sesión típica)
 ```bash
@@ -113,21 +107,19 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
 | Estadísticas: KPIs animados + 5 gráficas recharts | ✅ |
 | MB360 → Ubuntu laptop → nexo (28k+ checadas) | ✅ cron 30min con flock |
 | Cloudflare Tunnel (nexo.iesef.edu.mx → localhost:8000) | ✅ |
-| Auto-deploy webhook `/deploy` | ⏳ falta configurar en GitHub (ver arriba) |
-| Arranque automático Windows | ⏳ ejecutar `instalar_autostart.ps1` como admin |
+| Auto-deploy webhook `/deploy` | ✅ configurado (ID 606281234, ping 200 OK) |
+| Arranque automático Windows | ✅ instalado en carpeta Startup del usuario |
 
 ---
 
-## ⚠️ PENDIENTES EN PC CASA (antes del siguiente trabajo)
+## ⚠️ PENDIENTES EN PC CASA
 
-1. **Configurar webhook en GitHub** — ver instrucciones arriba (5 min en el browser)
-2. **Instalar autostart Windows** — `instalar_autostart.ps1` como admin
-3. **Cron Ubuntu laptop** — agregar flock cuando puedas SSH:
+1. **Cron Ubuntu laptop** — agregar flock cuando puedas SSH:
    ```bash
    crontab -e
    # */30 * * * * /usr/bin/flock -n /tmp/agente_nomina.lock /home/nomina/venv_zk/bin/python3 /home/nomina/agente_nomina/agente.py
    ```
-4. **Zona horaria PC casa**:
+2. **Zona horaria PC casa**:
    ```powershell
    Set-TimeZone -Id "Central Standard Time (Mexico)"
    ```
