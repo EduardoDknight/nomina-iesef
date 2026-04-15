@@ -5,16 +5,17 @@ Flujo:
   1. GitHub hace push → llama POST /deploy con X-Hub-Signature-256
   2. Se verifica la firma HMAC (secret en .env: DEPLOY_SECRET)
   3. Se ejecuta git pull --ff-only
-  4. Se "tocan" todos los .py modificados para que uvicorn --reload los detecte
-  5. uvicorn se reinicia automáticamente con el nuevo código
+  4. uvicorn --reload detecta el cambio y se reinicia (os._exit en background)
 """
 import hmac
 import hashlib
 import subprocess
 import logging
 import os
+import threading
 from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException, Header
+from fastapi.responses import JSONResponse
 from typing import Optional
 from config import settings
 
@@ -34,23 +35,15 @@ def _verificar_firma(body: bytes, signature: Optional[str]) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
-def _touch_py_files(changed_files: list[str]) -> int:
+def _restart_after_delay(delay: float = 1.5):
     """
-    Actualiza el mtime de los .py modificados para disparar uvicorn --reload.
-    Retorna el número de archivos tocados.
+    Espera `delay` segundos y luego termina el proceso worker.
+    uvicorn --reload detecta la salida y relanza el worker con el código nuevo.
     """
-    tocados = 0
-    for ruta in changed_files:
-        if ruta.endswith(".py"):
-            full = ROOT / ruta
-            if full.exists():
-                full.touch()
-                tocados += 1
-    # Si no hubo .py explícitos (ej. solo dist/ o .md), toca main para forzar reload
-    if tocados == 0:
-        (ROOT / "main_nomina.py").touch()
-        tocados = 1
-    return tocados
+    import time
+    time.sleep(delay)
+    logger.info("Deploy: reiniciando proceso uvicorn worker para cargar código nuevo...")
+    os._exit(0)
 
 
 @router.post("/deploy")
@@ -83,29 +76,17 @@ async def deploy(
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=500, detail="git pull timeout (>60s)")
 
-    # Si ya estaba actualizado, tocar main_nomina.py para forzar reload de uvicorn
-    if "Already up to date" in stdout or "Ya está actualizado" in stdout:
-        (ROOT / "main_nomina.py").touch()
-        logger.info("Already up to date — tocado main_nomina.py para forzar reload")
-        return {"status": "ok", "output": stdout, "reload": True, "forced": True}
+    ya_actualizado = "Already up to date" in stdout or "Ya está actualizado" in stdout
 
-    # 3. Detectar archivos modificados y tocar .py para forzar reload
-    try:
-        diff = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
-            capture_output=True, text=True, timeout=10, cwd=str(ROOT)
-        )
-        changed = [f.strip() for f in diff.stdout.splitlines() if f.strip()]
-    except Exception:
-        changed = []
+    # 3. Reiniciar el worker de uvicorn en background para cargar el código nuevo.
+    #    os._exit(0) termina solo este worker; uvicorn --reload lo relanza
+    #    automáticamente con los módulos frescos del disco.
+    threading.Thread(target=_restart_after_delay, args=(1.5,), daemon=True).start()
 
-    tocados = _touch_py_files(changed)
-    logger.info(f"Deploy OK — {tocados} archivos .py recargados. Cambios: {changed}")
-
-    return {
-        "status":   "ok",
-        "output":   stdout,
-        "reload":   True,
-        "changed":  changed,
-        "touched":  tocados,
-    }
+    return JSONResponse({
+        "status":  "ok",
+        "output":  stdout,
+        "reload":  True,
+        "method":  "process_restart",
+        "up_to_date": ya_actualizado,
+    })
