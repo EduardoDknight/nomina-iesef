@@ -5,9 +5,9 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-15 (tarde — PC trabajo, 2 sesiones consecutivas)
+**Fecha:** 2026-04-15 (tarde — PC trabajo, sesión completa)
 **Rama:** `main`
-**Último commit:** `426a370` — docs: actualizar estado sesión con SyncBadge y pasos build PC casa
+**Último commit:** `62bc564` — feat: dark mode con persistencia en localStorage
 
 ### Commits de hoy (en orden)
 | Hash | Descripción |
@@ -19,101 +19,82 @@
 | `4495264` | fix: exportar nómina filtra SQL por razon_social ($75 → $120) |
 | `7d3c38f` | docs: agregar problema reload uvicorn como prioridad crítica |
 | `2132626` | feat: SyncBadge — indicador último sync MB360 en 7 vistas |
-| `426a370` | docs: actualizar estado sesión con SyncBadge y pasos build PC casa |
+| `426a370` | docs: actualizar estado sesión con SyncBadge y pasos build |
+| `5fc21aa` | docs: reescribir NEXO_ESTADO.md + crear NEXO_PROYECTO_CHAT.md |
+| `62bc564` | feat: dark mode con persistencia en localStorage |
 
 ---
 
-## 🚨 ACCIÓN REQUERIDA AL LLEGAR A CASA (5pm)
+## 🚨 ACCIÓN REQUERIDA AL LLEGAR A CASA (esta noche)
 
-### PASO 1 — Reiniciar uvicorn (activa TODOS los fixes de hoy)
+### PASO 1 — Reiniciar uvicorn (activa TODOS los fixes de backend)
 ```powershell
 Get-Process python | Stop-Process -Force
 powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.ps1
 ```
 
-### PASO 2 — Build del frontend (activa el SyncBadge visual)
+### PASO 2 — Build del frontend (activa SyncBadge + Dark Mode)
 ```powershell
 cd C:\Proyectos\nomina-iesef\frontend
 npm run build
 cd ..
 git add -f frontend/dist/
-git commit -m "build: SyncBadge + activa fixes razon_social"
+git commit -m "build: dark mode + SyncBadge + fixes razon_social"
 git push
 ```
 
 ### PASO 3 — Verificar que todo funcionó
-1. Abrir quincena "centro" → debe mostrar solo ~20 docentes de Bachillerato (no 145)
-2. Exportar Excel → Barrera Reyes debe mostrar $120 (no $75)
-3. Estadísticas → debe aparecer badge "Al día · MB360 HH:MM" en lugar de "En vivo"
-4. Hacer un push de prueba desde PC trabajo → verificar que nexo se actualiza en ~3 seg
-
-### ¿Por qué es necesario el restart manual?
-El fix de `os._exit(0)` en `deploy.py` necesita ser cargado antes de poder usarse.
-Es un problema de arranque único: después de este restart, todos los futuros pushes
-desde PC trabajo actualizarán automáticamente el servidor.
+1. Quincena "centro" → debe mostrar solo ~20 docentes de Bachillerato (no 145)
+2. Excel exportado → Barrera Reyes debe mostrar $120 (no $75)
+3. Sidebar → debe aparecer botón 🌙 / ☀️ sobre "Cerrar sesión"
+4. Estadísticas → badge "Al día · MB360 HH:MM" en lugar de "En vivo"
+5. Hacer un push de prueba desde PC trabajo → nexo se actualiza en ~5 seg (sin restart manual)
 
 ---
 
-## FLUJO DE TRABAJO REMOTO — Cómo funciona el auto-deploy
+## FLUJO DE TRABAJO REMOTO
 
 ```
 PC trabajo (Claude Code)
-        │
         │  git push → GitHub
         ▼
   github.com/EduardoDknight/nomina-iesef
-        │
-        │  Webhook POST /deploy  (automático al hacer push)
+        │  Webhook POST /deploy (HMAC SHA-256)
         ▼
   nexo.iesef.edu.mx/deploy
-        │  verifica firma HMAC SHA-256 (DEPLOY_SECRET en .env de PC casa)
         │  git pull --ff-only
-        │  os._exit(0) en hilo secundario → uvicorn reinicia el worker
+        │  os._exit(0) → uvicorn reinicia worker con código nuevo
         ▼
-  nexo.iesef.edu.mx actualizado (~3-5 seg, sin tocar PC casa)
+  nexo.iesef.edu.mx actualizado (~3-5 seg)
 ```
 
-### Webhook GitHub
-- ID: `606281234` | URL: `https://nexo.iesef.edu.mx/deploy`
-- Ping verificado: **200 OK**
+- Webhook ID: `606281234` | URL: `https://nexo.iesef.edu.mx/deploy` | Ping: 200 OK
+- **Cambios de backend (.py):** se despliegan solos con git push
+- **Cambios de frontend (.jsx):** requieren `npm run build` + commit dist en PC casa
 
-### Flujo en PC trabajo (sesión típica)
+### Flujo típico desde PC trabajo
 ```bash
-git pull                          # siempre al empezar
-# Claude Code hace los cambios en backend (.py)
+git pull                    # siempre al empezar
+# Claude Code modifica archivos .py
 git add -u
 git commit -m "descripción"
-git push                          # dispara webhook → backend actualizado en ~5 seg
-
-# Si hay cambios de UI (frontend .jsx):
-# → HACER EN PC CASA: npm run build && git add -f frontend/dist/ && git push
+git push                    # webhook → backend actualizado automáticamente
 ```
 
 ---
 
 ## ARRANQUE DEL SERVIDOR (PC casa)
 
-### Reinicio manual
 ```powershell
+# Reinicio manual
 powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.ps1
-```
 
-### Arranque automático al inicio de Windows
-```powershell
-# Una sola vez, como admin:
-powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\scripts\instalar_autostart.ps1
-```
-✅ Ya instalado en carpeta Startup del usuario.
-
-### Verificar que el servidor corre
-```python
-python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/').status)"
-# → 200
+# Autostart ya instalado en carpeta Startup del usuario (no hacer de nuevo)
 ```
 
 ---
 
-## CHANGELOG — Historial de cambios importantes
+## CHANGELOG — Historial de cambios
 
 | Fecha/Hora (CST) | PC | Cambio | Motivo |
 |---|---|---|---|
@@ -127,12 +108,14 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
 | 2026-04-14 ~20:30 | PC casa | Estadísticas: KPIs animados + 5 gráficas recharts | Módulo completado |
 | 2026-04-14 ~21:00 | PC casa | Quincenas: colores por mes + botón eliminar + superadmin | UX + permisos |
 | 2026-04-14 ~21:30 | PC casa | Fix razon_social en cálculo nómina | Bug: quincena 'centro' incluía todos los programas |
-| 2026-04-14 ~22:00 | PC casa | Autostart Windows + deploy.py mejorado | Infraestructura auto-deploy |
+| 2026-04-14 ~22:00 | PC casa | Autostart Windows + deploy.py con os._exit(0) | Infraestructura auto-deploy |
 | 2026-04-14 ~22:30 | PC casa | Fix modal incidencias: dropdown Asignación vacío | `ciclo_label AS ciclo` + fechas como texto en Pydantic |
 | 2026-04-14 | Eduardo | Sistema v1 corregido: columna `_biometrico` | v1 ya toma sus propias checadas |
-| 2026-04-15 tarde | PC trabajo | **Fixes razon_social** (3 endpoints + export): nómina GET, asistencia, resumen, Excel | Quincena 'centro' mostraba 145 docentes → solo ~20 |
-| 2026-04-15 tarde | PC trabajo | **deploy.py os._exit(0)**: restart real del worker uvicorn | Webhook ya recarga código nuevo (pendiente restart manual) |
-| 2026-04-15 tarde | PC trabajo | **SyncBadge**: indicador último sync MB360 en 7 vistas | Usuarios saben hasta qué hora son sus datos |
+| 2026-04-15 tarde | PC trabajo | **Fixes razon_social** (3 endpoints + export) | Quincena 'centro' mostraba 145 docs → solo ~20; $75 → $120 |
+| 2026-04-15 tarde | PC trabajo | **deploy.py os._exit(0)** activo en repo | Webhook carga código nuevo (pendiente restart manual esta noche) |
+| 2026-04-15 tarde | PC trabajo | **SyncBadge** en 7 vistas (3 variantes) | Usuarios saben hasta qué hora son sus datos del checador |
+| 2026-04-15 tarde | PC trabajo | **Dark mode** (ThemeContext + CSS global + botón sidebar) | Toggle 🌙/☀️ con persistencia, sin tocar páginas individuales |
+| 2026-04-15 tarde | PC trabajo | **NEXO_PROYECTO_CHAT.md** creado | Contexto completo para Claude Projects (modo chat) |
 
 ---
 
@@ -147,15 +130,16 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
 | QuincenaDetalle: nómina, asistencia, virtual, incidencias, campo clínico | ✅ activo | |
 | Modal incidencias: dropdown de asignaciones | ✅ activo | |
 | Evaluación virtual (CA 40% + EV 60%) | ✅ activo | |
-| Cálculo nómina filtrado por razon_social | ✅ en repo | ⚠️ activa tras restart |
-| Exportación Excel nómina resumen | ✅ en repo | ⚠️ fix $75→$120 activa tras restart |
-| Personal Administrativo: CRUD + asistencia quincena | ✅ activo | |
-| Portal docente/trabajador: checadas, nómina, credenciales | ✅ activo | |
-| Estadísticas: KPIs animados + 5 gráficas recharts | ✅ activo | |
-| SyncBadge: indicador último sync MB360 en 7 vistas | ✅ fuente lista | ⚠️ pendiente build + restart |
-| MB360 → Ubuntu laptop → nexo (28k+ checadas) | ✅ activo | cron 30min con flock |
-| Cloudflare Tunnel (nexo.iesef.edu.mx → localhost:8000) | ✅ activo | |
-| Auto-deploy webhook `/deploy` | ✅ activo | ⚠️ os._exit activa tras restart |
+| Cálculo nómina filtrado por razon_social | ✅ en repo | ⚠️ activa tras restart uvicorn |
+| Exportación Excel resumen (fix $75→$120) | ✅ en repo | ⚠️ activa tras restart uvicorn |
+| Personal Administrativo: CRUD + asistencia | ✅ activo | |
+| Portales docente/trabajador | ✅ activo | |
+| Estadísticas: KPIs + 5 gráficas | ✅ activo | |
+| SyncBadge en 7 vistas | ✅ en repo | ⚠️ pendiente build frontend |
+| Dark mode (toggle 🌙/☀️ + CSS global) | ✅ en repo | ⚠️ pendiente build frontend |
+| MB360 → Ubuntu → nexo (28k+ checadas) | ✅ activo | cron 30min con flock |
+| Cloudflare Tunnel (nexo.iesef.edu.mx) | ✅ activo | |
+| Auto-deploy webhook `/deploy` | ✅ en repo | ⚠️ os._exit activa tras restart uvicorn |
 | Arranque automático Windows | ✅ activo | carpeta Startup del usuario |
 
 ---
@@ -164,77 +148,61 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
 
 | Item | Estado |
 |---|---|
-| Zona horaria PC casa | ✅ `America/Mexico_City` (UTC-6) |
-| Zona horaria PostgreSQL | ✅ `America/Mexico_City` |
-| Timestamps en BD | ✅ todos en CST, coherentes |
+| Zona horaria PC casa / PostgreSQL | ✅ `America/Mexico_City` (UTC-6) |
 | Cron Ubuntu laptop | ✅ `*/30 con flock` |
 | Webhook GitHub | ✅ ID 606281234, ping 200 OK |
 | Arranque automático Windows | ✅ carpeta Startup del usuario |
-| node/npm en PC trabajo | ❌ NO instalado — builds solo en PC casa |
+| node/npm | ❌ solo en PC casa — builds de frontend solo ahí |
 
 ---
 
-## SIGUIENTE SPRINT — Pendientes priorizados
+## SIGUIENTE SPRINT
 
-### 🔴 CRÍTICO — Infraestructura
+### 🔴 CRÍTICO — Esta noche en PC casa
+- [ ] Restart uvicorn + build frontend (pasos 1-2 de la sección ACCIÓN REQUERIDA)
+- [ ] Verificar los 5 puntos del PASO 3
+- [ ] Recalcular nómina Q6 (centro, id=6) — tras restart debe tener solo ~20 docentes
 
-- [ ] **Restart manual en PC casa a las 5pm** — ver sección ACCIÓN REQUERIDA arriba
-- [ ] **Build frontend en PC casa** — `npm run build` + commit dist + push
-- [ ] **NSSM** — convertir uvicorn en servicio Windows real para deploy sin intervención humana
+### 🔴 Infraestructura — próxima semana
+- [ ] **NSSM** — convertir uvicorn en servicio Windows real
   ```powershell
   # Descargar nssm.cc, luego:
   nssm install nomina-iesef "C:\Python312\python.exe" "-m uvicorn main_nomina:app --host 0.0.0.0 --port 8000"
   nssm set nomina-iesef AppDirectory "C:\Proyectos\nomina-iesef"
   nssm start nomina-iesef
   ```
-  En deploy.py reemplazar `os._exit(0)` con `subprocess.run(["sc", "stop/start", "nomina-iesef"])`
+  En `deploy.py` reemplazar `os._exit(0)` con `subprocess.run(["sc", "stop/start", "nomina-iesef"])`
 
-### 🟠 Alta prioridad — Desarrollo
-
-- [ ] **Excel HONORARIOS** — formato fiscal final con firma
-  Columnas: PROGRAMA | DOCENTE | H. PROG | H. PRES | H. VIRT | DESC | $/HR | HONORARIOS | IVA 16% | SUBTOTAL | RET ISR | RET IVA | TOTAL A PAGAR | FIRMA
-  Dos archivos separados: HONORARIOS CENTRO y HONORARIOS INSTITUTO
-- [ ] **Verificar cálculo fiscal** en `services/calculo_nomina.py` — confirmar IVA, ISR, retenciones por razon_social
-- [ ] **Módulo incidencias completo** — flujo: Coord.Académica registra → Coord.Docente valida → Cap.Humano aprueba
+### 🟠 Desarrollo prioritario
+- [ ] **Excel HONORARIOS completo** — formato fiscal final con firma
+  `PROGRAMA | DOCENTE | H.PROG | H.PRES | H.VIRT | DESC | $/HR | HONORARIOS | IVA 16% | SUBTOTAL | RET ISR | RET IVA | TOTAL A PAGAR | FIRMA`
+  Dos archivos: HONORARIOS CENTRO y HONORARIOS INSTITUTO
+- [ ] **Verificar cálculo fiscal multi-programa** en `services/calculo_nomina.py`
+- [ ] **Módulo incidencias completo** — Coord.Académica → Coord.Docente → Cap.Humano
 
 ### 🟡 Media prioridad
-
-- [ ] **Cargar horarios desde PDF aSc** — Eduardo pasa el PDF, Claude parsea y genera SQL
-- [ ] **Clasificador de checadas** con ventanas de horario (entrada ±10min, salida máx -20min)
-- [ ] **Recalcular nómina Q6** después del restart (quincena centro, debe tener ~20 docentes)
-- [ ] **Eliminar grupo "Segundo 1" de PREPA** — identificado como inexistente
+- [ ] Cargar horarios desde PDF aSc
+- [ ] Clasificador de checadas con ventanas de horario
+- [ ] Eliminar grupo "Segundo 1" de PREPA (inexistente)
 
 ### 🟢 Baja prioridad
-
-- [ ] Más indicadores en módulo Estadísticas
-- [ ] Integración Aspel NOI (archivo de exportación para pago masivo)
-- [ ] **PWA** — manifest.json + Service Worker
+- [ ] Más indicadores en Estadísticas
+- [ ] Integración Aspel NOI
+- [ ] PWA (manifest.json + Service Worker)
 
 ---
 
 ## ARQUITECTURA CLAVE
 
-### Infraestructura
-- **No está en HostGator** — todo corre local con Cloudflare Tunnel en PC casa
-- `nexo.iesef.edu.mx` → Cloudflare → túnel → `localhost:8000` PC casa
-- PostgreSQL local `iesef_nomina` — **NUNCA tocar `iesef_chatbot`**
-- psycopg2 directo, sin SQLAlchemy, sin Docker
-
 ### Rutas del proyecto
 | PC | Ruta |
 |---|---|
 | PC trabajo (oficina) | `C:\nomina-iesef` |
-| PC casa | `C:\Proyectos\nomina-iesef` |
+| PC casa (servidor) | `C:\Proyectos\nomina-iesef` |
 
-### Razones sociales — regla crítica
-| razon_social | Institución | Tarifa | Filtro correcto en SQL |
-|---|---|---|---|
-| `centro` | Preparatoria (Bachillerato) | $120/hr | `p.razon_social = 'centro'` |
-| `instituto` | Universidad, Especialidades, Maestrías | $130-220/hr | `p.razon_social = 'instituto'` |
-| `ambas` | Sin restricción | — | sin filtro |
-
-**Regla**: filtrar SIEMPRE por `p.razon_social` (programa), NO por `d.adscripcion` (docente).
-Un docente con `adscripcion='ambos'` puede dar clase en ambas razones sociales.
+### Regla crítica — razón social
+Filtrar SIEMPRE por `p.razon_social` (del programa), **NUNCA** por `d.adscripcion` (del docente).
+Un docente con `adscripcion='ambos'` puede aparecer en quincenas incorrectas si se filtra por docente.
 
 ### Asignaciones — JOIN por fechas (NO por ciclo string)
 ```sql
@@ -255,9 +223,16 @@ total_a_pagar  = sub_total - retencion_isr - retencion_iva
 ```
 
 ### Estado de la DB
-- Docentes activos: ~162 en sistema nuevo | Checadas: 28,097+
-- Quincenas: Q3 pagada · Q4 en_revision · Q5 abierta · Q6 (centro, en_revision — pendiente recalcular)
-- GAP permanente en checadas: 2026-04-13 13:04–19:41 (backup USB bloqueó TCP)
+- Checadas: 28,097+ | GAP permanente: 2026-04-13 13:04–19:41
+- Quincenas: Q3 pagada · Q4 en_revision · Q5 abierta · Q6 centro en_revision (pendiente recalcular)
+- `iesef_chatbot` → NUNCA TOCAR (chatbot WhatsApp de HostGator)
+
+### Componentes frontend clave nuevos (2026-04-15)
+| Archivo | Qué hace |
+|---|---|
+| `src/components/SyncBadge.jsx` | 3 variantes: Full/Compact/Portal — polling cada 5min |
+| `src/context/ThemeContext.jsx` | dark/light con localStorage + prefers-color-scheme |
+| `src/index.css` | overrides globales dark mode (Tailwind + inline styles React) |
 
 ---
 
@@ -266,19 +241,14 @@ total_a_pagar  = sub_total - retencion_isr - retencion_iva
 ```bash
 # Al EMPEZAR (cualquier PC)
 git pull
-# Claude Code lee este archivo → contexto completo
 
 # Al TERMINAR — cambios de backend
-git add -u
-git commit -m "descripción"
-git push                     # dispara webhook → nexo actualizado en ~5 seg
+git add -u && git commit -m "descripción" && git push
 
 # Al TERMINAR — cambios de frontend (SOLO EN PC CASA)
-npm run build               # en frontend/
-git add -f frontend/dist/
-git add -u
-git commit -m "build: descripción"
-git push
+cd frontend && npm run build && cd ..
+git add -f frontend/dist/ && git add -u
+git commit -m "build: descripción" && git push
 ```
 
 ---
