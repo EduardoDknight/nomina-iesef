@@ -83,9 +83,11 @@ async def deploy(
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=500, detail="git pull timeout (>60s)")
 
-    # Si ya estaba actualizado no hay nada que hacer
+    # Si ya estaba actualizado, tocar main_nomina.py para forzar reload de uvicorn
     if "Already up to date" in stdout or "Ya está actualizado" in stdout:
-        return {"status": "ok", "output": stdout, "reload": False}
+        (ROOT / "main_nomina.py").touch()
+        logger.info("Already up to date — tocado main_nomina.py para forzar reload")
+        return {"status": "ok", "output": stdout, "reload": True, "forced": True}
 
     # 3. Detectar archivos modificados y tocar .py para forzar reload
     try:
