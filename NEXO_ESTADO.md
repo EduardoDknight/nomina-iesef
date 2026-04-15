@@ -7,44 +7,35 @@
 ## Última sesión
 **Fecha:** 2026-04-14 (noche — PC casa)
 **Rama:** `main`
-**Último commit:** pendiente de push
+**Último commit:** `1666758` — fix: filtrar nomina por razon_social + eliminar en_revision para superadmin
 
 ---
 
-## CHANGELOG — Historial de cambios importantes
-> Formato: `YYYY-MM-DD HH:MM | PC | Cambio | Motivo`
-> Agregar aquí cualquier cambio crítico en infraestructura, BD, cron, o lógica de negocio.
+## FLUJO DE TRABAJO REMOTO — Cómo aplicar cambios desde PC trabajo
 
-| Fecha/Hora (CST) | PC | Cambio | Motivo |
-|---|---|---|---|
-| 2026-03-26 ~AM | Ubuntu laptop | Primera corrida del agente pyzk → 26,257 registros históricos del MB360 | Inicio de sincronización automática |
-| 2026-03-29 (sábado) | Ubuntu laptop | Agente apuntado de `api.iesef.edu.mx` → `nexo.iesef.edu.mx` | Migración a servidor local con tunnel |
-| 2026-04-01 al 09 | Ubuntu laptop | Cron APAGADO | Semana Santa, laptop apagada |
-| 2026-04-13 ~13:04 | MB360 | Alguien intentó respaldar MB360 a USB → puerto TCP bloqueado | Backup manual no coordinado |
-| 2026-04-13 13:04–19:41 | MB360 | **GAP TOTAL de checadas** — CERO registros para cualquier usuario | TCP bloqueado por backup USB |
-| 2026-04-13 ~19:00 | Ubuntu laptop | 46 instancias del cron corriendo simultáneamente (confirmado en sync_log) | Bug: flock no configurado |
-| 2026-04-14 ~AM | Ubuntu laptop | **Cron corregido: `*/5` → `*/30 con flock`** | Eliminar colisiones con v1 y MB360 |
-| 2026-04-14 10:35 CST | PC trabajo | Fix `a.ciclo` → `vigente_desde/vigente_hasta` en exportar_nomina_resumen | Error al exportar Excel nómina |
-| 2026-04-14 10:40 CST | PC trabajo | Webhook `/deploy` agregado para auto-pull desde GitHub | Eliminar necesidad de ir a casa para aplicar fixes |
-| 2026-04-14 ~20:00 CST | PC casa | `.env` actualizado con `DEPLOY_SECRET=iesef-deploy-2026` | El webhook necesitaba el secret para verificar firma |
-| 2026-04-14 ~20:00 CST | PC casa | Sistema v1 corregido (columna `_biometrico` mal nombrada por dev externo) | v1 ya funciona y toma sus checadas |
-| 2026-04-14 ~20:00 CST | PC casa | Excel nómina verificado OK — genera 20,252 bytes sin errores para Q4 | Confirmado funcional |
-| 2026-04-14 ~20:00 CST | PC casa | Uvicorn iniciado con `Start-Process` PowerShell + `--reload` | Servidor corriendo en localhost:8000 |
+```
+PC trabajo (Claude Code)
+        │
+        │  git push → GitHub
+        ▼
+  github.com/EduardoDknight/nomina-iesef
+        │
+        │  Webhook POST /deploy  (automático al hacer push)
+        ▼
+  nexo.iesef.edu.mx/deploy
+        │  verifica firma HMAC SHA-256
+        │  git pull --ff-only
+        │  touch archivos .py modificados
+        ▼
+  uvicorn --reload detecta cambios
+        │
+        ▼
+  🌐 nexo.iesef.edu.mx actualizado (sin tocar la PC casa)
+```
 
----
-
-## ✅ TAREAS COMPLETADAS HOY (PC casa, noche)
-
-1. ✅ **DEPLOY_SECRET** agregado al `.env` → webhook ya puede verificar firmas GitHub
-2. ✅ **Excel nómina** verificado — genera sin errores (fix `vigente_desde/vigente_hasta` funcionando)
-3. ✅ **Uvicorn** iniciado correctamente con `--reload`, responde en localhost:8000
-4. ✅ **Sistema v1** corregido por Eduardo (columna `_biometrico` eliminada del código del dev externo)
-
----
-
-## ⚠️ PENDIENTE INMEDIATO — Configurar GitHub Webhook
-
-Ve a: **github.com/EduardoDknight/nomina-iesef → Settings → Webhooks → Add webhook**
+### Requisito único: GitHub Webhook
+Configurar **UNA SOLA VEZ** en:
+> github.com/EduardoDknight/nomina-iesef → Settings → Webhooks → Add webhook
 
 | Campo | Valor |
 |---|---|
@@ -54,101 +45,129 @@ Ve a: **github.com/EduardoDknight/nomina-iesef → Settings → Webhooks → Add
 | Events | Just the push event |
 | Active | ✅ |
 
----
+Después del primer push, GitHub muestra ✅ verde si el webhook funcionó.
 
-## ⚠️ PENDIENTE — Cron Ubuntu laptop
-
-En la laptop Ubuntu, ejecutar:
+### Flujo en PC trabajo (sesión típica)
 ```bash
-crontab -e
-# Cambiar la línea del cron de:
-#   */5 * * * * /ruta/al/script
-# Por:
-#   */30 * * * * /usr/bin/flock -n /tmp/agente_nomina.lock /ruta/al/script
+# 1. Al empezar
+git pull
+
+# 2. Claude Code hace los cambios
+# (si hay frontend: npm run build en frontend/)
+
+# 3. Al terminar
+git add -u
+git add -f frontend/dist/     # si hubo cambios de UI
+git commit -m "fix: descripción del cambio"
+git push
+# → GitHub dispara el webhook → nexo se actualiza solo
 ```
-Confirmar con: `crontab -l`
 
 ---
 
-## ⚠️ PENDIENTE — Zona horaria PC casa
-El servidor guarda timestamps 2 horas adelantados (el reloj está mal).
+## ARRANQUE AUTOMÁTICO DEL SERVIDOR (PC casa)
+
+### Script manual (si el servidor se cae)
 ```powershell
-Set-TimeZone -Id "Central Standard Time (Mexico)"
+powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.ps1
 ```
+
+### Instalar arranque automático al inicio de Windows (ejecutar UNA SOLA VEZ como admin)
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\scripts\instalar_autostart.ps1
+```
+Esto crea una tarea en el Programador de tareas que arranca uvicorn automáticamente
+cada vez que inicias sesión en Windows.
+
+### Verificar que el servidor corre
+```powershell
+# Test rápido
+python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/').status)"
+# Debe imprimir: 200
+
+# Ver logs en tiempo real
+Get-Content C:\Proyectos\nomina-iesef\logs\uvicorn_err.log -Wait
+```
+
+### Logs
+- `logs/uvicorn.log` — stdout (casi vacío)
+- `logs/uvicorn_err.log` — stderr donde uvicorn realmente escribe
 
 ---
 
-## Lo que está funcionando en producción (nexo.iesef.edu.mx → localhost:8000 vía Cloudflare Tunnel)
+## CHANGELOG — Historial de cambios importantes
+
+| Fecha/Hora (CST) | PC | Cambio | Motivo |
+|---|---|---|---|
+| 2026-03-26 ~AM | Ubuntu laptop | Primera corrida del agente pyzk → 26,257 registros históricos del MB360 | Inicio de sincronización automática |
+| 2026-03-29 (sábado) | Ubuntu laptop | Agente apuntado a `nexo.iesef.edu.mx` | Migración a servidor local con tunnel |
+| 2026-04-13 13:04–19:41 | MB360 | **GAP TOTAL de checadas** — backup USB bloqueó TCP | Datos perdidos permanentemente |
+| 2026-04-14 ~AM | Ubuntu laptop | **Cron corregido: `*/30` con flock** | Eliminar 46 instancias simultáneas |
+| 2026-04-14 10:35 | PC trabajo | Fix exportar nómina: `a.ciclo` → `vigente_desde/vigente_hasta` | Excel nómina ya funciona |
+| 2026-04-14 10:40 | PC trabajo | Webhook `/deploy` implementado | Auto-deploy desde GitHub |
+| 2026-04-14 ~20:00 | PC casa | `.env` + `DEPLOY_SECRET`; servidor levantado; Excel verificado OK | Setup PC casa |
+| 2026-04-14 ~20:30 | PC casa | Estadísticas: KPIs + recharts (5 gráficas) | Módulo completado |
+| 2026-04-14 ~21:00 | PC casa | Quincenas: colores por mes + botón eliminar | UX |
+| 2026-04-14 ~21:30 | PC casa | Fix razon_social en cálculo nómina (centro ≠ instituto) | Bug: quincena centro mostraba todos los programas |
+| 2026-04-14 ~22:00 | PC casa | Autostart Windows + deploy.py mejorado (touch .py) | Infraestructura |
+| 2026-04-14 | Eduardo | Sistema v1 corregido: columna `_biometrico` | v1 ya toma sus propias checadas |
+
+---
+
+## Lo que está funcionando en producción
 
 | Módulo | Estado |
 |---|---|
 | Login JWT / roles / usuarios | ✅ |
 | Catálogos: docentes, programas, materias | ✅ |
 | Asignaciones + horarios (vigente_desde/vigente_hasta) | ✅ |
-| Horarios Por Grupo: grilla semanal visual, rowspan, conflictos, nueva materia | ✅ |
-| Quincenas: crear, cambiar estado, listar | ✅ |
-| QuincenaDetalle: docentes + campo clínico + evaluación virtual | ✅ |
+| Horarios Por Grupo: grilla semanal visual | ✅ |
+| Quincenas: crear, estado, colores por mes, eliminar | ✅ |
+| QuincenaDetalle: nómina, asistencia, virtual, incidencias, campo clínico | ✅ |
 | Evaluación virtual (CA 40% + EV 60%) | ✅ |
-| Exportación Excel nómina | ✅ FUNCIONANDO (fix aplicado + verificado) |
+| Cálculo nómina filtrado por razon_social (centro/instituto/ambas) | ✅ |
+| Exportación Excel nómina resumen | ✅ |
 | Personal Administrativo: CRUD + asistencia quincena | ✅ |
 | Portal docente/trabajador: checadas, credenciales | ✅ |
-| Estadísticas — KPIs animados + gráficas recharts | ✅ |
+| Estadísticas — KPIs animados + 5 gráficas recharts | ✅ |
 | MB360 → Ubuntu laptop → nexo (28k+ checadas) | ✅ cron cada 30min con flock |
 | Cloudflare Tunnel (nexo.iesef.edu.mx → localhost:8000) | ✅ |
-| Auto-deploy via GitHub webhook | ⏳ falta configurar en GitHub (ver arriba) |
-| Sistema v1 (dev externo) | ✅ corregido — ya toma sus propias checadas |
+| Auto-deploy via GitHub webhook POST /deploy | ⏳ falta configurar webhook en GitHub |
+| Arranque automático del servidor en Windows | ⏳ ejecutar instalar_autostart.ps1 |
 
 ---
 
-## Servidor local (PC casa)
-- FastAPI arranca con:
-  ```powershell
-  powershell -Command "Start-Process -FilePath 'python' -ArgumentList '-m uvicorn main_nomina:app --reload --host 0.0.0.0 --port 8000' -WorkingDirectory 'C:\Proyectos\nomina-iesef' -RedirectStandardOutput 'C:\Proyectos\nomina-iesef\logs\uvicorn.log' -RedirectStandardError 'C:\Proyectos\nomina-iesef\logs\uvicorn_err.log' -WindowStyle Hidden"
-  ```
-- Logs stdout: `C:\Proyectos\nomina-iesef\logs\uvicorn.log`
-- Logs stderr (donde realmente escribe): `C:\Proyectos\nomina-iesef\logs\uvicorn_err.log`
-- Verificar proceso: `netstat -ano | findstr :8000` (o `python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/docs').status)"`)
-- **No usa systemctl** — es un Start-Process en PowerShell.
+## ⚠️ ACCIONES PENDIENTES EN PC CASA
 
----
+### 1. Configurar webhook en GitHub (solo una vez, en el browser)
+Ver instrucciones en sección "FLUJO DE TRABAJO REMOTO" arriba.
 
-## Diagnóstico checadas — historial del cron (sync_log)
-| Fecha | Estado |
-|---|---|
-| Mar 26 | Primera corrida: descargó 26,257 registros históricos |
-| Mar 27–28 | Normal (300–456 nuevos/día) |
-| Mar 29–31 | Muy esporádico |
-| Abr 1–9 | APAGADO (Semana Santa + laptop off) — NORMAL |
-| Abr 10 | 3 runs, 164 nuevos (regreso vacaciones) |
-| Abr 11–12 | Sin runs |
-| Abr 13 | 631 + 752 nuevos (46 instancias simultáneas) |
-| Abr 14 | Cron corregido a */30 con flock ✅ |
+### 2. Instalar arranque automático del servidor
+```powershell
+# Abrir PowerShell como Administrador y ejecutar:
+powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\scripts\instalar_autostart.ps1
+```
 
-### Gap Abr 13 13:04–19:41 — Permanente, no recuperable
-Backup USB bloqueó el puerto TCP del MB360. Las checadas de ese período (incluyendo salida de Eduardo) se perdieron permanentemente. El MB360 no guarda logs de intentos fallidos de conexión.
+### 3. Cron Ubuntu laptop — flock (cuando puedas SSH)
+```bash
+crontab -e
+# Cambiar a:
+*/30 * * * * /usr/bin/flock -n /tmp/agente_nomina.lock /home/nomina/venv_zk/bin/python3 /home/nomina/agente_nomina/agente.py >> /home/nomina/agente_nomina/agente.log 2>&1
+```
 
-### tipo_punch NO confiable
-El MB360 envía todos los punches como tipo=0 o tipo=1 sin distinguir entrada/salida.
-El código usa **posición temporal** (primera del día = entrada, última = salida). Dedup: 180 seg.
-
----
-
-## Estado de la DB
-- **Docentes activos:** 162
-- **Checadas totales:** 28,097+ (al 2026-04-14)
-- **Quincenas:** Q3 pagada · Q4 en_revisión (id=4) + abierta (id=6) · Q5 abierta (id=5)
-- **Evaluaciones virtuales:** 280 registros
+### 4. Zona horaria PC casa
+```powershell
+Set-TimeZone -Id "Central Standard Time (Mexico)"
+```
 
 ---
 
 ## Siguiente sprint — Funcionalidades pendientes
 
 ### Alta prioridad
-- [ ] **Configurar webhook GitHub** — ver instrucciones arriba
-- [ ] **Verificar MB360** — conectar via SSH a laptop Ubuntu y confirmar checadas de docentes recientes
+- [ ] **Motor de cálculo fiscal completo** — honorarios × IVA × ISR por razon_social (fórmula ya documentada en CLAUDE.md)
+- [ ] **Excel HONORARIOS** — formato exacto del Excel original: HONORARIOS CENTRO y HONORARIOS INSTITUTO con cálculo fiscal
 - [ ] **Módulo de incidencias y suplencias** — flujo: coord_academica → coord_docente → cap_humano
-- [ ] **Motor de cálculo fiscal** — horas × tarifa → honorarios, IVA, ISR (fórmula ya documentada)
-- [ ] **Excel HONORARIOS** — formato exacto del Excel original (separado del resumen actual)
 
 ### Media prioridad
 - [ ] **Cargar horarios desde PDF aSc** — Eduardo pasa el PDF, Claude parsea y genera SQL
@@ -158,7 +177,7 @@ El código usa **posición temporal** (primera del día = entrada, última = sal
 ### Baja prioridad
 - [ ] Estadísticas: más indicadores
 - [ ] Integración Aspel NOI
-- [ ] **PWA (Progressive Web App)** — manifest.json + Service Worker. Estimado: 1-2 días.
+- [ ] **PWA** — manifest.json + Service Worker
 
 ---
 
@@ -188,10 +207,10 @@ retencion_iva  = iva × (2/3)
 total_a_pagar  = sub_total - retencion_isr - retencion_iva
 ```
 
-### Comando arranque servidor (PC casa)
-```powershell
-powershell -Command "Start-Process -FilePath 'python' -ArgumentList '-m uvicorn main_nomina:app --reload --host 0.0.0.0 --port 8000' -WorkingDirectory 'C:\Proyectos\nomina-iesef' -RedirectStandardOutput 'C:\Proyectos\nomina-iesef\logs\uvicorn.log' -RedirectStandardError 'C:\Proyectos\nomina-iesef\logs\uvicorn_err.log' -WindowStyle Hidden"
-```
+### Estado de la DB
+- Docentes activos: 162
+- Checadas totales: 28,097+ (al 2026-04-14)
+- Quincenas: Q3 pagada · Q4 en_revision (id=4, ambas) · Q5 abierta (id=5) · Q6 en_revision (id=6, centro — pendiente eliminar)
 
 ---
 
@@ -199,13 +218,18 @@ powershell -Command "Start-Process -FilePath 'python' -ArgumentList '-m uvicorn 
 
 ### Al EMPEZAR una sesión (cualquier PC)
 ```bash
-cd C:\Proyectos\nomina-iesef   # o C:/nomina-iesef en PC trabajo
 git pull
-# Claude Code leerá NEXO_ESTADO.md automáticamente y tendrá todo el contexto
+# Claude Code leerá NEXO_ESTADO.md automáticamente → contexto completo
 ```
 
-### Al TERMINAR una sesión
-Claude actualiza este archivo y hace push. En la siguiente PC solo haz `git pull`.
+### Al TERMINAR una sesión (PC trabajo → deploy automático)
+```bash
+git add -u
+git add -f frontend/dist/    # si hubo cambios de UI
+git commit -m "descripción"
+git push
+# Si el webhook está configurado → nexo se actualiza solo en ~5 segundos
+```
 
 ---
 
