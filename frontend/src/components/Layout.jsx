@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 
 const ROLES_LABEL = {
   superadmin:          'Superadmin',
@@ -83,6 +84,18 @@ const IconMenu = () => (
 const IconX = () => (
   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  </svg>
+)
+const IconMoon = () => (
+  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+  </svg>
+)
+const IconSun = () => (
+  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
   </svg>
 )
 
@@ -177,6 +190,7 @@ function NavGroup({ item, usuario, onNavigate }) {
 // ── Layout ────────────────────────────────────────────────────────────────────
 export default function Layout() {
   const { usuario, logout } = useAuth()
+  const { dark, toggle: toggleTheme } = useTheme()
   const navigate  = useNavigate()
   const location  = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -267,6 +281,26 @@ export default function Layout() {
             <p className="text-xs truncate" style={{ color: TEXT_DIM }}>{ROLES_LABEL[usuario?.rol]}</p>
           </div>
         </div>
+        {/* Botón modo oscuro / claro */}
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all mb-1"
+          style={{ color: TEXT_DIM }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'white';   e.currentTarget.style.background = HOVER_BG }}
+          onMouseLeave={e => { e.currentTarget.style.color = TEXT_DIM;  e.currentTarget.style.background = 'transparent' }}
+          title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+        >
+          {dark ? <IconSun /> : <IconMoon />}
+          <span>{dark ? 'Modo claro' : 'Modo oscuro'}</span>
+          {/* Indicador visual del estado actual */}
+          <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full"
+            style={{ background: dark ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)',
+                     color:      dark ? '#fbbf24'                : '#818cf8' }}>
+            {dark ? 'oscuro' : 'claro'}
+          </span>
+        </button>
+
+        {/* Cerrar sesión */}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all"
@@ -285,7 +319,8 @@ export default function Layout() {
   )
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#f1f4f8' }}>
+    <div className="flex h-screen overflow-hidden"
+      style={{ background: dark ? '#0f172a' : '#f1f4f8', transition: 'background 0.2s ease' }}>
 
       {/* ── Sidebar desktop (siempre visible ≥ md) ──────────────────────────── */}
       <aside className="hidden md:flex w-60 flex-shrink-0 flex-col" style={{ background: SIDEBAR_BG }}>

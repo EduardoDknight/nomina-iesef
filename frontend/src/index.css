@@ -1,1 +1,107 @@
 @import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DARK MODE — NEXO IESEF
+   Estrategia: la clase `dark` se agrega al <html> por ThemeContext.
+   Cubrimos dos tipos de estilos:
+     1. Clases Tailwind (bg-white, text-slate-800, border-slate-200, …)
+     2. Inline styles React (style={{ background: 'white', color: '#111827' }})
+   Usamos !important porque los inline styles tienen máxima especificidad,
+   y !important en una hoja de autor sí los sobreescribe.
+───────────────────────────────────────────────────────────────────────────── */
+
+html.dark {
+  color-scheme: dark;
+
+  /* ── Fondo general de la app (el flex container root en Layout.jsx) ── */
+  & [style*="background: #f1f4f8"] { background: #0f172a !important; }
+  & [style*="background: #f8fafc"] { background: #0f172a !important; }
+  & [style*="background: #f9fafb"] { background: #111827 !important; }
+
+  /* ── Tarjetas y paneles blancos ──────────────────────────────────── */
+  & .bg-white,
+  & [style*="background: white"],
+  & [style*="background: #ffffff"],
+  & [style*="background: #fff"]     { background: #1e293b !important; }
+
+  /* Fondo alternativo ligeramente más claro (hover, sub-paneles) */
+  & .bg-slate-50,
+  & [style*="background: #f8fafc"]  { background: #0f172a !important; }
+  & .bg-slate-100                   { background: #1e293b !important; }
+
+  /* ── Bordes ──────────────────────────────────────────────────────── */
+  & .border-slate-200,
+  & .border-slate-100               { border-color: #334155 !important; }
+  & .border-slate-300               { border-color: #475569 !important; }
+  & .divide-slate-100 > * + *,
+  & .divide-slate-200 > * + *       { border-color: #334155 !important; }
+  & [style*="border: 1px solid #e5e7eb"] { border-color: #334155 !important; }
+  & [style*="border: 1px solid #e2e8f0"] { border-color: #334155 !important; }
+  & [style*="border-bottom: 1px solid #e5e7eb"] { border-color: #334155 !important; }
+  & [style*="border-color: #e5e7eb"] { border-color: #334155 !important; }
+
+  /* ── Texto ───────────────────────────────────────────────────────── */
+  & .text-slate-900,
+  & .text-slate-800,
+  & [style*="color: #111827"],
+  & [style*="color: #1f2937"]       { color: #f1f5f9 !important; }
+
+  & .text-slate-700,
+  & [style*="color: #374151"]       { color: #e2e8f0 !important; }
+
+  & .text-slate-600,
+  & [style*="color: #4b5563"]       { color: #cbd5e1 !important; }
+
+  & .text-slate-500,
+  & [style*="color: #6b7280"]       { color: #94a3b8 !important; }
+
+  & .text-slate-400,
+  & [style*="color: #9ca3af"]       { color: #64748b !important; }
+
+  /* ── Inputs, selects y textareas ─────────────────────────────────── */
+  & input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  & textarea,
+  & select {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+  }
+  & input::placeholder,
+  & textarea::placeholder { color: #64748b !important; }
+
+  /* Inputs con clase Tailwind */
+  & .bg-white.border,
+  & input.bg-white,
+  & input.border-slate-200 {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  /* ── Sombras ─────────────────────────────────────────────────────── */
+  /* Las sombras claras desaparecen en fondo oscuro — las hacemos visibles */
+  & [style*="box-shadow: 0 1px 6px rgba(0,0,0,0.06)"],
+  & [style*="box-shadow: 0 1px 3px rgba(0,0,0,0.08)"] {
+    box-shadow: 0 1px 8px rgba(0,0,0,0.40) !important;
+  }
+
+  /* ── Tablas ──────────────────────────────────────────────────────── */
+  & thead,
+  & .bg-slate-50 thead,
+  & th                              { background-color: #1e293b !important; color: #94a3b8 !important; }
+  & tbody tr:hover                  { background-color: #263548 !important; }
+  & .hover\:bg-slate-50:hover       { background-color: #263548 !important; }
+  & .hover\:bg-slate-100:hover      { background-color: #263548 !important; }
+
+  /* ── Badges de estado — mantener colores pero más oscuros ────────── */
+  /* Los badges de emerald/amber/blue/red conservan sus colores — son semánticos.
+     No los tocamos. Solo ajustamos el texto si está hardcodeado en oscuro. */
+  & [style*="color: #065f46"]       { color: #34d399 !important; } /* emerald text */
+  & [style*="color: #92400e"]       { color: #fbbf24 !important; } /* amber text  */
+  & [style*="color: #1e3a5f"]       { color: #60a5fa !important; } /* blue text   */
+
+  /* ── Scrollbar sutil para modo oscuro ───────────────────────────── */
+  & ::-webkit-scrollbar              { width: 6px; height: 6px; }
+  & ::-webkit-scrollbar-track        { background: #1e293b; }
+  & ::-webkit-scrollbar-thumb        { background: #475569; border-radius: 3px; }
+  & ::-webkit-scrollbar-thumb:hover  { background: #64748b; }
+}
