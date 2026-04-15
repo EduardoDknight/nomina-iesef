@@ -153,6 +153,60 @@ async def crear_quincena(
         conn.close()
     return QuincenaOut(**row)
 
+@router.delete("/{quincena_id}", status_code=200)
+async def eliminar_quincena(
+    quincena_id: int,
+    usuario: UsuarioActual = Depends(get_usuario_actual)
+):
+    """Elimina una quincena y todos sus datos asociados.
+    Solo permitido si está en estado 'abierta'.
+    Solo director_cap_humano o superadmin pueden hacerlo.
+    """
+    if usuario.rol not in ('director_cap_humano', 'superadmin'):
+        raise HTTPException(status_code=403, detail="Solo el Director de Capital Humano puede eliminar quincenas")
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, estado, fecha_inicio, fecha_fin FROM quincenas WHERE id = %s", (quincena_id,))
+        q = cur.fetchone()
+        if not q:
+            raise HTTPException(status_code=404, detail="Quincena no encontrada")
+        if q["estado"] != "abierta":
+            raise HTTPException(
+                status_code=400,
+                detail=f"No se puede eliminar una quincena en estado '{q['estado']}'. Solo se eliminan quincenas 'abierta'."
+            )
+
+        # Borrar en cascada (orden: hijos primero)
+        tablas = [
+            "overrides_pago_clase",
+            "evaluacion_virtual_semana",
+            "evaluacion_virtual_resultado",
+            "campo_clinico_quincena",
+            "incidencias",
+            "ajustes_quincena",
+            "nomina_quincena",
+            "aclaraciones",
+        ]
+        for tabla in tablas:
+            cur.execute(f"DELETE FROM {tabla} WHERE quincena_id = %s", (quincena_id,))
+
+        cur.execute("DELETE FROM quincenas WHERE id = %s", (quincena_id,))
+        conn.commit()
+        logger.info(f"Quincena {quincena_id} eliminada por usuario {usuario.id}")
+        return {"ok": True, "detail": "Quincena eliminada correctamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error eliminando quincena {quincena_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error al eliminar: {e}")
+    finally:
+        cur.close()
+        conn.close()
+
+
 @router.patch("/{quincena_id}/estado")
 async def cambiar_estado(
     quincena_id: int,
