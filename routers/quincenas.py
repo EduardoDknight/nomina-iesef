@@ -347,7 +347,7 @@ async def get_asistencia_quincena(
                              AND nq.quincena_id = %s
         WHERE d.activo = true
           AND d.chec_id IS NOT NULL
-          AND (%s = 'ambas' OR d.adscripcion IN (%s, 'ambos'))
+          AND (%s = 'ambas' OR p.razon_social = %s)
         GROUP BY d.id, d.nombre_completo, d.chec_id, d.tipo,
                  nq.horas_presenciales, nq.horas_virtuales,
                  nq.horas_descuento, nq.estado
