@@ -5,11 +5,11 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-15 (tarde — PC trabajo, sesión completa)
+**Fecha:** 2026-04-15 (noche — PC casa, sesión de aplicación de fixes)
 **Rama:** `main`
-**Último commit:** `62bc564` — feat: dark mode con persistencia en localStorage
+**Último commit:** `f96cf28` — build: dark mode + SyncBadge + fixes razon_social
 
-### Commits de hoy (en orden)
+### Commits del día (en orden)
 | Hash | Descripción |
 |---|---|
 | `7ba2c61` | fix: GET nómina lee razon_social directamente de la quincena |
@@ -22,33 +22,21 @@
 | `426a370` | docs: actualizar estado sesión con SyncBadge y pasos build |
 | `5fc21aa` | docs: reescribir NEXO_ESTADO.md + crear NEXO_PROYECTO_CHAT.md |
 | `62bc564` | feat: dark mode con persistencia en localStorage |
+| `f96cf28` | build: dark mode + SyncBadge + fixes razon_social (**dist compilado**) |
 
 ---
 
-## 🚨 ACCIÓN REQUERIDA AL LLEGAR A CASA (esta noche)
+## ✅ ACCIONES COMPLETADAS (noche 2026-04-15)
 
-### PASO 1 — Reiniciar uvicorn (activa TODOS los fixes de backend)
-```powershell
-Get-Process python | Stop-Process -Force
-powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.ps1
-```
-
-### PASO 2 — Build del frontend (activa SyncBadge + Dark Mode)
-```powershell
-cd C:\Proyectos\nomina-iesef\frontend
-npm run build
-cd ..
-git add -f frontend/dist/
-git commit -m "build: dark mode + SyncBadge + fixes razon_social"
-git push
-```
-
-### PASO 3 — Verificar que todo funcionó
-1. Quincena "centro" → debe mostrar solo ~20 docentes de Bachillerato (no 145)
-2. Excel exportado → Barrera Reyes debe mostrar $120 (no $75)
-3. Sidebar → debe aparecer botón 🌙 / ☀️ sobre "Cerrar sesión"
-4. Estadísticas → badge "Al día · MB360 HH:MM" en lugar de "En vivo"
-5. Hacer un push de prueba desde PC trabajo → nexo se actualiza en ~5 seg (sin restart manual)
+1. ✅ Uvicorn reiniciado con código nuevo (os._exit activo)
+2. ✅ `npm run build` ejecutado → dist compilado y pusheado (`f96cf28`)
+3. ✅ Webhook disparó correctamente → servidor se reinició solo en ~5s
+4. ⬜ **Pendiente verificar manualmente en el navegador:**
+   - Quincena "centro" → debe mostrar solo ~20 docentes de Bachillerato (no 145)
+   - Excel exportado → Barrera Reyes debe mostrar $120 (no $75)
+   - Sidebar → botón 🌙 / ☀️ visible sobre "Cerrar sesión"
+   - Estadísticas → badge "Al día · MB360 HH:MM"
+   - Recalcular nómina Q6 (centro, id=6)
 
 ---
 
@@ -116,6 +104,7 @@ powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.
 | 2026-04-15 tarde | PC trabajo | **SyncBadge** en 7 vistas (3 variantes) | Usuarios saben hasta qué hora son sus datos del checador |
 | 2026-04-15 tarde | PC trabajo | **Dark mode** (ThemeContext + CSS global + botón sidebar) | Toggle 🌙/☀️ con persistencia, sin tocar páginas individuales |
 | 2026-04-15 tarde | PC trabajo | **NEXO_PROYECTO_CHAT.md** creado | Contexto completo para Claude Projects (modo chat) |
+| 2026-04-15 noche | PC casa | **Restart uvicorn + build dist** | Activa todos los fixes del día + SyncBadge + Dark Mode |
 
 ---
 
@@ -130,16 +119,16 @@ powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.
 | QuincenaDetalle: nómina, asistencia, virtual, incidencias, campo clínico | ✅ activo | |
 | Modal incidencias: dropdown de asignaciones | ✅ activo | |
 | Evaluación virtual (CA 40% + EV 60%) | ✅ activo | |
-| Cálculo nómina filtrado por razon_social | ✅ en repo | ⚠️ activa tras restart uvicorn |
-| Exportación Excel resumen (fix $75→$120) | ✅ en repo | ⚠️ activa tras restart uvicorn |
+| Cálculo nómina filtrado por razon_social | ✅ activo | uvicorn reiniciado 2026-04-15 noche |
+| Exportación Excel resumen (fix $75→$120) | ✅ activo | uvicorn reiniciado 2026-04-15 noche |
 | Personal Administrativo: CRUD + asistencia | ✅ activo | |
 | Portales docente/trabajador | ✅ activo | |
 | Estadísticas: KPIs + 5 gráficas | ✅ activo | |
-| SyncBadge en 7 vistas | ✅ en repo | ⚠️ pendiente build frontend |
-| Dark mode (toggle 🌙/☀️ + CSS global) | ✅ en repo | ⚠️ pendiente build frontend |
+| SyncBadge en 7 vistas | ✅ activo | dist compilado 2026-04-15 noche |
+| Dark mode (toggle 🌙/☀️ + CSS global) | ✅ activo | dist compilado 2026-04-15 noche |
 | MB360 → Ubuntu → nexo (28k+ checadas) | ✅ activo | cron 30min con flock |
 | Cloudflare Tunnel (nexo.iesef.edu.mx) | ✅ activo | |
-| Auto-deploy webhook `/deploy` | ✅ en repo | ⚠️ os._exit activa tras restart uvicorn |
+| Auto-deploy webhook `/deploy` | ✅ activo | os._exit funcionando — probado 2026-04-15 noche |
 | Arranque automático Windows | ✅ activo | carpeta Startup del usuario |
 
 ---
@@ -158,10 +147,12 @@ powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.
 
 ## SIGUIENTE SPRINT
 
-### 🔴 CRÍTICO — Esta noche en PC casa
-- [ ] Restart uvicorn + build frontend (pasos 1-2 de la sección ACCIÓN REQUERIDA)
-- [ ] Verificar los 5 puntos del PASO 3
-- [ ] Recalcular nómina Q6 (centro, id=6) — tras restart debe tener solo ~20 docentes
+### 🔴 CRÍTICO — Verificar en navegador (mañana o ahora)
+- [ ] Quincena "centro" → debe mostrar solo ~20 docentes de Bachillerato (no 145)
+- [ ] Excel exportado → Barrera Reyes debe mostrar $120 (no $75)
+- [ ] Sidebar → botón 🌙/☀️ visible sobre "Cerrar sesión"
+- [ ] Estadísticas → badge "Al día · MB360 HH:MM" en lugar de "En vivo"
+- [ ] Recalcular nómina Q6 (centro, id=6) — debe producir solo ~20 docentes
 
 ### 🔴 Infraestructura — próxima semana
 - [ ] **NSSM** — convertir uvicorn en servicio Windows real
