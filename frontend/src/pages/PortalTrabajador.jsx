@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
+import { SyncBadgePortal } from '../components/SyncBadge'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -149,8 +150,11 @@ function TabAsistencia() {
       <DateRangeSelectorTW value={{ fi: rango.fi, ff: rango.ff }} onChange={handleRangeChange} />
 
       {/* Cabecera tiempo real */}
-      <div className="flex items-center justify-end">
-        <BadgeTiempoRealAdm actualizado={data?.actualizado_en} />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-end">
+          <BadgeTiempoRealAdm actualizado={data?.actualizado_en} />
+        </div>
+        <SyncBadgePortal />
       </div>
 
       {/* Resumen pills */}

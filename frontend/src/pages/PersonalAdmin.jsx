@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
+import SyncBadge from '../components/SyncBadge'
 
 const DIAS = [
   { key: 'lunes',     label: 'L' },
@@ -317,15 +318,18 @@ export default function PersonalAdmin() {
           <h1 className="text-xl font-bold text-slate-800">Personal Administrativo</h1>
           <p className="text-slate-500 text-sm mt-0.5">{trabajadores.length} trabajadores registrados</p>
         </div>
-        {canEdit && (
-          <button onClick={() => setModal('nuevo')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Agregar trabajador
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <SyncBadge />
+          {canEdit && (
+            <button onClick={() => setModal('nuevo')}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Agregar trabajador
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Buscador */}

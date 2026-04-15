@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
+import SyncBadge from '../components/SyncBadge'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -2530,8 +2531,9 @@ export default function QuincenaDetalle() {
         </div>
 
         {/* Acciones de estado */}
-        {canEdit && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <SyncBadge />
+          {canEdit && <>
             {quincena.estado === 'abierta' && (
               <button onClick={() => cambiarEstado('en_revision')} disabled={cambiandoEstado}
                 className="px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg disabled:opacity-50">
@@ -2556,8 +2558,8 @@ export default function QuincenaDetalle() {
                 Marcar como pagada
               </button>
             )}
-          </div>
-        )}
+          </>}
+        </div>
       </div>
 
       {/* Tabs */}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
+import SyncBadge from '../components/SyncBadge'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -721,6 +722,7 @@ export default function AdminQuincenaDetalle() {
             Ciclo {quincena.ciclo} · Personal Administrativo · #{quincena.id}
           </p>
         </div>
+        <SyncBadge />
       </div>
 
       {/* Tabs */}

@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
 import api from '../api/client'
+import { SyncBadgeFull } from '../components/SyncBadge'
 
 // ── Paleta ──────────────────────────────────────────────────────────────────
 const C_RED    = '#8B1020'
@@ -202,11 +203,7 @@ export default function Estadisticas() {
             Indicadores generales del sistema NEXO
           </p>
         </div>
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium"
-          style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-          En vivo
-        </div>
+        <SyncBadgeFull />
       </div>
 
       {/* ── KPIs ─────────────────────────────────────────────────────────── */}

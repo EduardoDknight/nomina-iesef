@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
+import { SyncBadgePortal } from '../components/SyncBadge'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) => n == null ? '—' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
@@ -755,6 +756,11 @@ export default function PortalDocente() {
             {tab === 'aclaraciones' && 'Consultas y aclaraciones enviadas a Capital Humano'}
             {tab === 'cuenta'       && 'Configuración de tu contraseña de acceso'}
           </p>
+          {(tab === 'checadas' || tab === 'nomina') && (
+            <div className="mt-2">
+              <SyncBadgePortal />
+            </div>
+          )}
         </div>
         {tab === 'nomina'       && <TabNomina />}
         {tab === 'checadas'     && <TabChecadas />}

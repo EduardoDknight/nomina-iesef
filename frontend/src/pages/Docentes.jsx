@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
+import SyncBadge from '../components/SyncBadge'
 
 const ADSCRIPCION_LABEL = { centro: 'Centro', instituto: 'Instituto', ambos: 'Ambos' }
 const TIPO_LABEL = { por_horas: 'Por horas', tiempo_completo: 'Tiempo completo', campo_clinico: 'Campo clínico' }
@@ -490,6 +491,7 @@ export default function Docentes() {
           <p className="text-slate-500 text-sm mt-0.5">{total} de {todos.length} registros</p>
         </div>
         <div className="flex items-center gap-2">
+          <SyncBadge />
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleUpload} />
           <button onClick={() => fileRef.current.click()} disabled={uploading}
             className="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-800 text-sm font-medium rounded-lg transition-all disabled:opacity-50 active:scale-95">
