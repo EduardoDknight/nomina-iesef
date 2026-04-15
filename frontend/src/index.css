@@ -101,6 +101,33 @@ html.dark {
   & .text-rose-600                 { color: #fb7185 !important; }
   & .text-rose-700                 { color: #fb7185 !important; }
 
+  /* ── Fondos gray-* (usados en Horarios y otros) ─────────────────────
+     Tailwind 'gray' y 'slate' son paletas distintas; las cubrimos ambas.
+  ──────────────────────────────────────────────────────────────────────── */
+  & .bg-gray-50                    { background-color: #0f172a !important; }
+  & .bg-gray-100                   { background-color: #1e293b !important; }
+  & .bg-gray-200                   { background-color: #263548 !important; }
+
+  & .hover\:bg-gray-50:hover       { background-color: #263548 !important; }
+  & .hover\:bg-gray-100:hover      { background-color: #263548 !important; }
+  & .hover\:bg-gray-200:hover      { background-color: #334155 !important; }
+
+  & .border-gray-100,
+  & .border-gray-200               { border-color: #334155 !important; }
+  & .border-gray-300               { border-color: #475569 !important; }
+
+  & .divide-gray-100 > * + *,
+  & .divide-gray-200 > * + *       { border-color: #334155 !important; }
+
+  /* ── Texto gray-* ────────────────────────────────────────────────────── */
+  & .text-gray-900,
+  & .text-gray-800                 { color: #f1f5f9 !important; }
+  & .text-gray-700                 { color: #e2e8f0 !important; }
+  & .text-gray-600                 { color: #cbd5e1 !important; }
+  & .text-gray-500                 { color: #94a3b8 !important; }
+  & .text-gray-400                 { color: #64748b !important; }
+  & .text-gray-300                 { color: #475569 !important; }
+
   /* ── Texto neutro slate ──────────────────────────────────────────────── */
   & .text-slate-900,
   & .text-slate-800,
