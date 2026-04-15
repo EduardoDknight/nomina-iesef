@@ -1,64 +1,151 @@
 @import "tailwindcss";
 
-/* ─────────────────────────────────────────────────────────────────────────────
+/* =============================================================================
    DARK MODE — NEXO IESEF
    Estrategia: la clase `dark` se agrega al <html> por ThemeContext.
-   Cubrimos dos tipos de estilos:
-     1. Clases Tailwind (bg-white, text-slate-800, border-slate-200, …)
+   Cubrimos:
+     1. Clases Tailwind (bg-white, text-slate-800, bg-blue-100, …)
      2. Inline styles React (style={{ background: 'white', color: '#111827' }})
-   Usamos !important porque los inline styles tienen máxima especificidad,
-   y !important en una hoja de autor sí los sobreescribe.
-───────────────────────────────────────────────────────────────────────────── */
+   Usamos !important porque los inline styles tienen máxima especificidad.
+============================================================================= */
 
 html.dark {
   color-scheme: dark;
 
-  /* ── Fondo general de la app (el flex container root en Layout.jsx) ── */
-  & [style*="background: #f1f4f8"] { background: #0f172a !important; }
-  & [style*="background: #f8fafc"] { background: #0f172a !important; }
-  & [style*="background: #f9fafb"] { background: #111827 !important; }
+  /* ── Fondo general de la app ─────────────────────────────────────────── */
+  & [style*="background: #f1f4f8"],
+  & [style*="background: #f8fafc"],
+  & [style*="background: #f9fafb"] { background: #0f172a !important; }
 
-  /* ── Tarjetas y paneles blancos ──────────────────────────────────── */
+  /* ── Tarjetas y paneles blancos ──────────────────────────────────────── */
   & .bg-white,
   & [style*="background: white"],
   & [style*="background: #ffffff"],
-  & [style*="background: #fff"]     { background: #1e293b !important; }
+  & [style*="background: #fff"]    { background: #1e293b !important; }
 
-  /* Fondo alternativo ligeramente más claro (hover, sub-paneles) */
-  & .bg-slate-50,
-  & [style*="background: #f8fafc"]  { background: #0f172a !important; }
-  & .bg-slate-100                   { background: #1e293b !important; }
+  /* Paneles alternativos slate */
+  & .bg-slate-50                   { background: #0f172a !important; }
+  & .bg-slate-100                  { background: #1e293b !important; }
+  & .bg-slate-200                  { background: #263548 !important; }
 
-  /* ── Bordes ──────────────────────────────────────────────────────── */
-  & .border-slate-200,
-  & .border-slate-100               { border-color: #334155 !important; }
-  & .border-slate-300               { border-color: #475569 !important; }
-  & .divide-slate-100 > * + *,
-  & .divide-slate-200 > * + *       { border-color: #334155 !important; }
-  & [style*="border: 1px solid #e5e7eb"] { border-color: #334155 !important; }
-  & [style*="border: 1px solid #e2e8f0"] { border-color: #334155 !important; }
-  & [style*="border-bottom: 1px solid #e5e7eb"] { border-color: #334155 !important; }
-  & [style*="border-color: #e5e7eb"] { border-color: #334155 !important; }
+  /* ── Fondos de colores Tailwind (100) → versión oscura tintada ────────
+     Regla: bg-COLOR-100 → fondo oscuro con tinte de ese color al 12-15%
+  ──────────────────────────────────────────────────────────────────────── */
+  & .bg-blue-50                    { background-color: rgba(37, 99, 235, 0.08) !important; }
+  & .bg-blue-100                   { background-color: rgba(37, 99, 235, 0.15) !important; }
+  & .bg-emerald-50                 { background-color: rgba(16, 185, 129, 0.08) !important; }
+  & .bg-emerald-100                { background-color: rgba(16, 185, 129, 0.15) !important; }
+  & .bg-amber-50                   { background-color: rgba(245, 158, 11, 0.08) !important; }
+  & .bg-amber-100                  { background-color: rgba(245, 158, 11, 0.15) !important; }
+  & .bg-red-50                     { background-color: rgba(239, 68, 68, 0.08) !important; }
+  & .bg-red-100                    { background-color: rgba(239, 68, 68, 0.15) !important; }
+  & .bg-violet-50                  { background-color: rgba(124, 58, 237, 0.08) !important; }
+  & .bg-violet-100                 { background-color: rgba(124, 58, 237, 0.15) !important; }
+  & .bg-purple-50                  { background-color: rgba(147, 51, 234, 0.08) !important; }
+  & .bg-purple-100                 { background-color: rgba(147, 51, 234, 0.15) !important; }
+  & .bg-yellow-50                  { background-color: rgba(234, 179, 8, 0.08) !important; }
+  & .bg-yellow-100                 { background-color: rgba(234, 179, 8, 0.15) !important; }
+  & .bg-green-50                   { background-color: rgba(34, 197, 94, 0.08) !important; }
+  & .bg-green-100                  { background-color: rgba(34, 197, 94, 0.15) !important; }
+  & .bg-pink-50                    { background-color: rgba(236, 72, 153, 0.08) !important; }
+  & .bg-pink-100                   { background-color: rgba(236, 72, 153, 0.15) !important; }
+  & .bg-cyan-50                    { background-color: rgba(6, 182, 212, 0.08) !important; }
+  & .bg-cyan-100                   { background-color: rgba(6, 182, 212, 0.15) !important; }
+  & .bg-orange-50                  { background-color: rgba(249, 115, 22, 0.08) !important; }
+  & .bg-orange-100                 { background-color: rgba(249, 115, 22, 0.15) !important; }
+  & .bg-teal-50                    { background-color: rgba(20, 184, 166, 0.08) !important; }
+  & .bg-teal-100                   { background-color: rgba(20, 184, 166, 0.15) !important; }
+  & .bg-indigo-50                  { background-color: rgba(99, 102, 241, 0.08) !important; }
+  & .bg-indigo-100                 { background-color: rgba(99, 102, 241, 0.15) !important; }
+  & .bg-rose-50                    { background-color: rgba(244, 63, 94, 0.08) !important; }
+  & .bg-rose-100                   { background-color: rgba(244, 63, 94, 0.15) !important; }
 
-  /* ── Texto ───────────────────────────────────────────────────────── */
+  /* ── Texto coloreado Tailwind → versión luminosa ─────────────────────
+     Regla: text-COLOR-700/800 → versión más clara (400/300 aproximado)
+  ──────────────────────────────────────────────────────────────────────── */
+  & .text-blue-600                 { color: #60a5fa !important; }
+  & .text-blue-700                 { color: #60a5fa !important; }
+  & .text-blue-800                 { color: #93c5fd !important; }
+  & .text-emerald-600              { color: #34d399 !important; }
+  & .text-emerald-700              { color: #34d399 !important; }
+  & .text-emerald-800              { color: #6ee7b7 !important; }
+  & .text-amber-600                { color: #fbbf24 !important; }
+  & .text-amber-700                { color: #fbbf24 !important; }
+  & .text-amber-800                { color: #fcd34d !important; }
+  & .text-red-600                  { color: #f87171 !important; }
+  & .text-red-700                  { color: #f87171 !important; }
+  & .text-red-800                  { color: #fca5a5 !important; }
+  & .text-violet-600               { color: #a78bfa !important; }
+  & .text-violet-700               { color: #a78bfa !important; }
+  & .text-violet-800               { color: #c4b5fd !important; }
+  & .text-purple-600               { color: #c084fc !important; }
+  & .text-purple-700               { color: #c084fc !important; }
+  & .text-yellow-600               { color: #fde047 !important; }
+  & .text-yellow-700               { color: #fde047 !important; }
+  & .text-green-600                { color: #4ade80 !important; }
+  & .text-green-700                { color: #4ade80 !important; }
+  & .text-green-800                { color: #86efac !important; }
+  & .text-pink-600                 { color: #f472b6 !important; }
+  & .text-pink-700                 { color: #f472b6 !important; }
+  & .text-pink-800                 { color: #f9a8d4 !important; }
+  & .text-cyan-600                 { color: #22d3ee !important; }
+  & .text-cyan-700                 { color: #22d3ee !important; }
+  & .text-cyan-800                 { color: #67e8f9 !important; }
+  & .text-orange-600               { color: #fb923c !important; }
+  & .text-orange-700               { color: #fb923c !important; }
+  & .text-teal-600                 { color: #2dd4bf !important; }
+  & .text-teal-700                 { color: #2dd4bf !important; }
+  & .text-teal-800                 { color: #5eead4 !important; }
+  & .text-indigo-600               { color: #818cf8 !important; }
+  & .text-indigo-700               { color: #818cf8 !important; }
+  & .text-rose-600                 { color: #fb7185 !important; }
+  & .text-rose-700                 { color: #fb7185 !important; }
+
+  /* ── Texto neutro slate ──────────────────────────────────────────────── */
   & .text-slate-900,
   & .text-slate-800,
   & [style*="color: #111827"],
-  & [style*="color: #1f2937"]       { color: #f1f5f9 !important; }
+  & [style*="color: #1f2937"]      { color: #f1f5f9 !important; }
 
   & .text-slate-700,
-  & [style*="color: #374151"]       { color: #e2e8f0 !important; }
+  & [style*="color: #374151"]      { color: #e2e8f0 !important; }
 
   & .text-slate-600,
-  & [style*="color: #4b5563"]       { color: #cbd5e1 !important; }
+  & [style*="color: #4b5563"]      { color: #cbd5e1 !important; }
 
   & .text-slate-500,
-  & [style*="color: #6b7280"]       { color: #94a3b8 !important; }
+  & [style*="color: #6b7280"]      { color: #94a3b8 !important; }
 
   & .text-slate-400,
-  & [style*="color: #9ca3af"]       { color: #64748b !important; }
+  & [style*="color: #9ca3af"]      { color: #64748b !important; }
 
-  /* ── Inputs, selects y textareas ─────────────────────────────────── */
+  /* Textos de inline styles hardcodeados en Estadisticas y otras páginas */
+  & [style*="color: #111827"]      { color: #f1f5f9 !important; }
+  & [style*="color: #374151"]      { color: #e2e8f0 !important; }
+  & [style*="color: #6b7280"]      { color: #94a3b8 !important; }
+  & [style*="color: #9ca3af"]      { color: #64748b !important; }
+  & [style*="color: #065f46"]      { color: #34d399 !important; }
+  & [style*="color: #92400e"]      { color: #fbbf24 !important; }
+  & [style*="color: #1e3a5f"]      { color: #60a5fa !important; }
+
+  /* ── Bordes ──────────────────────────────────────────────────────────── */
+  & .border-slate-100,
+  & .border-slate-200              { border-color: #334155 !important; }
+  & .border-slate-300              { border-color: #475569 !important; }
+  & .border-blue-200               { border-color: rgba(37, 99, 235, 0.35) !important; }
+  & .border-emerald-200            { border-color: rgba(16, 185, 129, 0.35) !important; }
+  & .border-amber-200              { border-color: rgba(245, 158, 11, 0.35) !important; }
+  & .border-red-200                { border-color: rgba(239, 68, 68, 0.35) !important; }
+  & .border-violet-200             { border-color: rgba(124, 58, 237, 0.35) !important; }
+  & .border-slate-300.border-dashed{ border-color: #475569 !important; }
+  & .divide-slate-100 > * + *,
+  & .divide-slate-200 > * + *      { border-color: #334155 !important; }
+  & [style*="border: 1px solid #e5e7eb"]       { border-color: #334155 !important; }
+  & [style*="border: 1px solid #e2e8f0"]       { border-color: #334155 !important; }
+  & [style*="border-bottom: 1px solid #e5e7eb"]{ border-color: #334155 !important; }
+  & [style*="border-color: #e5e7eb"]            { border-color: #334155 !important; }
+
+  /* ── Inputs, selects y textareas ─────────────────────────────────────── */
   & input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   & textarea,
   & select {
@@ -67,39 +154,24 @@ html.dark {
     border-color: #334155 !important;
   }
   & input::placeholder,
-  & textarea::placeholder { color: #64748b !important; }
-
-  /* Inputs con clase Tailwind */
-  & .bg-white.border,
+  & textarea::placeholder          { color: #64748b !important; }
   & input.bg-white,
-  & input.border-slate-200 {
-    background-color: #1e293b !important;
-    border-color: #334155 !important;
-  }
+  & input.border-slate-200         { background-color: #1e293b !important; border-color: #334155 !important; }
 
-  /* ── Sombras ─────────────────────────────────────────────────────── */
-  /* Las sombras claras desaparecen en fondo oscuro — las hacemos visibles */
+  /* ── Tablas ──────────────────────────────────────────────────────────── */
+  & thead,
+  & th                             { background-color: #1e293b !important; color: #94a3b8 !important; }
+  & tbody tr:hover                 { background-color: #263548 !important; }
+  & .hover\:bg-slate-50:hover      { background-color: #263548 !important; }
+  & .hover\:bg-slate-100:hover     { background-color: #263548 !important; }
+
+  /* ── Sombras ─────────────────────────────────────────────────────────── */
   & [style*="box-shadow: 0 1px 6px rgba(0,0,0,0.06)"],
   & [style*="box-shadow: 0 1px 3px rgba(0,0,0,0.08)"] {
     box-shadow: 0 1px 8px rgba(0,0,0,0.40) !important;
   }
 
-  /* ── Tablas ──────────────────────────────────────────────────────── */
-  & thead,
-  & .bg-slate-50 thead,
-  & th                              { background-color: #1e293b !important; color: #94a3b8 !important; }
-  & tbody tr:hover                  { background-color: #263548 !important; }
-  & .hover\:bg-slate-50:hover       { background-color: #263548 !important; }
-  & .hover\:bg-slate-100:hover      { background-color: #263548 !important; }
-
-  /* ── Badges de estado — mantener colores pero más oscuros ────────── */
-  /* Los badges de emerald/amber/blue/red conservan sus colores — son semánticos.
-     No los tocamos. Solo ajustamos el texto si está hardcodeado en oscuro. */
-  & [style*="color: #065f46"]       { color: #34d399 !important; } /* emerald text */
-  & [style*="color: #92400e"]       { color: #fbbf24 !important; } /* amber text  */
-  & [style*="color: #1e3a5f"]       { color: #60a5fa !important; } /* blue text   */
-
-  /* ── Scrollbar sutil para modo oscuro ───────────────────────────── */
+  /* ── Scrollbar ───────────────────────────────────────────────────────── */
   & ::-webkit-scrollbar              { width: 6px; height: 6px; }
   & ::-webkit-scrollbar-track        { background: #1e293b; }
   & ::-webkit-scrollbar-thumb        { background: #475569; border-radius: 3px; }

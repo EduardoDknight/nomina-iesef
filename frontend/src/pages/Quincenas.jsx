@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
 
@@ -130,6 +131,7 @@ function Modal({ onClose, onSave }) {
 
 export default function Quincenas() {
   const { usuario } = useAuth()
+  const { dark } = useTheme()
   const navigate = useNavigate()
   const [quincenas, setQuincenas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -207,7 +209,7 @@ export default function Quincenas() {
       <div className="space-y-3">
         {loading ? (
           [...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 animate-pulse">
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 animate-pulse" style={dark ? { background: '#1e293b' } : {}}>
               <div className="flex items-center justify-between">
                 <div className="space-y-2 flex-1">
                   <div className="h-4 bg-slate-200 rounded w-1/3"></div>
@@ -229,7 +231,7 @@ export default function Quincenas() {
               <div key={q.id}
                 onClick={() => navigate(`/quincenas/${q.id}`)}
                 className="rounded-xl border border-slate-200 overflow-hidden cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all"
-                style={{ background: mesClr.bg }}>
+                style={{ background: dark ? `rgba(30,41,59,0.95)` : mesClr.bg }}>
 
                 {/* Barra de color del mes */}
                 <div className="h-1" style={{ background: mesClr.border }} />

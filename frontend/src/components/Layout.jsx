@@ -281,25 +281,6 @@ export default function Layout() {
             <p className="text-xs truncate" style={{ color: TEXT_DIM }}>{ROLES_LABEL[usuario?.rol]}</p>
           </div>
         </div>
-        {/* Botón modo oscuro / claro */}
-        <button
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all mb-1"
-          style={{ color: TEXT_DIM }}
-          onMouseEnter={e => { e.currentTarget.style.color = 'white';   e.currentTarget.style.background = HOVER_BG }}
-          onMouseLeave={e => { e.currentTarget.style.color = TEXT_DIM;  e.currentTarget.style.background = 'transparent' }}
-          title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-        >
-          {dark ? <IconSun /> : <IconMoon />}
-          <span>{dark ? 'Modo claro' : 'Modo oscuro'}</span>
-          {/* Indicador visual del estado actual */}
-          <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full"
-            style={{ background: dark ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)',
-                     color:      dark ? '#fbbf24'                : '#818cf8' }}>
-            {dark ? 'oscuro' : 'claro'}
-          </span>
-        </button>
-
         {/* Cerrar sesión */}
         <button
           onClick={handleLogout}
@@ -352,7 +333,7 @@ export default function Layout() {
       {/* ── Contenido principal ──────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Top bar móvil — hamburguesa + nombre página */}
+        {/* Top bar móvil — hamburguesa + nombre página + toggle */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 flex-shrink-0"
           style={{ background: SIDEBAR_BG, borderBottom: `1px solid ${BORDER_COLOR}` }}>
           <button
@@ -367,11 +348,69 @@ export default function Layout() {
               style={{ letterSpacing: '0.20em' }}>NEXO</span>
             <span className="text-xs font-medium" style={{ color: 'rgba(139,16,32,0.90)' }}>IESEF</span>
           </div>
-          {/* Avatar usuario */}
-          <div className="ml-auto w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(139,16,32,0.4)', border: '1px solid rgba(139,16,32,0.6)' }}>
-            <span className="font-bold text-xs" style={{ color: '#f87171' }}>
-              {usuario?.nombre?.charAt(0).toUpperCase()}
+          <div className="ml-auto flex items-center gap-2">
+            {/* Toggle móvil */}
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg transition-all"
+              style={{ color: 'rgba(255,255,255,0.6)' }}
+              title={dark ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {dark ? <IconSun /> : <IconMoon />}
+            </button>
+            {/* Avatar usuario */}
+            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(139,16,32,0.4)', border: '1px solid rgba(139,16,32,0.6)' }}>
+              <span className="font-bold text-xs" style={{ color: '#f87171' }}>
+                {usuario?.nombre?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* Top bar desktop — toggle modo + usuario ──────────────────────── */}
+        <header className="hidden md:flex items-center justify-end gap-3 px-5 py-2.5 flex-shrink-0"
+          style={{
+            background: dark ? '#0f172a' : '#ffffff',
+            borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+            transition: 'background 0.2s ease',
+          }}>
+          {/* Botón modo claro/oscuro */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+            style={{
+              color:      dark ? 'rgba(255,255,255,0.65)' : '#475569',
+              background: dark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.12)' : '#e2e8f0'
+              e.currentTarget.style.color      = dark ? 'white' : '#1e293b'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'
+              e.currentTarget.style.color      = dark ? 'rgba(255,255,255,0.65)' : '#475569'
+            }}
+            title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            {dark ? <IconSun /> : <IconMoon />}
+            <span>{dark ? 'Modo claro' : 'Modo oscuro'}</span>
+          </button>
+
+          {/* Separador */}
+          <div className="w-px h-5" style={{ background: dark ? 'rgba(255,255,255,0.1)' : '#e2e8f0' }} />
+
+          {/* Info usuario */}
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(139,16,32,0.25)', border: '1px solid rgba(139,16,32,0.4)' }}>
+              <span className="font-bold text-xs" style={{ color: '#f87171' }}>
+                {usuario?.nombre?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <span className="text-sm font-medium"
+              style={{ color: dark ? 'rgba(255,255,255,0.70)' : '#374151' }}>
+              {usuario?.nombre}
             </span>
           </div>
         </header>
