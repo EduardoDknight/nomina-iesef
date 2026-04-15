@@ -5,9 +5,36 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-14 (noche — PC casa)
+**Fecha:** 2026-04-15 (tarde — PC trabajo)
 **Rama:** `main`
-**Último commit:** `219f247` — fix: AsignacionOut serialization
+**Último commit:** `4495264` — fix: exportar nómina filtra por razon_social
+
+---
+
+## 🚨 PROBLEMA ACTIVO — Uvicorn no recarga código en PC casa
+
+**Síntoma:** Los cambios se pushean a GitHub, el webhook `/deploy` devuelve OK,
+pero uvicorn sigue ejecutando código viejo. Los fixes no se aplican en producción.
+
+**Causa confirmada:** uvicorn `--reload` en Windows no detecta cambios de mtime.
+El deploy hace `git pull` correctamente pero los módulos en memoria no se reemplazan.
+
+**Fix implementado pero no aplicado aún:**
+- `deploy.py` ahora usa `os._exit(0)` para matar el worker y forzar restart real
+- Este fix mismo está en el repo pero tampoco se ha cargado (el worker viejo lo ejecuta)
+
+**Para resolver HOY al llegar a casa (5pm):**
+```powershell
+# Matar uvicorn y relanzar — HACER ESTO ANTES DE CUALQUIER OTRA COSA
+Get-Process python | Stop-Process -Force
+powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.ps1
+```
+
+Después de ese restart manual, el nuevo `deploy.py` con `os._exit` estará activo
+y todos los futuros deploys desde PC trabajo funcionarán automáticamente.
+
+**Solución a largo plazo (ver prioridades abajo):** Configurar acceso remoto sin
+intervención humana (Remote Desktop sin aceptar, VNC, o Task Scheduler).
 
 ---
 
@@ -127,17 +154,55 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
 
 ## Siguiente sprint — Funcionalidades pendientes
 
-### Alta prioridad
-- [ ] **Excel HONORARIOS** — formato exacto del Excel original: HONORARIOS CENTRO y HONORARIOS INSTITUTO con cálculo fiscal completo (fórmula Art. 106 LISR ya documentada en CLAUDE.md)
-- [ ] **Motor de cálculo fiscal** — verificar que `calculo_nomina.py` aplica IVA, ISR, retenciones correctamente por razon_social
-- [ ] **Módulo incidencias** — verificar flujo completo: registro → validación coord → aprobación cap_humano
+### 🔴 CRÍTICO — Infraestructura (resolver ANTES de continuar desarrollo)
 
-### Media prioridad
+- [ ] **Acceso remoto sin intervención humana a PC casa** — uvicorn no recarga en Windows.
+  Opciones a evaluar al llegar a casa:
+  1. **VNC/TightVNC** sin contraseña de confirmación — instalar servidor VNC que no requiera aceptar
+  2. **Task Scheduler** — tarea programada que mata y relanza uvicorn cada vez que cambia un archivo en el repo (como pseudo-daemon de reload)
+  3. **Windows Remote Desktop sin NLA** — desactivar autenticación de red para que RDP no pida confirmación física
+  4. **NSSM (Non-Sucking Service Manager)** — convertir uvicorn en un servicio Windows real con restart automático
+  
+  **Recomendación: NSSM** — instala uvicorn como servicio Windows, se reinicia solo si se cae,
+  y el deploy puede hacer `sc stop/start` via subprocess sin necesitar nadie en casa.
+  
+  ```powershell
+  # Una vez instalado NSSM:
+  nssm install nomina-iesef "C:\Python312\python.exe" "-m uvicorn main_nomina:app --host 0.0.0.0 --port 8000"
+  nssm set nomina-iesef AppDirectory "C:\Proyectos\nomina-iesef"
+  nssm start nomina-iesef
+  ```
+  
+  Y en deploy.py reemplazar `os._exit(0)` con:
+  ```python
+  subprocess.run(["sc", "stop", "nomina-iesef"])
+  subprocess.run(["sc", "start", "nomina-iesef"])
+  ```
+
+### 🔴 Alta prioridad — Código listo pero pendiente de reload en PC casa
+
+Estos fixes están en el repo (commits del 2026-04-15) pero NO están activos en producción
+hasta que uvicorn se reinicie en casa:
+
+- [ ] **Filtro razon_social en nómina/asistencia/export** — quincena "centro" debe mostrar solo Bachillerato
+  - `routers/nomina.py` — GET lee razon_social de la quincena
+  - `routers/quincenas.py` — asistencia filtra por `p.razon_social`
+  - `services/exportar_nomina_resumen.py` — SQL filtra por razon_social
+- [ ] **Recalcular nómina Q6** después del reload — para que solo tenga docentes Centro
+
+### 🟠 Alta prioridad — Desarrollo
+
+- [ ] **Excel HONORARIOS** — formato fiscal completo: HONORARIOS CENTRO + HONORARIOS INSTITUTO
+  Columnas: PROGRAMA | DOCENTE | H. PROG | H. PRES | H. VIRT | DESC | $/HR | HONORARIOS | IVA 16% | SUBTOTAL | RET ISR | RET IVA | TOTAL | FIRMA
+- [ ] **Verificar cálculo fiscal** en `calculo_nomina.py` — IVA, ISR, retenciones por razon_social
+- [ ] **Módulo incidencias** — flujo completo: registro → coord → cap_humano
+
+### 🟡 Media prioridad
 - [ ] **Cargar horarios desde PDF aSc** — Eduardo pasa el PDF, Claude parsea y genera SQL
 - [ ] **Clasificador de checadas** con ventanas de horario para docentes
 - [ ] **Eliminar grupo "Segundo 1" de PREPA** — identificado como inexistente
 
-### Baja prioridad
+### 🟢 Baja prioridad
 - [ ] Más indicadores en Estadísticas
 - [ ] Integración Aspel NOI
 - [ ] **PWA** — manifest.json + Service Worker
