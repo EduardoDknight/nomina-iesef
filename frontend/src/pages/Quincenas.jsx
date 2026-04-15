@@ -273,8 +273,13 @@ export default function Quincenas() {
                         </button>
                       )}
 
-                      {/* Botón eliminar — solo director_cap_humano, solo estado abierta */}
-                      {canDelete && q.estado === 'abierta' && (
+                      {/* Botón eliminar:
+                          - director_cap_humano: solo 'abierta'
+                          - superadmin: 'abierta' o 'en_revision' */}
+                      {canDelete && (
+                        q.estado === 'abierta' ||
+                        (usuario?.rol === 'superadmin' && q.estado === 'en_revision')
+                      ) && (
                         <button
                           onClick={e => eliminar(e, q)}
                           disabled={eliminando === q.id}

@@ -69,13 +69,22 @@ async def generar_nomina(
         conn.close()
         raise HTTPException(status_code=400, detail=f"No se puede generar nómina en estado '{quincena['estado']}'")
 
-    # Obtener todos los docentes que participan en esta quincena:
-    # presenciales (chec_id), virtuales con evaluación, campo clínico,
-    # y docentes que fungieron como suplentes (aprobados)
-    cur.execute("""
+    # Filtro de adscripción según razon_social de la quincena
+    rs = quincena["razon_social"]  # 'centro', 'instituto', 'ambas'
+    if rs == "ambas":
+        adscripcion_filter = "TRUE"          # sin restricción
+        adscripcion_params: list = []
+    else:
+        adscripcion_filter = "d.adscripcion IN (%s, 'ambos')"
+        adscripcion_params = [rs]
+
+    # Obtener docentes que participan en esta quincena filtrados por razon_social:
+    # presenciales (chec_id), virtuales con evaluación, campo clínico, suplentes
+    cur.execute(f"""
         SELECT DISTINCT d.id
         FROM docentes d
         WHERE d.activo = true
+          AND {adscripcion_filter}
           AND (
               d.chec_id IS NOT NULL
               OR EXISTS (
@@ -94,7 +103,7 @@ async def generar_nomina(
                     AND i.tipo = 'suplencia'
               )
           )
-    """, (quincena_id, quincena_id, quincena_id))
+    """, adscripcion_params + [quincena_id, quincena_id, quincena_id])
     docente_ids = [r["id"] for r in cur.fetchall()]
     cur.close()
 
@@ -108,7 +117,8 @@ async def generar_nomina(
             docente_id=doc_id,
             quincena_id=quincena_id,
             fecha_inicio=quincena["fecha_inicio"],
-            fecha_fin=quincena["fecha_fin"]
+            fecha_fin=quincena["fecha_fin"],
+            razon_social=rs
         )
         if resultado.error:
             errores += 1

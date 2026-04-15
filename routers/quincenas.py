@@ -172,10 +172,14 @@ async def eliminar_quincena(
         q = cur.fetchone()
         if not q:
             raise HTTPException(status_code=404, detail="Quincena no encontrada")
-        if q["estado"] != "abierta":
+        # superadmin puede eliminar 'abierta' o 'en_revision'
+        # director_cap_humano solo puede eliminar 'abierta'
+        estados_permitidos = ("abierta", "en_revision") if usuario.rol == "superadmin" else ("abierta",)
+        if q["estado"] not in estados_permitidos:
             raise HTTPException(
                 status_code=400,
-                detail=f"No se puede eliminar una quincena en estado '{q['estado']}'. Solo se eliminan quincenas 'abierta'."
+                detail=f"No se puede eliminar una quincena en estado '{q['estado']}'. "
+                       f"Estados permitidos: {', '.join(estados_permitidos)}."
             )
 
         # Borrar en cascada (orden: hijos primero)

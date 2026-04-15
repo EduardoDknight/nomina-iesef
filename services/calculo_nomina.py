@@ -139,7 +139,8 @@ def calcular_nomina_docente(
     docente_id: int,
     quincena_id: int,
     fecha_inicio,
-    fecha_fin
+    fecha_fin,
+    razon_social: str = "ambas"   # 'centro', 'instituto', 'ambas'
 ) -> ResultadoNomina:
     """
     Calcula la nómina completa de un docente para una quincena.
@@ -230,6 +231,7 @@ def calcular_nomina_docente(
                 JOIN materias m    ON a.materia_id = m.id
                 JOIN programas p   ON m.programa_id = p.id
                 WHERE hc.activo = true
+                  AND (%s = 'ambas' OR p.razon_social = %s)
             ),
             bloques_por_fecha AS (
                 SELECT b.*, f.fecha
@@ -266,10 +268,11 @@ def calcular_nomina_docente(
                               - (LEAST(bf.horas_bloque * 10, 20) || ' minutes')::INTERVAL
                 ) AS tiene_salida
             FROM bloques_por_fecha bf
-        """, (fecha_inicio, fecha_fin,   # fechas CTE
-              fecha_inicio, fecha_fin,   # checadas CTE
-              docente_id,                # chec_id lookup
-              docente_id))               # bloques CTE
+        """, (fecha_inicio, fecha_fin,          # fechas CTE
+              fecha_inicio, fecha_fin,          # checadas CTE
+              docente_id,                       # chec_id lookup
+              docente_id,                       # bloques CTE: docente_id
+              razon_social, razon_social))       # bloques CTE: filtro razon_social
 
         bloques_raw = cur.fetchall()
 
