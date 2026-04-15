@@ -50,10 +50,22 @@ class AsignacionCreate(BaseModel):
 class AsignacionOut(AsignacionCreate):
     id: int
     activa: bool
+    vigente_hasta: Optional[str]  = None   # ISO date o None
     # campos derivados para conveniencia
-    docente_nombre: Optional[str] = None
-    materia_nombre: Optional[str] = None
+    docente_nombre:  Optional[str] = None
+    materia_nombre:  Optional[str] = None
     programa_nombre: Optional[str] = None
+
+    model_config = {"populate_by_name": True, "from_attributes": True}
+
+    @classmethod
+    def from_row(cls, row: dict) -> "AsignacionOut":
+        """Convierte un RealDictRow asegurando que las fechas sean strings."""
+        d = dict(row)
+        for f in ("vigente_desde", "vigente_hasta"):
+            if f in d and d[f] is not None and not isinstance(d[f], str):
+                d[f] = str(d[f])
+        return cls(**d)
 
 class HorarioCreate(BaseModel):
     asignacion_id: int
@@ -163,13 +175,13 @@ async def listar_asignaciones(
             a.horas_semana,
             a.modalidad,
             a.costo_hora,
-            a.ciclo_label   AS ciclo,
-            a.vigente_desde,
-            a.vigente_hasta,
+            a.ciclo_label        AS ciclo,
+            a.vigente_desde::text AS vigente_desde,
+            a.vigente_hasta::text AS vigente_hasta,
             a.activa,
-            d.nombre_completo AS docente_nombre,
-            m.nombre          AS materia_nombre,
-            p.nombre          AS programa_nombre
+            d.nombre_completo    AS docente_nombre,
+            m.nombre             AS materia_nombre,
+            p.nombre             AS programa_nombre
         FROM asignaciones a
         JOIN docentes d  ON a.docente_id  = d.id
         JOIN materias m  ON a.materia_id  = m.id
@@ -182,7 +194,7 @@ async def listar_asignaciones(
     rows = cur.fetchall()
     cur.close()
     conn.close()
-    return [AsignacionOut(**r) for r in rows]
+    return [AsignacionOut(**dict(r)) for r in rows]
 
 @router.post("/asignaciones", response_model=AsignacionOut, status_code=201)
 async def crear_asignacion(
