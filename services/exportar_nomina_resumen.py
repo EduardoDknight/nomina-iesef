@@ -173,6 +173,7 @@ SELECT
 FROM nomina_quincena nq
 JOIN docentes d ON d.id = nq.docente_id
 WHERE nq.quincena_id = %s
+  AND (%s = 'ambas' OR d.adscripcion IN (%s, 'ambos'))
 ORDER BY d.nombre_completo
 """
 
@@ -194,6 +195,7 @@ WHERE a.vigente_desde <= %s
   AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
   AND a.activa = true
   AND a.docente_id = ANY(%s)
+  AND (%s = 'ambas' OR p.razon_social = %s)
 GROUP BY a.docente_id, p.id, p.nombre, p.razon_social, p.nivel,
          a.costo_hora, p.costo_hora, a.modalidad
 ORDER BY a.docente_id, p.nombre
@@ -392,7 +394,9 @@ def generar_nomina_resumen_excel(conn, quincena_id: int) -> bytes:
         raise ValueError(f"Quincena {quincena_id} no encontrada")
     ciclo = quincena["ciclo"] or ""
 
-    cur.execute(SQL_NOMINA, (quincena_id,))
+    rs = quincena["razon_social"]  # 'centro', 'instituto', 'ambas'
+
+    cur.execute(SQL_NOMINA, (quincena_id, rs, rs))
     nominas = [dict(r) for r in cur.fetchall()]
     if not nominas:
         raise ValueError(
@@ -402,7 +406,9 @@ def generar_nomina_resumen_excel(conn, quincena_id: int) -> bytes:
 
     ids = list({n["docente_id"] for n in nominas})
     if ids:
-        cur.execute(SQL_ASIGNACIONES, (quincena["fecha_fin"], quincena["fecha_inicio"], ids))
+        # Pasar razon_social para filtrar solo los programas de esta quincena
+        cur.execute(SQL_ASIGNACIONES,
+                    (quincena["fecha_fin"], quincena["fecha_inicio"], ids, rs, rs))
         asig_por_doc = {}
         for row in cur.fetchall():
             asig_por_doc.setdefault(row["docente_id"], []).append(dict(row))
