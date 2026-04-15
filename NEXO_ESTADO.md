@@ -112,17 +112,16 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
 
 ---
 
-## ⚠️ PENDIENTES EN PC CASA
+## ✅ INFRAESTRUCTURA COMPLETAMENTE CONFIGURADA
 
-1. **Cron Ubuntu laptop** — agregar flock cuando puedas SSH:
-   ```bash
-   crontab -e
-   # */30 * * * * /usr/bin/flock -n /tmp/agente_nomina.lock /home/nomina/venv_zk/bin/python3 /home/nomina/agente_nomina/agente.py
-   ```
-2. **Zona horaria PC casa**:
-   ```powershell
-   Set-TimeZone -Id "Central Standard Time (Mexico)"
-   ```
+| Item | Estado |
+|---|---|
+| Zona horaria PC casa | ✅ `America/Mexico_City` (UTC-6) — correcta |
+| Zona horaria PostgreSQL | ✅ `America/Mexico_City` — correcta |
+| Timestamps en BD | ✅ todos en CST, coherentes (checada → sync +30min) |
+| Cron Ubuntu laptop | ✅ `*/30 con flock` — ya corregido |
+| Webhook GitHub | ✅ ID 606281234, ping 200 OK |
+| Arranque automático Windows | ✅ carpeta Startup del usuario |
 
 ---
 
