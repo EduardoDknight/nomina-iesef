@@ -5,9 +5,9 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-15 (tarde — PC trabajo)
+**Fecha:** 2026-04-15 (tarde — PC trabajo, sesión continuada)
 **Rama:** `main`
-**Último commit:** `4495264` — fix: exportar nómina filtra por razon_social
+**Último commit:** `2132626` — feat: agregar indicador de última sincronización MB360 en 7 vistas
 
 ---
 
@@ -113,6 +113,9 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
 | 2026-04-14 ~22:00 | PC casa | Autostart Windows + deploy.py mejorado | Infraestructura auto-deploy |
 | 2026-04-14 ~22:30 | PC casa | Fix modal incidencias: dropdown Asignación vacío | `ciclo_label AS ciclo` + fechas como texto en Pydantic |
 | 2026-04-14 | Eduardo | Sistema v1 corregido: columna `_biometrico` | v1 ya toma sus propias checadas |
+| 2026-04-15 tarde | PC trabajo | Fixes razon_social: nómina GET, asistencia, resumen, export Excel | Quincena 'centro' mostraba 145 docentes en vez de ~20 |
+| 2026-04-15 tarde | PC trabajo | deploy.py usa `os._exit(0)` para restart real de uvicorn | Webhook ya funciona para cargar código nuevo |
+| 2026-04-15 tarde | PC trabajo | **SyncBadge**: indicador último sync MB360 en 7 vistas | Docentes/admins saben hasta qué hora son sus checadas |
 
 ---
 
@@ -132,6 +135,7 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
 | Personal Administrativo: CRUD + asistencia quincena | ✅ |
 | Portal docente/trabajador: checadas, credenciales | ✅ |
 | Estadísticas: KPIs animados + 5 gráficas recharts | ✅ |
+| SyncBadge: indicador último sync MB360 en 7 vistas | ✅ fuente lista · ⚠️ pendiente build frontend en PC casa |
 | MB360 → Ubuntu laptop → nexo (28k+ checadas) | ✅ cron 30min con flock |
 | Cloudflare Tunnel (nexo.iesef.edu.mx → localhost:8000) | ✅ |
 | Auto-deploy webhook `/deploy` | ✅ configurado (ID 606281234, ping 200 OK) |
@@ -179,16 +183,27 @@ python -c "import urllib.request; print(urllib.request.urlopen('http://localhost
   subprocess.run(["sc", "start", "nomina-iesef"])
   ```
 
-### 🔴 Alta prioridad — Código listo pero pendiente de reload en PC casa
+### 🔴 Alta prioridad — Pendiente de activar en PC casa (5pm)
 
-Estos fixes están en el repo (commits del 2026-04-15) pero NO están activos en producción
-hasta que uvicorn se reinicie en casa:
+Al llegar a casa hacer PRIMERO:
+```powershell
+Get-Process python | Stop-Process -Force
+powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.ps1
+```
 
-- [ ] **Filtro razon_social en nómina/asistencia/export** — quincena "centro" debe mostrar solo Bachillerato
-  - `routers/nomina.py` — GET lee razon_social de la quincena
-  - `routers/quincenas.py` — asistencia filtra por `p.razon_social`
-  - `services/exportar_nomina_resumen.py` — SQL filtra por razon_social
-- [ ] **Recalcular nómina Q6** después del reload — para que solo tenga docentes Centro
+Luego buildear el frontend (solo necesario si hay cambios de UI):
+```powershell
+cd C:\Proyectos\nomina-iesef\frontend
+npm run build
+cd ..
+git add -f frontend/dist/
+git commit -m "build: compilar frontend con SyncBadge"
+git push
+```
+
+Pendiente verificar:
+- [ ] **Filtro razon_social en nómina/asistencia/export** — activo tras restart. Recalcular Q6.
+- [ ] **SyncBadge en 7 vistas** — necesita build frontend + `git add -f frontend/dist/` + push
 
 ### 🟠 Alta prioridad — Desarrollo
 
