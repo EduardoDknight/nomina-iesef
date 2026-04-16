@@ -5,9 +5,9 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-15 (noche — PC casa, sesión watchdog + dark mode fixes)
+**Fecha:** 2026-04-16 (mañana — PC trabajo, inicio sesión)
 **Rama:** `main`
-**Último commit:** pendiente (watchdog.ps1 + deploy.py + dark mode topbar)
+**Último commit:** `ff4863a` chore: ignorar scripts de mantenimiento
 
 ### Commits del día (en orden)
 | Hash | Descripción |
@@ -123,6 +123,7 @@ powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina
 | 2026-04-15 tarde | PC trabajo | **Dark mode** (ThemeContext + CSS global + botón sidebar) | Toggle 🌙/☀️ con persistencia, sin tocar páginas individuales |
 | 2026-04-15 tarde | PC trabajo | **NEXO_PROYECTO_CHAT.md** creado | Contexto completo para Claude Projects (modo chat) |
 | 2026-04-15 noche | PC casa | **Restart uvicorn + build dist** | Activa todos los fixes del día + SyncBadge + Dark Mode |
+| 2026-04-16 mañana | PC trabajo | **Inicio sesión PC trabajo** | git pull OK (42 archivos), túnel 200 OK, webhook test |
 
 ---
 
