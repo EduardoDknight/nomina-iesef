@@ -985,6 +985,7 @@ function CriterioBar({ label, valor, opciones, onChange, disabled }) {
 }
 
 function AsignacionVirtualCard({ asig, quincenaId, quincenaEstado, usuario, onRecalc, semanasPeriodo }) {
+  const { dark } = useTheme()
   // Default: max values (verde) para semanas sin capturar aún
   const [semanas, setSemanas] = useState(
     () => Array.from({ length: asig.n_semanas }, (_, i) => {
@@ -1086,7 +1087,7 @@ function AsignacionVirtualCard({ asig, quincenaId, quincenaEstado, usuario, onRe
             {asig.grupo ? ` · ${asig.grupo}` : ''}
           </p>
           <p className="text-xs text-slate-400 mt-0.5">
-            {Math.round(asig.horas_semana)} h/sem × {nSem} sem = {Math.round(asig.horas_quincena)} hrs · {fmt(asig.tarifa)}/hr · Base {fmt(Math.round(asig.horas_quincena) * asig.tarifa)}
+            {Number(asig.horas_semana).toFixed(1)} h/sem × {nSem} sem = {Math.round(asig.horas_quincena)} hrs · {fmt(asig.tarifa)}/hr · Base {fmt(asig.horas_quincena * asig.tarifa)}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -1119,10 +1120,13 @@ function AsignacionVirtualCard({ asig, quincenaId, quincenaEstado, usuario, onRe
           return (
             <div key={sem.semana_num}
               className={`rounded-lg p-3 border transition-colors ${
-                sem._confirmada
-                  ? 'bg-slate-50 border-slate-200'
-                  : 'bg-amber-50/60 border-amber-200 border-dashed'
-              }`}>
+                sem._confirmada ? 'border-slate-200' : 'border-amber-200 border-dashed'
+              }`}
+              style={{
+                background: sem._confirmada
+                  ? (dark ? '#263548' : '#f8fafc')
+                  : (dark ? 'rgba(245,158,11,0.08)' : 'rgba(255,251,235,0.6)'),
+              }}>
               {/* Header semana */}
               <div className="flex items-start justify-between mb-2 gap-1">
                 <div>
@@ -1235,6 +1239,7 @@ function AsignacionVirtualCard({ asig, quincenaId, quincenaEstado, usuario, onRe
 }
 
 function TabVirtual({ quincena, usuario }) {
+  const { dark } = useTheme()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [calculando, setCalculando] = useState(false)
@@ -1395,7 +1400,8 @@ function TabVirtual({ quincena, usuario }) {
 
                 {/* Detalle expandido: cards de evaluación */}
                 {abierto && (
-                  <div className="px-4 pb-4 pt-1 bg-slate-50/60 border-t border-slate-100">
+                  <div className="px-4 pb-4 pt-1 border-t border-slate-100"
+                    style={{ background: dark ? '#0f172a' : '#f8fafc' }}>
                     {doc.asigs.map(asig => (
                       <AsignacionVirtualCard
                         key={asig.asignacion_id}
