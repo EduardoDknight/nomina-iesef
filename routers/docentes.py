@@ -559,7 +559,10 @@ async def get_horarios_docente(
                 hc.horas_bloque
             FROM candidatas c
             LEFT JOIN horario_clases hc ON hc.asignacion_id = c.asignacion_id
-                                       AND hc.activo = true
+                                       -- Para asignaciones activas: solo bloques activos.
+                                       -- Para el fallback inactivo: mostrar todos los bloques.
+                                       AND (c.activa = true AND hc.activo = true
+                                            OR c.activa = false)
             WHERE c.rn = 1
               -- Si hay activas, mostrar solo activas; si no, mostrar la mejor inactiva
               AND (c.total_activas > 0 AND c.activa = true
