@@ -49,7 +49,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add frontend/dist/
+          git add -f frontend/dist/
           # Solo commitear si hay cambios reales en dist/
           if git diff --cached --quiet; then
             echo "Sin cambios en dist/ — nada que commitear"
