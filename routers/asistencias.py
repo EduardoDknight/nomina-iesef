@@ -107,12 +107,23 @@ async def recibir_checadas(request: Request):
 
 @router.get("/ultimo_sync")
 def ultimo_sync():
+    """
+    Devuelve la última vez que el AGENTE corrió (sync_log.timestamp_agente),
+    no la última checada nueva — el agente corre cada 5 min aunque no haya
+    checadas nuevas, pero asistencias_checadas.sincronizado_en solo cambia
+    cuando se insertan registros nuevos.
+    """
     conn = get_conn()
     cur  = conn.cursor()
-    cur.execute("SELECT MAX(sincronizado_en) as ultimo, COUNT(*) as total FROM asistencias_checadas")
+    cur.execute("""
+        SELECT
+            (SELECT MAX(timestamp_agente) FROM sync_log)    AS ultimo,
+            (SELECT COUNT(*)              FROM asistencias_checadas) AS total
+    """)
     row = cur.fetchone()
     cur.close()
     conn.close()
+
     # Adjuntar timezone para que JavaScript lo interprete correctamente.
     # PostgreSQL devuelve un datetime naive ya en hora de México (America/Mexico_City).
     # Sin offset el frontend lo trata como UTC y calcula diferencias incorrectas.
@@ -125,6 +136,6 @@ def ultimo_sync():
             ultimo_iso = row["ultimo"].isoformat() + "-06:00"
 
     return {
-        "ultimo_sync":    ultimo_iso,
+        "ultimo_sync":     ultimo_iso,
         "total_registros": row["total"],
     }

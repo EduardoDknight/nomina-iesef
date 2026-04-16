@@ -28,11 +28,13 @@ function minutosDesde(isoString) {
   return Math.max(0, Math.round(diff))   // nunca negativo (desfase de TZ)
 }
 
-/** Minutos hasta la próxima sincronización esperada */
+/** Minutos hasta la próxima sincronización esperada.
+ *  Solo tiene sentido cuando el agente corrió hace menos de INTERVALO_SYNC_MIN.
+ *  Si ya pasó más tiempo, el sync está retrasado y no mostramos countdown. */
 function minutosSiguiente(minutos) {
   if (minutos === null) return null
-  const resta = INTERVALO_SYNC_MIN - (minutos % INTERVALO_SYNC_MIN)
-  return resta === INTERVALO_SYNC_MIN ? 0 : resta   // 0 = debería ser inminente
+  if (minutos >= INTERVALO_SYNC_MIN) return null   // retrasado — no mostrar countdown
+  return INTERVALO_SYNC_MIN - minutos
 }
 
 function fmtRelativo(minutos) {
