@@ -1124,14 +1124,14 @@ function AsignacionVirtualCard({ asig, quincenaId, quincenaEstado, usuario, onRe
           )}
           <div className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${
             !todasConfirmadas
-              ? 'bg-slate-50 text-slate-400 border-slate-200'
+              ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
               : aprobada
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : 'bg-red-50 text-red-600 border-red-200'
           }`}>
             {todasConfirmadas
               ? `${(pct * 100).toFixed(0)}% ${aprobada ? '✓ Se paga' : '✗ No se paga'}`
-              : 'Pendiente captura'}
+              : '✓ Se paga · Pendiente evaluar'}
           </div>
         </div>
       </div>
@@ -1395,12 +1395,13 @@ function TabVirtual({ quincena, usuario }) {
             const pendientes = nAsigs - aprobadas - reprobadas
             const progNames  = [...new Set(doc.asigs.map(a => a.programa_nombre))].join(', ')
 
-            const estadoBadge = pendientes > 0
-              ? <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Pendiente</span>
-              : reprobadas > 0 && aprobadas === 0
-                ? <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-600">No se paga</span>
-                : reprobadas > 0
-                  ? <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700">Parcial</span>
+            // Pendientes = sin resultado aún → por defecto se pagan (verde, no ámbar)
+            const estadoBadge = reprobadas > 0 && aprobadas === 0 && pendientes === 0
+              ? <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-600">No se paga</span>
+              : reprobadas > 0
+                ? <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700">Parcial</span>
+                : pendientes > 0
+                  ? <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-600">Por evaluar · Se paga</span>
                   : <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700">Aprobada</span>
 
             return (

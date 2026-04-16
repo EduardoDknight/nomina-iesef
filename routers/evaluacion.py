@@ -57,8 +57,11 @@ def _calcular_pct(semanas: list, n_semanas: int, params: dict) -> dict:
     denom_ca = n_semanas * 0.40
     denom_ev = n_semanas * 0.60
     if not semanas or denom_ca == 0:
-        return dict(ca_contribution=0.0, ev_contribution=0.0,
-                    pct_cumplimiento=0.0, aprobada=False)
+        # Sin datos de evaluación → default: aprobado al 100% (se paga)
+        # El personal capturará después; mientras tanto no se bloquea la nómina.
+        return dict(ca_contribution=float(params.get('peso_ca', 0.40)),
+                    ev_contribution=float(params.get('peso_ev', 0.60)),
+                    pct_cumplimiento=1.0, aprobada=True, pendiente=True)
 
     ca_sum = sum(
         float(s.get('ca_1') or 0) + float(s.get('ca_2') or 0) +
@@ -241,8 +244,8 @@ async def guardar_semana_virtual(
       educacion_virtual → solo ev_1..ev_4, obs_ev
       cap_humano / director → ambos
     """
-    puede_ca = usuario.rol in ('coord_academica', 'director_cap_humano', 'cap_humano')
-    puede_ev = usuario.rol in ('educacion_virtual', 'director_cap_humano', 'cap_humano')
+    puede_ca = usuario.rol in ('superadmin', 'coord_academica', 'director_cap_humano', 'cap_humano')
+    puede_ev = usuario.rol in ('superadmin', 'educacion_virtual', 'director_cap_humano', 'cap_humano')
 
     if not puede_ca and not puede_ev:
         raise HTTPException(status_code=403, detail="Sin permiso para capturar evaluación virtual")
@@ -354,7 +357,7 @@ async def calcular_resultados_virtual(
     Recalcula y guarda evaluacion_virtual_resultado para todas las asignaciones
     virtuales/mixtas de la quincena. Puede llamarse múltiples veces.
     """
-    if usuario.rol not in ('director_cap_humano', 'cap_humano', 'educacion_virtual'):
+    if usuario.rol not in ('superadmin', 'director_cap_humano', 'cap_humano', 'educacion_virtual'):
         raise HTTPException(status_code=403, detail="Sin permiso para calcular evaluación virtual")
 
     conn = get_conn()

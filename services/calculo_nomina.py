@@ -12,6 +12,7 @@ Flujo:
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional
 from dataclasses import dataclass, field
+from datetime import timedelta
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import logging
@@ -395,23 +396,63 @@ def calcular_nomina_docente(
             else:
                 resultado.horas_descuento += horas
 
-        # ── 2. Horas virtuales aprobadas (de evaluacion_virtual_resultado) ──
+        # ── 2. Horas virtuales ────────────────────────────────────────────────
+        # Política: si existe resultado → respetar aprobada/no aprobada.
+        # Si NO existe resultado (pendiente de evaluación) → pagar todo por defecto.
+        # Esto permite operar la nómina sin depender de que el personal haya capturado.
+        # n_semanas calendáricas (L-D) que intersectan [fecha_inicio, fecha_fin]:
+        _lunes = fecha_inicio - timedelta(days=fecha_inicio.weekday())
+        n_sem_virt = 0
+        _l = _lunes
+        while _l <= fecha_fin:
+            n_sem_virt += 1
+            _l += timedelta(weeks=1)
+
         cur.execute("""
-            SELECT evr.asignacion_id, evr.horas_reales_a_pagar, evr.tarifa,
-                   m.programa_id, p.nombre AS programa_nombre
+            -- Resultados explícitos aprobados
+            SELECT evr.asignacion_id,
+                   evr.horas_reales_a_pagar  AS horas,
+                   evr.tarifa,
+                   m.programa_id,
+                   p.nombre AS programa_nombre
             FROM evaluacion_virtual_resultado evr
-            JOIN asignaciones a  ON evr.asignacion_id = a.id
-            JOIN materias m      ON a.materia_id = m.id
-            JOIN programas p     ON m.programa_id = p.id
+            JOIN asignaciones a ON evr.asignacion_id = a.id
+            JOIN materias m     ON a.materia_id = m.id
+            JOIN programas p    ON m.programa_id = p.id
             WHERE evr.quincena_id = %s
-              AND evr.docente_id = %s
-              AND evr.aprobada = true
-        """, (quincena_id, docente_id))
+              AND evr.docente_id  = %s
+              AND evr.aprobada    = true
+
+            UNION ALL
+
+            -- Asignaciones sin resultado aún → default: pagar horas completas
+            SELECT a.id,
+                   a.horas_semana * %s       AS horas,
+                   COALESCE(a.costo_hora, p.costo_hora) AS tarifa,
+                   m.programa_id,
+                   p.nombre AS programa_nombre
+            FROM asignaciones a
+            JOIN materias m ON a.materia_id = m.id
+            JOIN programas p ON m.programa_id = p.id
+            WHERE a.docente_id = %s
+              AND a.activa = true
+              AND a.modalidad IN ('virtual', 'mixta')
+              AND a.vigente_desde <= %s
+              AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
+              AND NOT EXISTS (
+                  SELECT 1 FROM evaluacion_virtual_resultado evr2
+                  WHERE evr2.asignacion_id = a.id
+                    AND evr2.quincena_id   = %s
+              )
+        """, (quincena_id, docente_id,
+              n_sem_virt,
+              docente_id, fecha_fin, fecha_inicio,
+              quincena_id))
 
         for virt in cur.fetchall():
             pid = virt["programa_id"]
             tarifa = Decimal(str(virt["tarifa"] or "0"))
-            horas = Decimal(str(virt["horas_reales_a_pagar"] or "0"))
+            horas = Decimal(str(virt["horas"] or "0"))
             horas_programadas += horas
 
             if pid not in programas_dict:
