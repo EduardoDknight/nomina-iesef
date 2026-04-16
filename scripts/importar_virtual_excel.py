@@ -353,7 +353,7 @@ def main(dry_run=False):
         # Verificar si ya existe
         cur.execute("""
             SELECT id, modalidad, horas_semana FROM asignaciones
-            WHERE docente_id=%s AND materia_id=%s AND grupo=%s AND ciclo=%s AND activa=true
+            WHERE docente_id=%s AND materia_id=%s AND grupo=%s AND ciclo_label=%s AND activa=true
         """, (doc_id, mat_id, grupo, CICLO))
         existing = cur.fetchone()
 
@@ -374,7 +374,7 @@ def main(dry_run=False):
         if not dry_run:
             cur.execute("""
                 INSERT INTO asignaciones
-                    (docente_id, materia_id, grupo, ciclo, activa, costo_hora, modalidad, horas_semana)
+                    (docente_id, materia_id, grupo, ciclo_label, activa, costo_hora, modalidad, horas_semana)
                 VALUES (%s,%s,%s,%s,true,%s,%s,%s)
                 RETURNING id
             """, (doc_id, mat_id, grupo, CICLO,
