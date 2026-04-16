@@ -100,6 +100,18 @@ function colorConfig(minutos) {
       pulse:  false,
     }
   }
+  // > 60 min: rojo solo si llevamos más de 4 horas sin contacto.
+  // Un silencio de 1-4h es normal fuera del horario escolar (noche/madrugada).
+  if (minutos <= 240) {
+    return {
+      dot:    '#f59e0b',
+      bg:     '#fffbeb',
+      border: '#fde68a',
+      text:   '#92400e',
+      label:  'Sin actividad reciente',
+      pulse:  false,
+    }
+  }
   return {
     dot:    '#ef4444',
     bg:     '#fef2f2',
@@ -161,15 +173,23 @@ export function SyncBadgeCompact() {
     </div>
   )
 
-  const cfg = colorConfig(minutos)
+  const cfg       = colorConfig(minutos)
+  const horaExacta = fmtFechaHora(ultimoSync)   // ej. "hoy 03:00" o "15 abr 23:30"
+  const relativo   = minutos !== null ? fmtRelativo(minutos) : null
 
   return (
-    <div title={`Última sincronización: ${fmtFechaHora(ultimoSync) ?? 'desconocida'}\nSincronización automática cada ${INTERVALO_SYNC_MIN} min`}
+    <div title={`Último sync: ${horaExacta ?? 'desconocido'} (${relativo ?? '—'})\nSincronización automática cada ${INTERVALO_SYNC_MIN} min`}
       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium cursor-default select-none transition-colors"
       style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.text }}>
       <span className={`w-1.5 h-1.5 rounded-full inline-block ${cfg.pulse ? 'animate-pulse' : ''}`}
         style={{ background: cfg.dot }} />
-      {minutos !== null ? fmtRelativo(minutos) : '—'}
+      {/* Hora exacta como texto principal — siempre legible sin importar el tiempo transcurrido */}
+      <span>
+        {horaExacta
+          ? <>Sync {horaExacta}{relativo && minutos > 10 && <span className="opacity-60 ml-1">· {relativo}</span>}</>
+          : '—'
+        }
+      </span>
     </div>
   )
 }
