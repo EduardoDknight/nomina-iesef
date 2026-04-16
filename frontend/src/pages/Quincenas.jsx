@@ -34,8 +34,8 @@ function getMesColor(fechaInicio) {
 }
 
 const RS_CONFIG = {
-  centro:    { label: 'CENTRO',    color: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
-  instituto: { label: 'INSTITUTO', color: 'bg-violet-100 text-violet-700 border border-violet-200' },
+  centro:    { label: 'Centro',    color: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
+  instituto: { label: 'Instituto', color: 'bg-violet-100 text-violet-700 border border-violet-200' },
   ambas:     { label: 'C + I',     color: 'bg-slate-100 text-slate-500 border border-slate-200' },
 }
 
