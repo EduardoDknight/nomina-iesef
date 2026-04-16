@@ -76,14 +76,14 @@ def parse_time(t) -> str | None:
     return None
 
 
-def calcular_horas_bloque(entrada: str, salida: str) -> float:
+def calcular_horas_bloque(entrada: str, salida: str) -> int:
     """Calcula horas entre dos strings HH:MM."""
     if not entrada or not salida:
-        return 0.0
+        return 0
     h1, m1 = map(int, entrada.split(':'))
     h2, m2 = map(int, salida.split(':'))
     total = (h2 * 60 + m2) - (h1 * 60 + m1)
-    return round(total / 60, 2)
+    return max(1, round(total / 60))
 
 
 def leer_excel(ruta: str) -> dict:

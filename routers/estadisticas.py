@@ -34,7 +34,7 @@ async def resumen(_: UsuarioActual = Depends(get_usuario_actual)):
     asignaciones_activas = cur.fetchone()["n"]
 
     # Horas programadas totales (semana)
-    cur.execute("SELECT COALESCE(SUM(horas_semana),0)::float AS h FROM asignaciones WHERE activa = true")
+    cur.execute("SELECT COALESCE(SUM(horas_semana),0)::integer AS h FROM asignaciones WHERE activa = true")
     horas_semana = cur.fetchone()["h"]
 
     # Total checadas en la BD
@@ -78,7 +78,7 @@ async def resumen(_: UsuarioActual = Depends(get_usuario_actual)):
     return {
         "docentes_activos":    int(docentes_activos),
         "asignaciones_activas": int(asignaciones_activas),
-        "horas_semana":        round(horas_semana, 1),
+        "horas_semana":        int(horas_semana),
         "checadas_total":      int(checadas_total),
         "checadas_hoy":        int(checadas_hoy),
         "checadas_semana":     int(checadas_semana),
@@ -125,7 +125,7 @@ async def docentes_por_programa(_: UsuarioActual = Depends(get_usuario_actual)):
             p.nombre AS programa,
             p.codigo AS codigo,
             COUNT(DISTINCT a.docente_id) AS docentes,
-            COALESCE(SUM(a.horas_semana), 0)::float AS horas_semana
+            COALESCE(SUM(a.horas_semana), 0)::integer AS horas_semana
         FROM asignaciones a
         JOIN materias  m ON a.materia_id  = m.id
         JOIN programas p ON m.programa_id = p.id
@@ -140,7 +140,7 @@ async def docentes_por_programa(_: UsuarioActual = Depends(get_usuario_actual)):
             "programa":    r["programa"],
             "codigo":      r["codigo"] or r["programa"][:6],
             "docentes":    int(r["docentes"]),
-            "horas_semana": round(r["horas_semana"], 1),
+            "horas_semana": int(r["horas_semana"]),
         }
         for r in rows
     ]

@@ -76,10 +76,10 @@ def parse_time(t) -> str | None:
     return None
 
 
-def horas_bloque(inicio: str, fin: str) -> float:
+def horas_bloque(inicio: str, fin: str) -> int:
     h1, m1 = map(int, inicio.split(':'))
     h2, m2 = map(int, fin.split(':'))
-    return round(((h2 * 60 + m2) - (h1 * 60 + m1)) / 60, 2)
+    return max(1, round(((h2 * 60 + m2) - (h1 * 60 + m1)) / 60))
 
 
 def leer_xlsx(ruta: str) -> list[dict]:

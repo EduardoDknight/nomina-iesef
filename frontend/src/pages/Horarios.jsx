@@ -118,7 +118,7 @@ function ModalAgregarBloque({ asignacion, onClose, onSaved }) {
 
   const horas_bloque = (() => {
     const ini = toMin(form.hora_inicio), fin = toMin(form.hora_fin)
-    return fin > ini ? Math.round((fin - ini) / 60 * 100) / 100 : 0
+    return fin > ini ? Math.round((fin - ini) / 60) : 0
   })()
 
   async function guardar() {
@@ -658,7 +658,7 @@ function ModalNuevaMateria({ grupo, programaId, cicloLabel, onClose, onSaved }) 
       const horasTotal = bloques.reduce((s, b) => {
         const [hI, mI] = b.hora_inicio.split(':').map(Number)
         const [hF, mF] = b.hora_fin.split(':').map(Number)
-        return s + Math.round(((hF * 60 + mF) - (hI * 60 + mI)) / 60 * 100) / 100
+        return s + Math.round(((hF * 60 + mF) - (hI * 60 + mI)) / 60)
       }, 0)
 
       // Crear asignacion
@@ -676,7 +676,7 @@ function ModalNuevaMateria({ grupo, programaId, cicloLabel, onClose, onSaved }) 
       for (const b of bloques) {
         const ini = b.hora_inicio.split(':').map(Number)
         const fin = b.hora_fin.split(':').map(Number)
-        const horas = Math.round(((fin[0]*60+fin[1]) - (ini[0]*60+ini[1])) / 60 * 100) / 100
+        const horas = Math.round(((fin[0]*60+fin[1]) - (ini[0]*60+ini[1])) / 60)
         await api.post('/catalogos/horarios', {
           asignacion_id: asig.data.id,
           dia_semana:    b.dia,
@@ -760,8 +760,8 @@ function ModalNuevaMateria({ grupo, programaId, cicloLabel, onClose, onSaved }) 
             </div>
             <div className="w-28">
               <label className="block text-xs font-medium text-gray-600 mb-1">Horas/semana</label>
-              <input type="number" min={0.5} step={0.5} value={horasSemana}
-                onChange={e => setHorasSemana(parseFloat(e.target.value) || 0)}
+              <input type="number" min={1} step={1} value={horasSemana}
+                onChange={e => setHorasSemana(parseInt(e.target.value, 10) || 0)}
                 className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
             </div>
           </div>

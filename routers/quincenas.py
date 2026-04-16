@@ -376,9 +376,9 @@ class IncidenciaCreate(BaseModel):
     asignacion_id:       int
     tipo:                str   # 'falta', 'retardo', 'suplencia'
     fecha:               date
-    horas_afectadas:     float = 0
+    horas_afectadas:     int = 0
     docente_suplente_id: Optional[int]  = None
-    horas_suplidas:      Optional[float] = None
+    horas_suplidas:      Optional[int] = None
     notas:               Optional[str]  = None
 
 
@@ -951,7 +951,7 @@ async def get_checadas_docente(
             if DIAS.get(h['dia_semana'], -1) == wd:
                 ini_m = h['hora_inicio'].hour * 60 + h['hora_inicio'].minute
                 fin_m = h['hora_fin'].hour   * 60 + h['hora_fin'].minute
-                hb    = float(h['horas_bloque']) if h['horas_bloque'] else (fin_m - ini_m) / 60
+                hb    = int(h['horas_bloque']) if h['horas_bloque'] else int((fin_m - ini_m) // 60)
                 tol_s = min(int(hb * 10), MAX_TOL_SALIDA)
                 modalidad = h['modalidad'] or 'presencial'
                 # sesión virtual si: modalidad='virtual' siempre,

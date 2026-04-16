@@ -277,7 +277,7 @@ def _finalizar_bloque(b, dia, grupo):
         'dia':         dia,
         'hora_inicio': h_ini,
         'hora_fin':    h_fin,
-        'horas_bloque': round(mins / 60, 2),
+        'horas_bloque': max(1, round(mins / 60)),
         'materia':     b['materia'],
         'docente':     b['docente'],
     }

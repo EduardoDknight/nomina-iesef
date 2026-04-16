@@ -203,7 +203,7 @@ async def mis_checadas(
             if DIAS.get(h['dia_semana'], -1) == wd:
                 ini_m = h['hora_inicio'].hour * 60 + h['hora_inicio'].minute
                 fin_m = h['hora_fin'].hour   * 60 + h['hora_fin'].minute
-                hb    = float(h['horas_bloque']) if h['horas_bloque'] else (fin_m - ini_m) / 60
+                hb    = int(h['horas_bloque']) if h['horas_bloque'] else int((fin_m - ini_m) // 60)
                 tol_s = min(int(hb * 10), MAX_TOL_SALIDA)
                 modalidad  = h['modalidad'] or 'presencial'
                 es_virtual = (modalidad == 'virtual') or (modalidad == 'mixta' and wd <= 4)

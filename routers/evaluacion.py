@@ -174,7 +174,7 @@ async def listar_virtual(
 
     for asig in asignaciones:
         asig_id = asig['asignacion_id']
-        horas_quincena = float(asig['horas_semana'] or 0) * n_semanas
+        horas_quincena = int(asig['horas_semana'] or 0) * n_semanas
 
         cur.execute("""
             SELECT * FROM evaluacion_virtual_semana
@@ -384,7 +384,7 @@ async def calcular_resultados_virtual(
     procesados = 0
     for asig in asignaciones:
         asig_id = asig['asignacion_id']
-        horas_quincena = float(asig['horas_semana'] or 0) * n_semanas
+        horas_quincena = int(asig['horas_semana'] or 0) * n_semanas
         tarifa = float(asig['tarifa'] or 0)
         monto_base = horas_quincena * tarifa
 

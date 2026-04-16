@@ -1087,7 +1087,7 @@ function AsignacionVirtualCard({ asig, quincenaId, quincenaEstado, usuario, onRe
             {asig.grupo ? ` · ${asig.grupo}` : ''}
           </p>
           <p className="text-xs text-slate-400 mt-0.5">
-            {Number(asig.horas_semana).toFixed(1)} h/sem × {nSem} sem = {Math.round(asig.horas_quincena)} hrs · {fmt(asig.tarifa)}/hr · Base {fmt(asig.horas_quincena * asig.tarifa)}
+            {asig.horas_semana} h/sem × {nSem} sem = {asig.horas_quincena} hrs · {fmt(asig.tarifa)}/hr · Base {fmt(asig.horas_quincena * asig.tarifa)}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -1473,11 +1473,11 @@ function ModalIncidencia({ quincena, incidencia, onClose, onSaved }) {
       ...form,
       docente_titular_id:  parseInt(form.docente_titular_id),
       asignacion_id:       parseInt(form.asignacion_id),
-      horas_afectadas:     parseFloat(form.horas_afectadas) || 0,
+      horas_afectadas:     parseInt(form.horas_afectadas, 10) || 0,
       docente_suplente_id: form.tipo === 'suplencia' && form.docente_suplente_id
         ? parseInt(form.docente_suplente_id) : null,
       horas_suplidas: form.tipo === 'suplencia' && form.horas_suplidas
-        ? parseFloat(form.horas_suplidas) : null,
+        ? parseInt(form.horas_suplidas, 10) : null,
     }
     try {
       if (esEdicion) {
@@ -1551,7 +1551,7 @@ function ModalIncidencia({ quincena, incidencia, onClose, onSaved }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Horas afectadas</label>
-              <input type="number" min="0" step="0.5" value={form.horas_afectadas}
+              <input type="number" min="1" step="1" value={form.horas_afectadas}
                 onChange={e => set('horas_afectadas', e.target.value)} className={inputCls} />
             </div>
           </div>
@@ -1568,7 +1568,7 @@ function ModalIncidencia({ quincena, incidencia, onClose, onSaved }) {
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Horas suplidas</label>
-                <input type="number" min="0" step="0.5" value={form.horas_suplidas}
+                <input type="number" min="1" step="1" value={form.horas_suplidas}
                   onChange={e => set('horas_suplidas', e.target.value)} className={inputCls} />
               </div>
             </>

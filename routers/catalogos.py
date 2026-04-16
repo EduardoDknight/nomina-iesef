@@ -41,7 +41,7 @@ class AsignacionCreate(BaseModel):
     docente_id:    int
     materia_id:    int
     grupo:         Optional[str]  = None
-    horas_semana:  float
+    horas_semana:  int
     modalidad:     str = "presencial"
     costo_hora:    Optional[float] = None  # None = usa tarifa del programa
     ciclo:         str
@@ -72,7 +72,7 @@ class HorarioCreate(BaseModel):
     dia_semana:    str   # 'lunes', 'martes', etc.
     hora_inicio:   str   # "08:00"
     hora_fin:      str   # "10:00"
-    horas_bloque:  float
+    horas_bloque:  int
 
 class HorarioOut(HorarioCreate):
     id: int
@@ -291,7 +291,7 @@ async def asignaciones_por_programa(
                 'asignacion_id': r['asignacion_id'],
                 'grupo':        r['grupo'],
                 'materia':      r['materia_nombre'],
-                'horas_semana': float(r['horas_semana'] or 0),
+                'horas_semana': int(r['horas_semana'] or 0),
                 'modalidad':    r['modalidad'],
                 'tarifa':       float(r['tarifa'] or 0),
                 'ciclo':        r['ciclo'],
@@ -303,7 +303,7 @@ async def asignaciones_por_programa(
                 'dia':          r['dia_semana'],
                 'inicio':       str(r['hora_inicio'])[:5],
                 'fin':          str(r['hora_fin'])[:5],
-                'horas_bloque': float(r['horas_bloque'] or 0),
+                'horas_bloque': int(r['horas_bloque'] or 0),
             })
 
     result = []
@@ -415,7 +415,7 @@ async def carga_masiva_horarios(
             semestre        = str(row[1]).strip() if row[1] else None
             materia_nombre  = str(row[2]).strip() if row[2] else None
             docente_nombre  = str(row[3]).strip() if row[3] else None
-            horas_semana    = float(row[4]) if row[4] else 0
+            horas_semana    = int(round(float(row[4]))) if row[4] else 0
 
             if not (programa_nombre and materia_nombre and docente_nombre):
                 continue
@@ -595,7 +595,7 @@ async def horarios_por_grupo(
                 'programa':      r['programa'],
                 'programa_id':   r['programa_id'],
                 'programa_codigo': r['programa_codigo'],
-                'horas_semana':  float(r['horas_semana'] or 0),
+                'horas_semana':  int(r['horas_semana'] or 0),
                 'bloques': [],
             }
         if r['bloque_id']:
@@ -604,7 +604,7 @@ async def horarios_por_grupo(
                 'dia':   r['dia_semana'],
                 'inicio': str(r['hora_inicio'])[:5],
                 'fin':    str(r['hora_fin'])[:5],
-                'horas':  float(r['horas_bloque'] or 0),
+                'horas':  int(r['horas_bloque'] or 0),
             })
     return list(asigs.values())
 
