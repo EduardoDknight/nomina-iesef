@@ -192,6 +192,31 @@ html.dark {
   & .hover\:bg-slate-50:hover      { background-color: #263548 !important; }
   & .hover\:bg-slate-100:hover     { background-color: #263548 !important; }
 
+  /* ── Tailwind clases con modificador de opacidad (bg-COLOR-XX/NN) ─────
+     Tailwind genera .bg-red-50\/40 etc. El selector requiere \ escapado.
+     Se necesita cuando clases condicionales llevan /40 /50 /60 /20.
+  ──────────────────────────────────────────────────────────────────────── */
+  & .bg-red-50\/40,
+  & .bg-red-50\/60,
+  & .hover\:bg-red-50\/60:hover          { background-color: rgba(239, 68, 68, 0.08) !important; }
+
+  & .bg-amber-50\/20,
+  & .bg-amber-50\/50,
+  & .bg-amber-50\/60,
+  & .hover\:bg-amber-50\/60:hover        { background-color: rgba(245, 158, 11, 0.08) !important; }
+
+  & .bg-blue-50\/40,
+  & .bg-blue-50\/50,
+  & .hover\:bg-blue-50\/50:hover         { background-color: rgba(37, 99, 235, 0.08) !important; }
+
+  & .bg-purple-50\/40,
+  & .hover\:bg-purple-50:hover           { background-color: rgba(124, 58, 237, 0.08) !important; }
+
+  & .bg-slate-50\/60,
+  & .bg-slate-50\/80                     { background-color: #0f172a !important; }
+  & .bg-slate-100\/60,
+  & .bg-slate-100\/80                    { background-color: #1e293b !important; }
+
   /* ── Sombras ─────────────────────────────────────────────────────────── */
   & [style*="box-shadow: 0 1px 6px rgba(0,0,0,0.06)"],
   & [style*="box-shadow: 0 1px 3px rgba(0,0,0,0.08)"] {

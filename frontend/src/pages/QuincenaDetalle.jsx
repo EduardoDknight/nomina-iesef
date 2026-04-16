@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import api from '../api/client'
 import SyncBadge from '../components/SyncBadge'
 
@@ -693,6 +694,7 @@ function HistorialChecadas({ quincenaId, quincena, usuario, docente, onAlerta, o
 }
 
 function TabAsistencia({ quincena, usuario }) {
+  const { dark } = useTheme()
   const [docentes, setDocentes] = useState([])
   const [programasCat, setProgramasCat] = useState([])
   const [loading, setLoading] = useState(true)
@@ -812,12 +814,28 @@ function TabAsistencia({ quincena, usuario }) {
                 <>
                   <tr key={d.id}
                     onClick={() => toggleExpandido(d.id)}
-                    className={`cursor-pointer transition-colors ${
-                      isOpen ? 'bg-blue-50' :
-                      tieneAlerta ? 'bg-purple-50/40 hover:bg-purple-50' :
-                      tieneDescuento ? 'bg-red-50/40 hover:bg-red-50/60' :
-                      'hover:bg-slate-50'
-                    }`}>
+                    className="cursor-pointer transition-colors"
+                    style={{
+                      background: isOpen
+                        ? (dark ? 'rgba(37,99,235,0.12)' : '#eff6ff')
+                        : tieneAlerta
+                          ? (dark ? 'rgba(124,58,237,0.10)' : 'rgba(233,213,255,0.4)')
+                          : tieneDescuento
+                            ? (dark ? 'rgba(239,68,68,0.10)' : 'rgba(254,226,226,0.4)')
+                            : undefined,
+                    }}
+                    onMouseEnter={e => {
+                      if (!isOpen) e.currentTarget.style.background = dark
+                        ? (tieneAlerta ? 'rgba(124,58,237,0.18)' : tieneDescuento ? 'rgba(239,68,68,0.18)' : 'rgba(51,65,85,0.5)')
+                        : (tieneAlerta ? 'rgba(233,213,255,0.7)' : tieneDescuento ? 'rgba(254,226,226,0.6)' : '#f8fafc')
+                    }}
+                    onMouseLeave={e => {
+                      if (!isOpen) e.currentTarget.style.background = tieneAlerta
+                        ? (dark ? 'rgba(124,58,237,0.10)' : 'rgba(233,213,255,0.4)')
+                        : tieneDescuento
+                          ? (dark ? 'rgba(239,68,68,0.10)' : 'rgba(254,226,226,0.4)')
+                          : undefined
+                    }}>
                     <td className="px-4 py-3 font-medium text-slate-800 flex items-center gap-1.5">
                       <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -865,7 +883,8 @@ function TabAsistencia({ quincena, usuario }) {
                   </tr>
                   {isOpen && (
                     <tr key={`${d.id}-detalle`}>
-                      <td colSpan={6} className="p-0 bg-blue-50/50">
+                      <td colSpan={6} className="p-0"
+                        style={{ background: dark ? 'rgba(37,99,235,0.07)' : 'rgba(239,246,255,0.5)' }}>
                         <HistorialChecadas quincenaId={quincena.id} quincena={quincena} usuario={usuario} docente={d} onAlerta={marcarAlerta} onHoras={registrarHoras} onOverrideSaved={recargarDocentes} />
                       </td>
                     </tr>
