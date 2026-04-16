@@ -59,3 +59,5 @@ dump_nomina.sql
 *.dump
 *.sql.gz
 run_migration_*.py
+checadas_gap.sql
+scripts/insert_gap.py
