@@ -1,0 +1,57 @@
+name: Build frontend
+
+# Solo se activa cuando cambian archivos de código fuente del frontend.
+# Los commits con "[skip ci]" (el propio build) no vuelven a disparar esto.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/src/**'
+      - 'frontend/index.html'
+      - 'frontend/vite.config.*'
+      - 'frontend/tailwind.config.*'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Evitar que dos builds corran en paralelo (ej. push rápidos seguidos)
+    concurrency:
+      group: frontend-build
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Token con permisos de escritura para poder hacer push del dist
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+
+      - name: Commit y push dist
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add frontend/dist/
+          # Solo commitear si hay cambios reales en dist/
+          if git diff --cached --quiet; then
+            echo "Sin cambios en dist/ — nada que commitear"
+          else
+            git commit -m "build: auto-compilar frontend [skip ci]"
+            git push
+          fi
