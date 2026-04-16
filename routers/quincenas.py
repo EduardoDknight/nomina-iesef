@@ -196,6 +196,15 @@ async def eliminar_quincena(
             )
 
         # Borrar en cascada (orden: hijos primero)
+        # nomina_detalle_programa tiene FK a nomina_quincena.id (no a quincena_id),
+        # por lo que se elimina por separado con subquery antes que nomina_quincena.
+        cur.execute("""
+            DELETE FROM nomina_detalle_programa
+            WHERE nomina_id IN (
+                SELECT id FROM nomina_quincena WHERE quincena_id = %s
+            )
+        """, (quincena_id,))
+
         tablas = [
             "overrides_pago_clase",
             "evaluacion_virtual_semana",
@@ -320,17 +329,37 @@ async def get_asistencia_quincena(
             ARRAY_AGG(DISTINCT p.nombre ORDER BY p.nombre) AS programas,
             SUM(a.horas_semana)                             AS horas_semana_total,
             (
-                -- Dedup: misma lógica que el endpoint de detalle (ventana 3 min)
+                -- Dedup (ventana 3 min) solo para checadas en días con clase
+                -- del programa de esta quincena (evita contar días de otros planteles)
                 SELECT COUNT(*) FROM (
-                    SELECT timestamp_checada,
-                           LAG(timestamp_checada) OVER (ORDER BY timestamp_checada) AS prev_ts
-                    FROM asistencias_checadas
-                    WHERE user_id = d.chec_id
-                      AND timestamp_checada >= %s::timestamp
-                      AND timestamp_checada <  (%s::date + INTERVAL '1 day')::timestamp
+                    SELECT ac.timestamp_checada,
+                           LAG(ac.timestamp_checada) OVER (ORDER BY ac.timestamp_checada) AS prev_ts
+                    FROM asistencias_checadas ac
+                    WHERE ac.user_id = d.chec_id
+                      AND ac.timestamp_checada >= %s::timestamp
+                      AND ac.timestamp_checada <  (%s::date + INTERVAL '1 day')::timestamp
+                      AND (%s = 'ambas' OR EXISTS (
+                          SELECT 1
+                          FROM   asignaciones a_chk
+                          JOIN   materias   mat_chk ON a_chk.materia_id    = mat_chk.id
+                          JOIN   programas  p_chk   ON mat_chk.programa_id = p_chk.id
+                          JOIN   horario_clases hc_chk ON hc_chk.asignacion_id = a_chk.id
+                          WHERE  a_chk.docente_id = d.id
+                            AND  a_chk.activa     = true
+                            AND  p_chk.razon_social::text = %s
+                            AND  EXTRACT(DOW FROM ac.timestamp_checada)::int =
+                                 CASE hc_chk.dia_semana
+                                     WHEN 'lunes'     THEN 1
+                                     WHEN 'martes'    THEN 2
+                                     WHEN 'miercoles' THEN 3
+                                     WHEN 'jueves'    THEN 4
+                                     WHEN 'viernes'   THEN 5
+                                     WHEN 'sabado'    THEN 6
+                                 END
+                      ))
                 ) t
-                WHERE prev_ts IS NULL
-                   OR EXTRACT(EPOCH FROM (timestamp_checada - prev_ts)) > 180
+                WHERE t.prev_ts IS NULL
+                   OR EXTRACT(EPOCH FROM (t.timestamp_checada - t.prev_ts)) > 180
             ) AS total_checadas,
             nq.horas_presenciales,
             nq.horas_virtuales,
@@ -353,10 +382,11 @@ async def get_asistencia_quincena(
                  nq.horas_presenciales, nq.horas_virtuales,
                  nq.horas_descuento, nq.estado
         ORDER BY d.nombre_completo
-    """, (q['fecha_inicio'], q['fecha_fin'],   # total_checadas subquery
-          q['fecha_fin'], q['fecha_inicio'],   # vigente_desde <= fecha_fin, vigente_hasta >= fecha_inicio
+    """, (q['fecha_inicio'], q['fecha_fin'],      # total_checadas: rango de fechas
+          q['razon_social'], q['razon_social'],   # total_checadas: filtro razon_social EXISTS
+          q['fecha_fin'], q['fecha_inicio'],       # vigente_desde <= fecha_fin, vigente_hasta >= fecha_inicio
           quincena_id,
-          q['razon_social'], q['razon_social']))
+          q['razon_social'], q['razon_social']))   # main WHERE razon_social
 
     rows = cur.fetchall()
     cur.close(); conn.close()
@@ -914,7 +944,9 @@ async def get_checadas_docente(
         WHERE a.docente_id = %s
           AND a.vigente_desde <= %s AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
           AND a.activa = true
-    """, (docente_id, q['fecha_fin'], q['fecha_inicio']))
+          AND (%s = 'ambas' OR p.razon_social = %s)
+    """, (docente_id, q['fecha_fin'], q['fecha_inicio'],
+          q['razon_social'], q['razon_social']))
     horarios = list(cur.fetchall())
 
     cur.close(); conn.close()

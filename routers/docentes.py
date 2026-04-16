@@ -491,3 +491,135 @@ async def save_jornada_tc(
     finally:
         cur.close()
         conn.close()
+
+
+@router.get("/{docente_id}/horarios")
+async def get_horarios_docente(
+    docente_id: int,
+    ciclo: str = None,
+    _: UsuarioActual = Depends(get_usuario_actual)
+):
+    """
+    Retorna todas las asignaciones activas del docente con sus bloques horarios,
+    agrupadas por programa. Si se pasa ?ciclo= filtra por ciclo_label.
+    """
+    conn = get_conn()
+    cur  = conn.cursor()
+    try:
+        cur.execute("SELECT id, nombre_completo FROM docentes WHERE id = %s", (docente_id,))
+        doc = cur.fetchone()
+        if not doc:
+            raise HTTPException(404, "Docente no encontrado")
+
+        ciclo_filter = "AND a.ciclo_label = %s" if ciclo else ""
+        params = [docente_id] + ([ciclo] if ciclo else [])
+
+        # Seleccionar las asignaciones activas; si no tiene ninguna (docente dado de baja,
+        # duplicados desactivados, etc.) mostrar la más reciente por (materia, grupo)
+        # para que el usuario vea el contexto del horario aunque sea inactivo.
+        cur.execute(f"""
+            WITH candidatas AS (
+                SELECT
+                    a.id            AS asignacion_id,
+                    a.grupo,
+                    a.horas_semana,
+                    a.modalidad,
+                    a.ciclo_label,
+                    a.activa,
+                    a.vigente_desde,
+                    COALESCE(a.costo_hora, p.costo_hora) AS costo_hora,
+                    mat.id          AS materia_id,
+                    mat.nombre      AS materia_nombre,
+                    p.id            AS programa_id,
+                    p.nombre        AS programa_nombre,
+                    p.razon_social::text AS razon_social,
+                    -- Rango de partición: por (materia, grupo) para deduplicar
+                    ROW_NUMBER() OVER (
+                        PARTITION BY mat.id, COALESCE(a.grupo,'')
+                        ORDER BY a.activa DESC, a.vigente_desde DESC, a.id DESC
+                    ) AS rn,
+                    -- ¿Existe al menos una asig activa para este docente?
+                    COUNT(*) FILTER (WHERE a.activa = true)
+                        OVER (PARTITION BY a.docente_id) AS total_activas
+                FROM asignaciones a
+                JOIN materias mat  ON a.materia_id  = mat.id
+                JOIN programas p   ON mat.programa_id = p.id
+                WHERE a.docente_id = %s
+                  {ciclo_filter}
+            )
+            SELECT
+                c.asignacion_id, c.grupo, c.horas_semana, c.modalidad,
+                c.ciclo_label, c.activa, c.costo_hora,
+                c.materia_id, c.materia_nombre,
+                c.programa_id, c.programa_nombre, c.razon_social,
+                hc.id           AS bloque_id,
+                hc.dia_semana,
+                hc.hora_inicio::text AS hora_inicio,
+                hc.hora_fin::text    AS hora_fin,
+                hc.horas_bloque
+            FROM candidatas c
+            LEFT JOIN horario_clases hc ON hc.asignacion_id = c.asignacion_id
+                                       AND hc.activo = true
+            WHERE c.rn = 1
+              -- Si hay activas, mostrar solo activas; si no, mostrar la mejor inactiva
+              AND (c.total_activas > 0 AND c.activa = true
+                   OR c.total_activas = 0)
+            ORDER BY c.programa_nombre, c.materia_nombre, c.grupo,
+                     CASE hc.dia_semana
+                         WHEN 'lunes' THEN 1 WHEN 'martes' THEN 2 WHEN 'miercoles' THEN 3
+                         WHEN 'jueves' THEN 4 WHEN 'viernes' THEN 5 WHEN 'sabado' THEN 6
+                     END
+        """, params)
+        rows = cur.fetchall()
+
+        # Agrupar: programa → asignacion → bloques
+        programas: dict = {}
+        for r in rows:
+            pid = r["programa_id"]
+            aid = r["asignacion_id"]
+
+            if pid not in programas:
+                programas[pid] = {
+                    "programa_id":     pid,
+                    "programa_nombre": r["programa_nombre"],
+                    "razon_social":    r["razon_social"],
+                    "asignaciones":    {},
+                }
+            prog = programas[pid]
+
+            if aid not in prog["asignaciones"]:
+                prog["asignaciones"][aid] = {
+                    "asignacion_id":  aid,
+                    "materia_nombre": r["materia_nombre"],
+                    "grupo":          r["grupo"] or "",
+                    "horas_semana":   int(r["horas_semana"] or 0),
+                    "modalidad":      r["modalidad"] or "presencial",
+                    "costo_hora":     float(r["costo_hora"] or 0),
+                    "ciclo_label":    r["ciclo_label"] or "",
+                    "bloques":        [],
+                }
+            asig = prog["asignaciones"][aid]
+
+            if r["bloque_id"]:
+                asig["bloques"].append({
+                    "bloque_id":   r["bloque_id"],
+                    "dia_semana":  r["dia_semana"],
+                    "hora_inicio": str(r["hora_inicio"])[:5],
+                    "hora_fin":    str(r["hora_fin"])[:5],
+                    "horas_bloque": int(r["horas_bloque"] or 0),
+                })
+
+        # Serializar a lista
+        result = []
+        for prog in programas.values():
+            asigs = list(prog["asignaciones"].values())
+            result.append({**prog, "asignaciones": asigs})
+
+        return {
+            "docente_id":     docente_id,
+            "docente_nombre": doc["nombre_completo"],
+            "programas":      result,
+        }
+    finally:
+        cur.close()
+        conn.close()

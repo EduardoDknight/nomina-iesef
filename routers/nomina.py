@@ -69,14 +69,24 @@ async def generar_nomina(
         conn.close()
         raise HTTPException(status_code=400, detail=f"No se puede generar nómina en estado '{quincena['estado']}'")
 
-    # Filtro de adscripción según razon_social de la quincena
+    # Filtro por razon_social de la quincena.
+    # Se usa presencia de asignaciones en programas del razon_social correcto,
+    # no el campo adscripcion del docente, para capturar docentes que enseñan
+    # en un plantel aunque su adscripcion principal sea el otro.
     rs = quincena["razon_social"]  # 'centro', 'instituto', 'ambas'
     if rs == "ambas":
-        adscripcion_filter = "TRUE"          # sin restricción
-        adscripcion_params: list = []
+        rs_filter = "TRUE"
+        rs_params: list = []
     else:
-        adscripcion_filter = "d.adscripcion IN (%s, 'ambos')"
-        adscripcion_params = [rs]
+        rs_filter = """EXISTS (
+            SELECT 1 FROM asignaciones a_rs
+            JOIN materias m_rs   ON a_rs.materia_id   = m_rs.id
+            JOIN programas p_rs  ON m_rs.programa_id  = p_rs.id
+            WHERE a_rs.docente_id = d.id
+              AND a_rs.activa = true
+              AND p_rs.razon_social = %s
+        )"""
+        rs_params = [rs]
 
     # Obtener docentes que participan en esta quincena filtrados por razon_social:
     # presenciales (chec_id), virtuales con evaluación, campo clínico, suplentes
@@ -84,7 +94,7 @@ async def generar_nomina(
         SELECT DISTINCT d.id
         FROM docentes d
         WHERE d.activo = true
-          AND {adscripcion_filter}
+          AND {rs_filter}
           AND (
               d.chec_id IS NOT NULL
               OR EXISTS (
@@ -103,7 +113,7 @@ async def generar_nomina(
                     AND i.tipo = 'suplencia'
               )
           )
-    """, adscripcion_params + [quincena_id, quincena_id, quincena_id])
+    """, rs_params + [quincena_id, quincena_id, quincena_id])
     docente_ids = [r["id"] for r in cur.fetchall()]
     cur.close()
 
@@ -176,7 +186,16 @@ async def get_nomina_quincena(
     """
     params = [quincena_id]
     if rs != "ambas":
-        sql += " AND d.adscripcion IN (%s, 'ambos')"
+        # Filtrar por asignaciones en programas del razon_social correcto
+        # (mismo criterio que en generar_nomina: no usar adscripcion del docente)
+        sql += """ AND EXISTS (
+            SELECT 1 FROM asignaciones a_rs
+            JOIN materias m_rs  ON a_rs.materia_id  = m_rs.id
+            JOIN programas p_rs ON m_rs.programa_id = p_rs.id
+            WHERE a_rs.docente_id = d.id
+              AND a_rs.activa = true
+              AND p_rs.razon_social = %s
+        )"""
         params.append(rs)
     sql += " ORDER BY d.nombre_completo"
     cur.execute(sql, params)

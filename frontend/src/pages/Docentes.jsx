@@ -1,7 +1,105 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
 import SyncBadge from '../components/SyncBadge'
+
+// ── Panel de horarios del docente ─────────────────────────────────────────────
+
+const DIA_LABEL = { lunes:'Lun', martes:'Mar', miercoles:'Mié',
+                    jueves:'Jue', viernes:'Vie', sabado:'Sáb' }
+const MOD_COLOR = {
+  presencial: 'bg-blue-50 text-blue-700 border-blue-200',
+  virtual:    'bg-violet-50 text-violet-700 border-violet-200',
+  mixta:      'bg-amber-50 text-amber-700 border-amber-200',
+}
+const RS_DOT = { centro: 'bg-sky-400', instituto: 'bg-emerald-400' }
+
+export function HorariosDocentePanel({ docenteId, onClose }) {
+  const [data, setData]   = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!docenteId) return
+    setLoading(true)
+    api.get(`/docentes/${docenteId}/horarios`)
+      .then(r => setData(r.data))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [docenteId])
+
+  if (loading) return (
+    <td colSpan={9} className="px-6 py-4 bg-slate-50 border-b border-slate-200">
+      <div className="flex gap-2 items-center text-xs text-slate-400">
+        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        Cargando horarios...
+      </div>
+    </td>
+  )
+
+  if (!data || data.programas.length === 0) return (
+    <td colSpan={9} className="px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs text-slate-400">
+      Sin asignaciones activas en el ciclo actual.
+    </td>
+  )
+
+  return (
+    <td colSpan={9} className="p-0 border-b border-slate-200">
+      <div className="bg-slate-50 px-6 py-4 space-y-4">
+        {data.programas.map(prog => (
+          <div key={prog.programa_id}>
+            {/* Cabecera programa */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${RS_DOT[prog.razon_social] || 'bg-slate-400'}`} />
+              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                {prog.programa_nombre}
+              </span>
+              <span className="text-xs text-slate-400 capitalize">{prog.razon_social}</span>
+            </div>
+            {/* Asignaciones */}
+            <div className="space-y-2 ml-4">
+              {prog.asignaciones.map(asig => (
+                <div key={asig.asignacion_id}
+                  className="flex items-start gap-3 flex-wrap bg-white rounded-lg border border-slate-200 px-3 py-2">
+                  {/* Materia + grupo */}
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-medium text-slate-700">{asig.materia_nombre}</span>
+                    {asig.grupo && (
+                      <span className="ml-2 text-xs text-slate-400 font-mono">{asig.grupo}</span>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs text-slate-400">{asig.horas_semana}h/sem</span>
+                      <span className="text-xs text-slate-400">${asig.costo_hora}/h</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded border capitalize ${MOD_COLOR[asig.modalidad] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                        {asig.modalidad}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Bloques */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {asig.bloques.length === 0
+                      ? <span className="text-xs text-slate-300 italic">Sin bloques definidos</span>
+                      : asig.bloques.map((b, i) => (
+                        <span key={i}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-mono whitespace-nowrap">
+                          <span className="font-semibold text-slate-500">{DIA_LABEL[b.dia_semana] || b.dia_semana}</span>
+                          {b.hora_inicio}–{b.hora_fin}
+                          <span className="text-slate-400">({b.horas_bloque}h)</span>
+                        </span>
+                      ))
+                    }
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </td>
+  )
+}
 
 const ADSCRIPCION_LABEL = { centro: 'Centro', instituto: 'Instituto', ambos: 'Ambos' }
 const TIPO_LABEL = { por_horas: 'Por horas', tiempo_completo: 'Tiempo completo', campo_clinico: 'Campo clínico' }
@@ -406,8 +504,13 @@ export default function Docentes() {
   const [uploadMsg, setUploadMsg] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [drawer, setDrawer] = useState(null) // null | 'nuevo' | {docente}
+  const [expandedId, setExpandedId] = useState(null) // id del docente con horarios visibles
   const fileRef = useRef()
   const POR_PAGINA = 20
+
+  const toggleExpand = useCallback((id) => {
+    setExpandedId(prev => prev === id ? null : id)
+  }, [])
 
   const cargar = async () => {
     setLoading(true)
@@ -588,46 +691,68 @@ export default function Docentes() {
                   </td>
                 </tr>
               ) : (
-                paginados.map(d => (
-                  <tr key={d.id}
-                    className={`hover:bg-slate-50 transition-colors ${!d.activo ? 'opacity-50' : ''}`}>
-                    <td className="px-4 py-3 font-mono text-slate-500 text-xs">
-                      {d.numero_docente?.replace(/\.0+$/, '') || '—'}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{d.nombre_completo}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{d.correo || '—'}</td>
-                    <td className="px-4 py-3 font-mono text-slate-500 text-xs">{d.rfc || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        d.adscripcion === 'ambos' ? 'bg-violet-100 text-violet-700' :
-                        d.adscripcion === 'centro' ? 'bg-blue-100 text-blue-700' :
-                        'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {ADSCRIPCION_LABEL[d.adscripcion] || d.adscripcion}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 text-xs">{TIPO_LABEL[d.tipo] || d.tipo}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs capitalize">{d.regimen_fiscal?.replace('_', ' ')}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        d.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${d.activo ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                        {d.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => setDrawer(d)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Editar">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                paginados.flatMap(d => {
+                  const isOpen = expandedId === d.id
+                  return [
+                    <tr key={d.id}
+                      className={`transition-colors ${!d.activo ? 'opacity-50' : ''} ${isOpen ? 'bg-blue-50/40' : 'hover:bg-slate-50'}`}>
+                      <td className="px-4 py-3 font-mono text-slate-500 text-xs">
+                        {d.numero_docente?.replace(/\.0+$/, '') || '—'}
+                      </td>
+                      {/* Nombre — clic expande horarios */}
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => toggleExpand(d.id)}
+                          className="flex items-center gap-1.5 text-left font-medium text-slate-800 hover:text-blue-600 transition-colors group"
+                          title={isOpen ? 'Ocultar horarios' : 'Ver programas y horarios'}
+                        >
+                          <svg className={`w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          {d.nombre_completo}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 text-xs">{d.correo || '—'}</td>
+                      <td className="px-4 py-3 font-mono text-slate-500 text-xs">{d.rfc || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          d.adscripcion === 'ambos' ? 'bg-violet-100 text-violet-700' :
+                          d.adscripcion === 'centro' ? 'bg-blue-100 text-blue-700' :
+                          'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {ADSCRIPCION_LABEL[d.adscripcion] || d.adscripcion}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-xs">{TIPO_LABEL[d.tipo] || d.tipo}</td>
+                      <td className="px-4 py-3 text-slate-500 text-xs capitalize">{d.regimen_fiscal?.replace('_', ' ')}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          d.activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${d.activo ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                          {d.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => setDrawer(d)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Editar">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>,
+                    /* Fila expandida con horarios */
+                    isOpen && (
+                      <tr key={`${d.id}-horarios`}>
+                        <HorariosDocentePanel docenteId={d.id} />
+                      </tr>
+                    ),
+                  ].filter(Boolean)
+                })
               )}
             </tbody>
           </table>

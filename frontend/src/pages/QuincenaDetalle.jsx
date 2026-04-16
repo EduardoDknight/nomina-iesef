@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import api from '../api/client'
 import SyncBadge from '../components/SyncBadge'
+import { HorariosDocentePanel } from './Docentes'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ function TabNomina({ quincena, canEdit }) {
   const [exportando, setExportando] = useState(null)
   const [msg, setMsg] = useState(null)
   const [busqueda, setBusqueda] = useState('')
+  const [expandedId, setExpandedId] = useState(null)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -222,27 +224,49 @@ function TabNomina({ quincena, canEdit }) {
                     ))}
                   </tr>
                 ))
-              ) : nominaFiltrada.map(n => (
-                <tr key={n.docente_id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-800">{n.docente_nombre}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 tabular-nums">{n.horas_presenciales != null ? Math.round(n.horas_presenciales) : '—'}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 tabular-nums">{n.horas_virtuales != null ? Math.round(n.horas_virtuales) : '—'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {n.horas_suplencia > 0
-                      ? <span className="text-blue-600 font-medium">{Math.round(n.horas_suplencia)}</span>
-                      : <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono text-slate-700">{fmt(n.honorarios)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-slate-500 text-xs">{fmt(n.iva)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-red-500 text-xs">{fmt(n.retencion_isr)}</td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800">{fmt(n.total_final)}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 capitalize">
-                      {n.estado}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              ) : nominaFiltrada.flatMap(n => {
+                const isOpen = expandedId === n.docente_id
+                return [
+                  <tr key={n.docente_id}
+                    className={`transition-colors ${isOpen ? 'bg-blue-50/40' : 'hover:bg-slate-50'}`}>
+                    {/* Nombre — clic expande horarios */}
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setExpandedId(p => p === n.docente_id ? null : n.docente_id)}
+                        className="flex items-center gap-1.5 text-left font-medium text-slate-800 hover:text-blue-600 transition-colors group"
+                        title={isOpen ? 'Ocultar horarios' : 'Ver programas y horarios'}
+                      >
+                        <svg className={`w-3 h-3 text-slate-300 group-hover:text-blue-500 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`}
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                        {n.docente_nombre}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-600 tabular-nums">{n.horas_presenciales != null ? Math.round(n.horas_presenciales) : '—'}</td>
+                    <td className="px-4 py-3 text-right text-slate-600 tabular-nums">{n.horas_virtuales != null ? Math.round(n.horas_virtuales) : '—'}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {n.horas_suplencia > 0
+                        ? <span className="text-blue-600 font-medium">{Math.round(n.horas_suplencia)}</span>
+                        : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-slate-700">{fmt(n.honorarios)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-slate-500 text-xs">{fmt(n.iva)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-red-500 text-xs">{fmt(n.retencion_isr)}</td>
+                    <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800">{fmt(n.total_final)}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 capitalize">
+                        {n.estado}
+                      </span>
+                    </td>
+                  </tr>,
+                  isOpen && (
+                    <tr key={`${n.docente_id}-horarios`}>
+                      <HorariosDocentePanel docenteId={n.docente_id} />
+                    </tr>
+                  ),
+                ].filter(Boolean)
+              })}
             </tbody>
             {nomina.length > 0 && (
               <tfoot>
