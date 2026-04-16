@@ -1,5 +1,5 @@
 /**
- * SyncBadge — Indicador de última sincronización con el checador MB360
+ * SyncBadge — Indicador de última sincronización con el checador
  *
  * Variantes:
  *   compact  → píldora pequeña inline para headers  (default)
@@ -7,19 +7,32 @@
  *   portal   → versión compacta para portales móviles
  *
  * Colores automáticos por frescura:
- *   < 30 min  → verde   (datos frescos)
+ *   ≤ 30 min  → verde   (datos frescos)
  *   30-60 min → ámbar   (próxima sincronización)
  *   > 60 min  → rojo    (posible problema)
+ *
+ * Nota: el backend devuelve timestamps con offset de zona horaria
+ * (America/Mexico_City) para que el cálculo de minutos sea correcto.
  */
 import { useState, useEffect, useCallback } from 'react'
 import api from '../api/client'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+const TZ = 'America/Mexico_City'
+const INTERVALO_SYNC_MIN = 30   // el cron del agente corre cada 30 min
+
 function minutosDesde(isoString) {
   if (!isoString) return null
   const diff = (Date.now() - new Date(isoString).getTime()) / 60000
-  return Math.round(diff)
+  return Math.max(0, Math.round(diff))   // nunca negativo (desfase de TZ)
+}
+
+/** Minutos hasta la próxima sincronización esperada */
+function minutosSiguiente(minutos) {
+  if (minutos === null) return null
+  const resta = INTERVALO_SYNC_MIN - (minutos % INTERVALO_SYNC_MIN)
+  return resta === INTERVALO_SYNC_MIN ? 0 : resta   // 0 = debería ser inminente
 }
 
 function fmtRelativo(minutos) {
@@ -38,18 +51,20 @@ function fmtRelativo(minutos) {
 function fmtHora(isoString) {
   if (!isoString) return null
   return new Date(isoString).toLocaleTimeString('es-MX', {
-    hour: '2-digit', minute: '2-digit', hour12: false,
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ,
   })
 }
 
 function fmtFechaHora(isoString) {
   if (!isoString) return null
   const d = new Date(isoString)
-  const hoy = new Date()
-  const esHoy = d.toDateString() === hoy.toDateString()
-  const hora = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (esHoy) return `hoy ${hora}`
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) + ' ' + hora
+  // Comparar "es hoy" en zona horaria de México
+  const hoyMX  = new Date().toLocaleDateString('es-MX', { timeZone: TZ })
+  const fechaMX = d.toLocaleDateString('es-MX', { timeZone: TZ })
+  const hora = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ })
+  if (fechaMX === hoyMX) return `hoy ${hora}`
+  const fechaCorta = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', timeZone: TZ })
+  return `${fechaCorta} ${hora}`
 }
 
 function colorConfig(minutos) {
@@ -113,10 +128,10 @@ function useSyncInfo() {
     }
   }, [])
 
-  // Cargar al montar y cada 5 minutos
+  // Cargar al montar y cada 30 minutos (igual que el cron del agente)
   useEffect(() => {
     fetchSync()
-    const iv = setInterval(fetchSync, 5 * 60 * 1000)
+    const iv = setInterval(fetchSync, INTERVALO_SYNC_MIN * 60 * 1000)
     return () => clearInterval(iv)
   }, [fetchSync])
 
@@ -147,7 +162,7 @@ export function SyncBadgeCompact() {
   const cfg = colorConfig(minutos)
 
   return (
-    <div title={`Última sincronización con MB360: ${fmtFechaHora(ultimoSync) ?? 'desconocida'}\nActualización automática cada 30 min`}
+    <div title={`Última sincronización: ${fmtFechaHora(ultimoSync) ?? 'desconocida'}\nSincronización automática cada ${INTERVALO_SYNC_MIN} min`}
       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium cursor-default select-none transition-colors"
       style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.text }}>
       <span className={`w-1.5 h-1.5 rounded-full inline-block ${cfg.pulse ? 'animate-pulse' : ''}`}
@@ -174,7 +189,7 @@ export function SyncBadgeFull() {
   const hora = fmtHora(ultimoSync)
 
   return (
-    <div title={`Última sincronización con MB360: ${fmtFechaHora(ultimoSync) ?? 'desconocida'}\nActualización automática cada 30 min`}
+    <div title={`Última sincronización: ${fmtFechaHora(ultimoSync) ?? 'desconocida'}\nSincronización automática cada ${INTERVALO_SYNC_MIN} min`}
       className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium cursor-default select-none"
       style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.text }}>
       <span className={`w-1.5 h-1.5 rounded-full inline-block ${cfg.pulse ? 'animate-pulse' : ''}`}
@@ -182,7 +197,7 @@ export function SyncBadgeFull() {
       <span>
         {cfg.label}
         {hora && (
-          <span className="ml-1 opacity-75">· MB360 {hora}</span>
+          <span className="ml-1 opacity-75">· Checador {hora}</span>
         )}
         {total !== null && (
           <span className="ml-1 opacity-60">· {total.toLocaleString()} checadas</span>
@@ -199,19 +214,29 @@ export function SyncBadgePortal() {
 
   if (cargando) return null
 
-  const cfg = colorConfig(minutos)
+  const cfg      = colorConfig(minutos)
+  const horaSync = fmtHora(ultimoSync)        // hora exacta MX de la última sync
+  const siguiente = minutosSiguiente(minutos)  // minutos hasta la próxima
+
+  // Texto del countdown
+  const txtSiguiente = siguiente === null ? null
+    : siguiente <= 1 ? 'próxima sincronización inminente'
+    : `próxima en ${siguiente} min`
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
       style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.text }}>
       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.pulse ? 'animate-pulse' : ''}`}
         style={{ background: cfg.dot }} />
-      <span>
-        <span className="font-medium">Checador MB360 · {fmtRelativo(minutos)}</span>
-        {ultimoSync && (
-          <span className="ml-1 opacity-70">({fmtFechaHora(ultimoSync)})</span>
+      <span className="flex-1 min-w-0">
+        {/* Hora exacta de última sincronización */}
+        <span className="font-medium">
+          Checador · {horaSync ? `actualizado ${horaSync}` : fmtRelativo(minutos)}
+        </span>
+        {/* Countdown a la siguiente */}
+        {txtSiguiente && (
+          <span className="ml-1.5 opacity-60">· {txtSiguiente}</span>
         )}
-        <span className="ml-1 opacity-60">· actualización cada 30 min</span>
       </span>
     </div>
   )

@@ -9,6 +9,12 @@ import psycopg2, logging
 from psycopg2.extras import RealDictCursor
 from config import settings
 
+try:
+    from zoneinfo import ZoneInfo
+    _MX = ZoneInfo('America/Mexico_City')
+except ImportError:
+    _MX = None   # Python < 3.9 fallback
+
 logger = logging.getLogger(__name__)
 
 def get_conn():
@@ -107,7 +113,18 @@ def ultimo_sync():
     row = cur.fetchone()
     cur.close()
     conn.close()
+    # Adjuntar timezone para que JavaScript lo interprete correctamente.
+    # PostgreSQL devuelve un datetime naive ya en hora de México (America/Mexico_City).
+    # Sin offset el frontend lo trata como UTC y calcula diferencias incorrectas.
+    ultimo_iso = None
+    if row["ultimo"]:
+        if _MX:
+            ultimo_iso = row["ultimo"].replace(tzinfo=_MX).isoformat()
+        else:
+            # Fallback: adjuntar -06:00 estático (CST); CDT = -05:00
+            ultimo_iso = row["ultimo"].isoformat() + "-06:00"
+
     return {
-        "ultimo_sync":    row["ultimo"].isoformat() if row["ultimo"] else None,
+        "ultimo_sync":    ultimo_iso,
         "total_registros": row["total"],
     }
