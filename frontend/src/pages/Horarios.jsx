@@ -1063,22 +1063,294 @@ function TabPorGrupo({ canEdit }) {
   )
 }
 
+// ── Modal Importar PDF ────────────────────────────────────────────────────────
+
+function ModalImportarPDF({ onClose, onImported }) {
+  const [archivo,      setArchivo]      = useState(null)
+  const [ciclo,        setCiclo]        = useState('2026-1')
+  const [dryRun,       setDryRun]       = useState(true)
+  const [loading,      setLoading]      = useState(false)
+  const [resultado,    setResultado]    = useState(null)
+  const [error,        setError]        = useState('')
+  const fileInputRef = useRef(null)
+
+  async function ejecutar(isDry) {
+    if (!archivo) { setError('Selecciona un archivo PDF'); return }
+    if (!ciclo.trim()) { setError('El ciclo es requerido'); return }
+    setLoading(true); setError(''); setResultado(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', archivo)
+      formData.append('ciclo', ciclo.trim())
+      formData.append('dry_run', String(isDry))
+      const res = await api.post('/catalogos/horarios/upload-pdf', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setResultado({ ...res.data, _wasDry: isDry })
+      if (!isDry) {
+        onImported && onImported()
+      }
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Error al procesar el PDF')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleFile(f) {
+    if (!f) return
+    if (!f.name.toLowerCase().endsWith('.pdf')) {
+      setError('El archivo debe ser un PDF')
+      return
+    }
+    setArchivo(f)
+    setError('')
+    setResultado(null)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    const f = e.dataTransfer.files[0]
+    handleFile(f)
+  }
+
+  const hayCriticos = resultado && resultado.sin_match && resultado.sin_match.length > 0
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div>
+            <h3 className="font-semibold text-gray-800 text-base">Importar horarios desde PDF</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Formato: PDF aSc Horarios de Coord. Docente</p>
+          </div>
+          <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-2xl leading-none">×</button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Drop zone */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={e => e.preventDefault()}
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-lg px-4 py-8 text-center cursor-pointer transition-colors ${
+              archivo ? 'border-emerald-400 bg-emerald-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={e => handleFile(e.target.files[0])}
+            />
+            {archivo ? (
+              <div className="space-y-1">
+                <div className="text-emerald-600 font-medium text-sm">{archivo.name}</div>
+                <div className="text-xs text-gray-400">{(archivo.size / 1024 / 1024).toFixed(1)} MB</div>
+                <button
+                  onClick={e => { e.stopPropagation(); setArchivo(null); setResultado(null) }}
+                  className="text-xs text-red-400 hover:text-red-600 mt-1"
+                >Cambiar archivo</button>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <svg className="w-8 h-8 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm text-gray-500">Arrastra el PDF aquí o haz clic para seleccionar</p>
+                <p className="text-xs text-gray-400">Máx. 50 MB</p>
+              </div>
+            )}
+          </div>
+
+          {/* Ciclo + Dry run */}
+          <div className="flex items-center gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Ciclo académico</label>
+              <input
+                type="text"
+                value={ciclo}
+                onChange={e => setCiclo(e.target.value)}
+                placeholder="Ej. 2026-1"
+                className="border border-gray-300 rounded px-3 py-1.5 text-sm w-28"
+              />
+            </div>
+            <div className="flex items-center gap-2 mt-4">
+              <input
+                type="checkbox"
+                id="dry_run"
+                checked={dryRun}
+                onChange={e => setDryRun(e.target.checked)}
+                className="w-4 h-4 rounded text-blue-600"
+              />
+              <label htmlFor="dry_run" className="text-sm text-gray-700 cursor-pointer">
+                Modo simulación <span className="text-xs text-gray-400">(sin cambios en BD)</span>
+              </label>
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>
+          )}
+
+          {/* Resultado */}
+          {resultado && (
+            <div className="space-y-3">
+              {resultado._wasDry && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Simulación completada — ningún dato fue modificado
+                </div>
+              )}
+              {!resultado._wasDry && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700">
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Importacion completada exitosamente
+                </div>
+              )}
+
+              {/* Tabla resumen */}
+              <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                <p className="font-medium text-gray-700 mb-2 text-xs uppercase tracking-wide">Resumen</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                  <span className="text-gray-500">Grupos procesados</span>
+                  <span className="font-medium text-gray-800">{resultado.grupos_procesados}</span>
+                  <span className="text-gray-500">Grupos 100% virtual (omitidos)</span>
+                  <span className="font-medium text-gray-800">{resultado.grupos_virtuales_omitidos}</span>
+                  <span className="text-gray-500">Bloques extraídos</span>
+                  <span className="font-medium text-gray-800">{resultado.bloques_extraidos}</span>
+                  {!resultado._wasDry && (
+                    <>
+                      <span className="text-gray-500">Asignaciones creadas</span>
+                      <span className="font-medium text-emerald-700">{resultado.asignaciones_creadas}</span>
+                      <span className="text-gray-500">Bloques de horario creados</span>
+                      <span className="font-medium text-emerald-700">{resultado.horarios_creados}</span>
+                      <span className="text-gray-500">Materias nuevas</span>
+                      <span className="font-medium text-blue-700">{resultado.materias_nuevas}</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Por programa */}
+                {Object.keys(resultado.programas || {}).length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-xs text-gray-400 mb-1">Bloques por programa</p>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs">
+                      {Object.entries(resultado.programas).map(([prog, n]) => (
+                        <span key={prog} className="text-gray-600 col-span-2">
+                          <span className="font-medium">{prog}:</span> {n} bloques
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sin match */}
+              {resultado.sin_match && resultado.sin_match.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs font-medium text-amber-700 mb-1">
+                    Docentes no encontrados en BD ({resultado.sin_match.length})
+                  </p>
+                  <ul className="text-xs text-amber-600 space-y-0.5 max-h-32 overflow-y-auto">
+                    {resultado.sin_match.map((s, i) => (
+                      <li key={i} className="font-mono">{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Sin prefijo */}
+              {resultado.sin_prefijo && resultado.sin_prefijo.length > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <p className="text-xs font-medium text-gray-600 mb-1">
+                    Páginas con prefijo desconocido ({resultado.sin_prefijo.length})
+                  </p>
+                  <ul className="text-xs text-gray-400 space-y-0.5 max-h-24 overflow-y-auto">
+                    {resultado.sin_prefijo.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+            Cerrar
+          </button>
+          <div className="flex gap-2">
+            {/* Botón de simulación */}
+            <button
+              onClick={() => ejecutar(true)}
+              disabled={loading || !archivo}
+              className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-40 font-medium"
+            >
+              {loading && dryRun ? 'Analizando...' : 'Simular'}
+            </button>
+            {/* Botón de importación real — visible siempre, pero resaltado tras simulación sin errores críticos */}
+            <button
+              onClick={() => ejecutar(false)}
+              disabled={loading || !archivo}
+              className={`px-4 py-2 text-sm rounded-lg font-medium disabled:opacity-40 transition-colors ${
+                resultado && resultado._wasDry && !hayCriticos
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {loading && !dryRun
+                ? 'Importando...'
+                : resultado && resultado._wasDry && !hayCriticos
+                  ? 'Importar en real'
+                  : 'Importar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Componente principal ─────────────────────────────────────────────────────
 
 export default function Horarios() {
   const { usuario } = useAuth()
   const [tab, setTab]       = useState('programa')
+  const [modalPDF, setModalPDF] = useState(false)
   const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano',
                    'coord_docente', 'servicios_escolares'].includes(usuario?.rol)
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Encabezado */}
-      <div className="mb-5">
-        <h1 className="text-xl font-bold text-gray-800">Horarios</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Fuente: PDF aSc de Coord. Docente · Editable para correcciones manuales
-        </p>
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">Horarios</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Fuente: PDF aSc de Coord. Docente · Editable para correcciones manuales
+          </p>
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setModalPDF(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Importar PDF
+          </button>
+        )}
       </div>
 
       {/* Pestañas principales */}
@@ -1104,6 +1376,18 @@ export default function Horarios() {
       {/* Contenido */}
       {tab === 'programa' && <TabPorPrograma canEdit={canEdit} />}
       {tab === 'grupo'    && <TabPorGrupo canEdit={canEdit} />}
+
+      {/* Modal PDF */}
+      {modalPDF && (
+        <ModalImportarPDF
+          onClose={() => setModalPDF(false)}
+          onImported={() => {
+            setModalPDF(false)
+            // Forzar recarga recargando la página de horarios
+            window.location.reload()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -494,6 +494,42 @@ async def carga_masiva_horarios(
         errores=errores,
         detalle_errores=detalle_errores
     )
+
+# ── IMPORT PDF HORARIOS ────────────────────────────────────────────────────────
+
+@router.post("/horarios/upload-pdf")
+async def upload_pdf_horarios(
+    file:    UploadFile = File(...),
+    ciclo:   str        = Form(...),
+    dry_run: bool       = Form(True),
+    usuario: UsuarioActual = Depends(get_usuario_actual)
+):
+    """Sube el PDF de aSc Horarios para importar los horarios del período."""
+    if usuario.rol not in ('superadmin', 'director_cap_humano', 'cap_humano',
+                           'coord_docente', 'servicios_escolares'):
+        raise HTTPException(status_code=403, detail="Sin permiso para cargar horarios")
+
+    if not (file.filename or '').lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un PDF")
+
+    pdf_bytes = await file.read()
+    if len(pdf_bytes) > 50 * 1024 * 1024:  # 50 MB máx
+        raise HTTPException(status_code=400, detail="PDF demasiado grande (máx 50 MB)")
+
+    conn = get_conn()
+    try:
+        from services.pdf_horarios import procesar_pdf
+        resultado = procesar_pdf(pdf_bytes, ciclo, conn, dry_run=dry_run)
+        if not dry_run:
+            conn.commit()
+        return resultado
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error al procesar PDF horarios: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
 
 # ── CONFIG ASISTENCIA ─────────────────────────────────────────────────────────
 
