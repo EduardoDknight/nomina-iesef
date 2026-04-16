@@ -1929,7 +1929,7 @@ function TabIncidencias({ quincena, usuario }) {
                                       </svg>
                                     </button>
                                   )}
-                                  {puedeAprobar && esPendiente && (
+                                  {puedeAprobar && ['pendiente', 'validada_coord'].includes(inc.estado) && (
                                     <button onClick={() => cambiarEstado(inc.id, 'aprobada')}
                                       className="px-2 py-0.5 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200">
                                       Aprobar

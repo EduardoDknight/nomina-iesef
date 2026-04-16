@@ -5,14 +5,15 @@ Flujo:
   1. GitHub hace push → llama POST /deploy con X-Hub-Signature-256
   2. Se verifica la firma HMAC (secret en .env: DEPLOY_SECRET)
   3. Se ejecuta git pull --ff-only
-  4. os._exit(0) termina el proceso uvicorn (sin --reload)
-  5. watchdog.ps1 detecta la salida y relanza uvicorn en ~2 segundos con código nuevo
+  4. os._exit(0) termina el proceso uvicorn
+  5. NSSM (servicio Windows 'nomina-iesef') detecta la salida y relanza en ~2 segundos
 
-Arquitectura de reinicio (Windows, sin --reload):
-  - uvicorn corre como proceso único (sin reloader padre/hijo)
-  - watchdog.ps1 corre en paralelo en un bucle infinito
-  - Si uvicorn termina por cualquier razón (deploy, crash, reboot), watchdog lo reinicia
+Arquitectura de reinicio (NSSM, Windows Service):
+  - uvicorn corre como servicio Windows 'nomina-iesef' gestionado por NSSM
+  - NSSM tiene AppRestartDelay=2000ms, reinicia automáticamente si uvicorn muere
+  - Si uvicorn termina por cualquier razón (deploy, crash, reboot), NSSM lo reinicia
   - El delay de 1.5s en _restart_after_delay permite enviar la respuesta HTTP antes de morir
+  - Alternativa limpia: nssm restart nomina-iesef (requiere que el proceso tenga permisos)
 """
 import hmac
 import hashlib

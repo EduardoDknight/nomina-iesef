@@ -556,7 +556,7 @@ async def actualizar_estado_incidencia(
     superadmin puede todo
     """
     puede_validar  = usuario.rol in ('coord_academica',)
-    puede_aprobar  = usuario.rol in ('director_cap_humano', 'cap_humano', 'coord_docente')
+    puede_aprobar  = usuario.rol in ('superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente')
 
     conn = get_conn()
     cur = conn.cursor()
@@ -579,7 +579,7 @@ async def actualizar_estado_incidencia(
         """, (nuevo_estado, usuario.id, incidencia_id))
     elif nuevo_estado in ('aprobada', 'rechazada'):
         if not puede_aprobar:
-            raise HTTPException(status_code=403, detail="Solo Capital Humano puede aprobar/rechazar")
+            raise HTTPException(status_code=403, detail="Sin permiso para aprobar/rechazar incidencias")
         cur.execute("""
             UPDATE incidencias
             SET estado = %s, aprobado_cap_por = %s, aprobado_cap_en = NOW()
