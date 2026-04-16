@@ -31,10 +31,11 @@ except ImportError:
 
 # ── Configuración ───────────────────────────────────────────────────────────────
 
-DB_URL    = 'postgresql://nomina_user:IESEFnomina%402026%24@localhost:5432/iesef_nomina'
-PDF_PATH  = r'C:\Users\Admin\Downloads\HORARIOS.pdf'
-CICLO     = '2026-1'
-QUINCENA_MAESTRIAS = 3   # quincena ID para aprobar maestrías
+DB_URL       = 'postgresql://nomina_user:IESEFnomina%402026%24@localhost:5432/iesef_nomina'
+PDF_PATH     = r'C:\Users\Admin\Downloads\HORARIOS.pdf'
+CICLO        = '2026-1'
+CICLO_START  = '2026-01-01'   # fecha vigente_desde para asignaciones del ciclo
+QUINCENA_MAESTRIAS = 3         # quincena ID para aprobar maestrías
 
 # Grupos a ignorar (pruebas / datos internos)
 GRUPOS_IGNORAR = {'PRUEBA', 'INTERNO', 'TEST'}
@@ -514,10 +515,11 @@ def importar(pdf_path, dry_run=False, aprobar_mae=False):
         # Crear asignación
         cur.execute("""
             INSERT INTO asignaciones
-                (docente_id, materia_id, grupo, ciclo_label, activa, costo_hora, modalidad, horas_semana)
-            VALUES (%s, %s, %s, %s, true, %s, 'presencial', %s)
+                (docente_id, materia_id, grupo, ciclo_label, activa, costo_hora,
+                 modalidad, horas_semana, vigente_desde)
+            VALUES (%s, %s, %s, %s, true, %s, 'presencial', %s, %s)
             RETURNING id
-        """, (doc_id, mat_id, grupo, CICLO, tarifa, horas_sem))
+        """, (doc_id, mat_id, grupo, CICLO, tarifa, horas_sem, CICLO_START))
         asig_id = cur.fetchone()['id']
         creados_asig += 1
 

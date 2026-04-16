@@ -31,11 +31,12 @@ import pandas as pd
 
 # ── Configuración ─────────────────────────────────────────────────────────────
 
-DB_URL     = 'postgresql://nomina_user:IESEFnomina%402026%24@localhost:5432/iesef_nomina'
-EXCEL_PATH = r'C:\Users\Admin\Downloads\Virtual marzo 2- Excel con la parte que la coord de educacion virtual tiene que llenar docente por docente que da clases.xlsx'
-CICLO      = '2026-1'
-HOJA       = 'VIRTUAL'
-HEADER_ROW = 14   # fila 0-indexada con PROGRAMA/GRUPO/MATERIA/DOCENTE
+DB_URL       = 'postgresql://nomina_user:IESEFnomina%402026%24@localhost:5432/iesef_nomina'
+EXCEL_PATH   = r'C:\Users\Admin\Downloads\Virtual marzo 2- Excel con la parte que la coord de educacion virtual tiene que llenar docente por docente que da clases.xlsx'
+CICLO        = '2026-1'
+CICLO_START  = '2026-01-01'   # fecha vigente_desde para asignaciones del ciclo
+HOJA         = 'VIRTUAL'
+HEADER_ROW   = 14   # fila 0-indexada con PROGRAMA/GRUPO/MATERIA/DOCENTE
 
 # ID de la quincena de referencia para calcular n_semanas a partir de la cual
 # se deriva horas_semana = round(horas_quincena_excel / n_semanas).
@@ -374,11 +375,12 @@ def main(dry_run=False):
         if not dry_run:
             cur.execute("""
                 INSERT INTO asignaciones
-                    (docente_id, materia_id, grupo, ciclo_label, activa, costo_hora, modalidad, horas_semana)
-                VALUES (%s,%s,%s,%s,true,%s,%s,%s)
+                    (docente_id, materia_id, grupo, ciclo_label, activa, costo_hora,
+                     modalidad, horas_semana, vigente_desde)
+                VALUES (%s,%s,%s,%s,true,%s,%s,%s,%s)
                 RETURNING id
             """, (doc_id, mat_id, grupo, CICLO,
-                  data['tarifa'], data['modalidad'], data['horas_sem']))
+                  data['tarifa'], data['modalidad'], data['horas_sem'], CICLO_START))
             asig_id = cur.fetchone()['id']
             new_asig_index[idx_key] = asig_id
             created += 1
