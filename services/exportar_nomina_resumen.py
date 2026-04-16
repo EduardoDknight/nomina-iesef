@@ -441,24 +441,39 @@ def generar_nomina_resumen_excel(conn, quincena_id: int) -> bytes:
     instituto_prog_order = sorted(instituto_map.keys(), key=_peso)
 
     wb = openpyxl.Workbook()
+    # wb siempre crea una hoja activa por defecto; la usamos para la primera
+    # hoja necesaria y creamos la segunda solo si aplica.
 
-    ws_c = wb.active
-    ws_c.title = "CENTRO"
-    if centro_rows:
-        _escribir_hoja(ws_c, COLS_CENTRO,
-                       centro_prog_order, centro_prog_rows,
-                       ANCHOS_CENTRO, es_instituto=False)
-    else:
-        ws_c.cell(1, 1, "Sin docentes en CENTRO para esta quincena")
+    incluir_centro   = rs in ("centro", "ambas")
+    incluir_instituto = rs in ("instituto", "ambas")
 
-    ws_i = wb.create_sheet("INSTITUTO")
-    if instituto_map:
-        instituto_prog_rows = {p: instituto_map[p] for p in instituto_prog_order}
-        _escribir_hoja(ws_i, COLS_INSTITUTO,
-                       instituto_prog_order, instituto_prog_rows,
-                       ANCHOS_INSTITUTO, es_instituto=True)
-    else:
-        ws_i.cell(1, 1, "Sin docentes en INSTITUTO para esta quincena")
+    primera_hoja = True
+
+    if incluir_centro:
+        ws_c = wb.active
+        ws_c.title = "CENTRO"
+        primera_hoja = False
+        if centro_rows:
+            _escribir_hoja(ws_c, COLS_CENTRO,
+                           centro_prog_order, centro_prog_rows,
+                           ANCHOS_CENTRO, es_instituto=False)
+        else:
+            ws_c.cell(1, 1, "Sin docentes en CENTRO para esta quincena")
+
+    if incluir_instituto:
+        if primera_hoja:
+            ws_i = wb.active
+            ws_i.title = "INSTITUTO"
+            primera_hoja = False
+        else:
+            ws_i = wb.create_sheet("INSTITUTO")
+        if instituto_map:
+            instituto_prog_rows = {p: instituto_map[p] for p in instituto_prog_order}
+            _escribir_hoja(ws_i, COLS_INSTITUTO,
+                           instituto_prog_order, instituto_prog_rows,
+                           ANCHOS_INSTITUTO, es_instituto=True)
+        else:
+            ws_i.cell(1, 1, "Sin docentes en INSTITUTO para esta quincena")
 
     buf = io.BytesIO()
     wb.save(buf)
