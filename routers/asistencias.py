@@ -4,16 +4,10 @@ Compatible con el agente Ubuntu que enviaba a api.iesef.edu.mx
 """
 from fastapi import APIRouter, Request
 from typing import Any
-from datetime import datetime
+from datetime import datetime, timezone as _UTC
 import psycopg2, logging
 from psycopg2.extras import RealDictCursor
 from config import settings
-
-try:
-    from zoneinfo import ZoneInfo
-    _MX = ZoneInfo('America/Mexico_City')
-except ImportError:
-    _MX = None   # Python < 3.9 fallback
 
 logger = logging.getLogger(__name__)
 
@@ -124,16 +118,14 @@ def ultimo_sync():
     cur.close()
     conn.close()
 
-    # Adjuntar timezone para que JavaScript lo interprete correctamente.
-    # PostgreSQL devuelve un datetime naive ya en hora de México (America/Mexico_City).
-    # Sin offset el frontend lo trata como UTC y calcula diferencias incorrectas.
+    # El agente envía timestamp_agente en UTC (datetime.utcnow() en la laptop Ubuntu).
+    # PostgreSQL lo almacena como TIMESTAMP naive (sin zona horaria) pero su valor ES UTC.
+    # Adjuntamos +00:00 para que JavaScript lo interprete como UTC y lo convierta
+    # correctamente a hora local del navegador (America/Mexico_City).
+    # NUNCA adjuntar -06:00 aquí — ese era el bug original (6 horas de desfase).
     ultimo_iso = None
     if row["ultimo"]:
-        if _MX:
-            ultimo_iso = row["ultimo"].replace(tzinfo=_MX).isoformat()
-        else:
-            # Fallback: adjuntar -06:00 estático (CST); CDT = -05:00
-            ultimo_iso = row["ultimo"].isoformat() + "-06:00"
+        ultimo_iso = row["ultimo"].replace(tzinfo=_UTC.utc).isoformat()
 
     return {
         "ultimo_sync":     ultimo_iso,
