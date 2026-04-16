@@ -200,6 +200,13 @@ powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina
 - [ ] Integración Aspel NOI
 - [ ] PWA (manifest.json + Service Worker)
 
+### 🔵 Proyectos futuros (pendientes de madurar)
+- [ ] **Firma digital de documentos** — reemplazar listas físicas de calificaciones y asistencia
+  - Requiere primero: módulo de calificaciones/actas en nexo
+  - Nivel recomendado: firma electrónica simple institucional (hash SHA-256 + timestamp + QR verificación)
+  - Opción avanzada: integración con e.firma SAT (FIEL) para validez legal plena
+  - Referencia: así lo hacen universidades medianas en México para actas internas
+
 ---
 
 ## ARQUITECTURA CLAVE
