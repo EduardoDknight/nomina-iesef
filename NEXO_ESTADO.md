@@ -5,9 +5,9 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-15 (noche — PC casa, sesión de aplicación de fixes)
+**Fecha:** 2026-04-15 (noche — PC casa, sesión watchdog + dark mode fixes)
 **Rama:** `main`
-**Último commit:** `f96cf28` — build: dark mode + SyncBadge + fixes razon_social
+**Último commit:** pendiente (watchdog.ps1 + deploy.py + dark mode topbar)
 
 ### Commits del día (en orden)
 | Hash | Descripción |
@@ -51,7 +51,12 @@ PC trabajo (Claude Code)
         ▼
   nexo.iesef.edu.mx/deploy
         │  git pull --ff-only
-        │  os._exit(0) → uvicorn reinicia worker con código nuevo
+        │  os._exit(0) → uvicorn muere (proceso único, sin --reload)
+        ▼
+  watchdog.ps1 (siempre corriendo en PC casa)
+        │  detecta salida del proceso uvicorn
+        │  espera 2 segundos
+        │  lanza uvicorn fresco con código nuevo del disco
         ▼
   nexo.iesef.edu.mx actualizado (~3-5 seg)
 ```
@@ -59,6 +64,7 @@ PC trabajo (Claude Code)
 - Webhook ID: `606281234` | URL: `https://nexo.iesef.edu.mx/deploy` | Ping: 200 OK
 - **Cambios de backend (.py):** se despliegan solos con git push
 - **Cambios de frontend (.jsx):** requieren `npm run build` + commit dist en PC casa
+- **uvicorn corre SIN `--reload`** — proceso único, watchdog.ps1 es el guardian
 
 ### Flujo típico desde PC trabajo
 ```bash
@@ -74,11 +80,23 @@ git push                    # webhook → backend actualizado automáticamente
 ## ARRANQUE DEL SERVIDOR (PC casa)
 
 ```powershell
-# Reinicio manual
-powershell -ExecutionPolicy Bypass -File C:\Proyectos\nomina-iesef\start_server.ps1
+# Reinicio manual del watchdog (si se cerró accidentalmente)
+powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina-iesef\watchdog.ps1
 
-# Autostart ya instalado en carpeta Startup del usuario (no hacer de nuevo)
+# Autostart ya instalado — watchdog se lanza solo al iniciar sesión:
+# C:\Users\Admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\IESEF-Nomina-Watchdog.bat
+
+# Logs del watchdog y uvicorn:
+# C:\Proyectos\nomina-iesef\logs\watchdog.log
+# C:\Proyectos\nomina-iesef\logs\uvicorn.log
+# C:\Proyectos\nomina-iesef\logs\uvicorn_err.log
 ```
+
+### Arquitectura watchdog (activa desde 2026-04-15 noche)
+- `uvicorn` corre SIN `--reload` → proceso único, mata limpia
+- `watchdog.ps1` corre en paralelo, bucle infinito
+- Cuando uvicorn muere (por deploy, crash, reboot) → watchdog lo reinicia en 2s
+- No requiere intervención manual. Funciona con pushes desde PC trabajo.
 
 ---
 

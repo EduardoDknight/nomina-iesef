@@ -5,7 +5,14 @@ Flujo:
   1. GitHub hace push → llama POST /deploy con X-Hub-Signature-256
   2. Se verifica la firma HMAC (secret en .env: DEPLOY_SECRET)
   3. Se ejecuta git pull --ff-only
-  4. uvicorn --reload detecta el cambio y se reinicia (os._exit en background)
+  4. os._exit(0) termina el proceso uvicorn (sin --reload)
+  5. watchdog.ps1 detecta la salida y relanza uvicorn en ~2 segundos con código nuevo
+
+Arquitectura de reinicio (Windows, sin --reload):
+  - uvicorn corre como proceso único (sin reloader padre/hijo)
+  - watchdog.ps1 corre en paralelo en un bucle infinito
+  - Si uvicorn termina por cualquier razón (deploy, crash, reboot), watchdog lo reinicia
+  - El delay de 1.5s en _restart_after_delay permite enviar la respuesta HTTP antes de morir
 """
 import hmac
 import hashlib
@@ -37,8 +44,9 @@ def _verificar_firma(body: bytes, signature: Optional[str]) -> bool:
 
 def _restart_after_delay(delay: float = 1.5):
     """
-    Espera `delay` segundos y luego termina el proceso worker.
-    uvicorn --reload detecta la salida y relanza el worker con el código nuevo.
+    Espera `delay` segundos y luego termina el proceso uvicorn con os._exit(0).
+    El delay permite que FastAPI envíe la respuesta HTTP antes de morir.
+    watchdog.ps1 detecta la salida y relanza uvicorn en ~2 segundos con código nuevo del disco.
     """
     import time
     time.sleep(delay)
@@ -78,8 +86,8 @@ async def deploy(
 
     ya_actualizado = "Already up to date" in stdout or "Ya está actualizado" in stdout
 
-    # 3. Reiniciar el worker de uvicorn en background para cargar el código nuevo.
-    #    os._exit(0) termina solo este worker; uvicorn --reload lo relanza
+    # 3. Terminar el proceso uvicorn en background para cargar el código nuevo.
+    #    os._exit(0) termina el proceso; watchdog.ps1 lo relanza en ~2s
     #    automáticamente con los módulos frescos del disco.
     threading.Thread(target=_restart_after_delay, args=(1.5,), daemon=True).start()
 
