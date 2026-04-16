@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS dias_no_laborables (
     ciclo       VARCHAR(20) DEFAULT '2026',
     activo      BOOLEAN     DEFAULT true,
     creado_en   TIMESTAMP   DEFAULT NOW(),
-    creado_por  UUID REFERENCES usuarios(id) ON DELETE SET NULL
+    creado_por  INTEGER REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_dias_no_lab_fecha ON dias_no_laborables(fecha);

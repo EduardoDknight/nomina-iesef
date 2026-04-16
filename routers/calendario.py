@@ -5,7 +5,7 @@ Solo afecta el cálculo de horas virtuales docentes.
 Administrativos no se ven afectados.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import Optional, List
+from typing import Optional
 from datetime import date
 import psycopg2
 from psycopg2.extras import RealDictCursor
