@@ -16,6 +16,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # necesario para hacer git push del dist compilado
     # Evitar que dos builds corran en paralelo (ej. push rápidos seguidos)
     concurrency:
       group: frontend-build
