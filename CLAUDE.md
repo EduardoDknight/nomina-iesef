@@ -266,16 +266,21 @@ Los administrativos son trabajadores con jornadas fijas, no honorarios:
 - El "estado" es una interpretación del timestamp según las reglas del ciclo vigente.
 - El sistema **NUNCA descuenta automáticamente**. Siempre hay confirmación humana.
 
-### Ventana de entrada
-- Tolerancia: **10 minutos** para todos los niveles y duraciones de bloque
-- Si checa dentro de los 10 min posteriores al inicio → ✅ Asistencia limpia
-- Si checa después de min 11 → ⚠️ Retardo (sin descuento automático)
-- Minutos para considerar falta directamente: **21 min** (sin checada o llegada > 20 min)
+### REGLA CRÍTICA — Para docentes el pago es BINARIO (NO hay decimales ni parciales)
+> **Confirmado por Eduardo 2026-04-16**
+- Un docente tiene un bloque de N horas (ej. 4h). O se pagan las 4h completas o cero.
+- **No existen** horas parciales como "3.75h" para docentes.
+- **No existen retardos** para docentes. La llegada tardía dentro de la ventana es asistencia limpia; fuera de la ventana es `pendiente_revision` (coordinación decide si pagar o no).
+- El concepto de "3 retardos = 1 falta" aplica **solo a administrativos** y a la **Capa 1 de docentes TC** (su permanencia institucional), NUNCA a las clases de docentes.
 
-### Ventana de salida — REGLA VERIFICADA
-- Tolerancia de salida anticipada: **mínimo entre (horas_bloque × 10 min) y 20 min**
+### Ventana de entrada (docentes)
+- Tolerancia: **10 minutos** desde el inicio del bloque
+- Checa entre min 0 y min +10 → ✅ `asistencia` — se pagan las N horas completas
+- Checa después de min +10 → `pendiente_revision` — coordinación/Cap.Humano decide
+
+### Ventana de salida — REGLA VERIFICADA (docentes)
+- Tolerancia de salida anticipada: `min(horas_bloque × 10, 20)` minutos antes del fin
 - **El máximo es 20 minutos, sin importar las horas del bloque**
-- Fórmula: `tolerancia_salida = min(horas_bloque × 10, 20)` minutos antes del fin
 
 | Duración bloque | Puede salir desde | Tolerancia |
 |---|---|---|
@@ -284,31 +289,34 @@ Los administrativos son trabajadores con jornadas fijas, no honorarios:
 | 3 horas | min 160 (20 min antes) | **20 min (tope)** |
 | 5 horas | min 280 (20 min antes) | **20 min (tope)** |
 
-### Consecuencia del retardo (política configurable por ciclo)
-- `solo_nota` — solo queda registrado
-- `retardo_descuento` — descuenta proporcional (si Dirección lo activa)
-- `tres_retardos_falta` — 3 retardos en quincena = 1 falta (default actual)
-
-### Valores configurables en `config_asistencia`
-| Parámetro | Valor actual |
-|---|---|
-| tolerancia_entrada_min | 10 |
-| max_tolerancia_salida_min | 20 |
-| minutos_falta | 21 |
-| retardos_por_falta | 3 |
+- Sale dentro de la ventana → sigue siendo `asistencia` completa
+- Sale fuera (demasiado temprano) → `pendiente_revision`
 
 ### Clases back-to-back (REGLA CRÍTICA)
 Una sola checada **NO** cuenta para dos clases consecutivas. El docente debe hacer dos checadas físicas separadas:
 - Salida clase 1: ventana minutos 40-60 del bloque
 - Entrada clase 2: ventana minutos 0-10 desde inicio
-- Una sola checada en esa zona → se asigna a la clase correspondiente, la otra queda "incompleta" → revisión Capital Humano.
+- Una sola checada en esa zona → se asigna a la clase correspondiente, la otra queda `incompleta` → revisión Capital Humano.
 
-### Estados de checada
-- `asistencia` — dentro de ventana, completa
-- `retardo` — fuera de tolerancia de entrada
+### Estados de checada para docentes
+- `asistencia` — cumple ventanas de entrada y salida → se pagan N horas completas del bloque
 - `fuera_ventana` — no corresponde a ninguna clase
 - `incompleta` — entrada sin salida o viceversa
-- `pendiente_revision` — va a bandeja de Capital Humano
+- `pendiente_revision` — fuera de tolerancia → va a bandeja de Capital Humano (nunca descuento automático)
+
+> **Nota:** El estado `retardo` NO aplica a docentes. Solo aplica a administrativos (ver sección 17) y a la Capa 1 de docentes TC (permanencia institucional, no sus clases).
+
+### Retardos — SOLO para administrativos y TC Capa 1
+- `solo_nota` — solo queda registrado
+- `tres_retardos_falta` — 3 retardos en quincena = 1 día descontado (solo administrativos y TC jornada)
+
+### Valores configurables en `config_asistencia`
+| Parámetro | Aplica a | Valor actual |
+|---|---|---|
+| tolerancia_entrada_min | Todos | 10 |
+| max_tolerancia_salida_min | Todos | 20 |
+| minutos_falta (falta directa sin checada) | Administrativos | 21 |
+| retardos_por_falta | Administrativos + TC Capa 1 | 3 |
 
 ---
 
