@@ -5,9 +5,9 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-16 (mañana — PC trabajo, inicio sesión)
+**Fecha:** 2026-04-16 (PC trabajo, sesión completa)
 **Rama:** `main`
-**Último commit:** `ff4863a` chore: ignorar scripts de mantenimiento
+**Último commit:** `25a20ae` docs: firma digital como proyecto futuro
 
 ### Commits del día (en orden)
 | Hash | Descripción |
@@ -69,10 +69,15 @@ PC trabajo (Claude Code)
 ### Flujo típico desde PC trabajo
 ```bash
 git pull                    # siempre al empezar
-# Claude Code modifica archivos .py
+# Claude Code modifica archivos .py o .jsx
 git add -u
 git commit -m "descripción"
-git push                    # webhook → backend actualizado automáticamente
+git push                    # backend .py → live en ~5s
+                            # frontend .jsx → GitHub Actions build (~2 min) → live
+
+# ⚠️ Si el push falla con "fetch first":
+# GitHub Actions commiteó el dist/ mientras trabajabas
+git pull --rebase && git push
 ```
 
 ---
@@ -124,6 +129,9 @@ powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina
 | 2026-04-15 tarde | PC trabajo | **NEXO_PROYECTO_CHAT.md** creado | Contexto completo para Claude Projects (modo chat) |
 | 2026-04-15 noche | PC casa | **Restart uvicorn + build dist** | Activa todos los fixes del día + SyncBadge + Dark Mode |
 | 2026-04-16 mañana | PC trabajo | **Inicio sesión PC trabajo** | git pull OK (42 archivos), túnel 200 OK, webhook test |
+| 2026-04-16 | PC trabajo | **Fix Excel: solo hojas por razon_social** | Centro solo genera hoja CENTRO, Instituto solo INSTITUTO, ambas ambas |
+| 2026-04-16 | PC trabajo | **Badges visuales razon_social en Quincenas** | Centro=verde, Instituto=violeta, C+I=gris |
+| 2026-04-16 | PC trabajo | **GitHub Actions build automático frontend** | Push .jsx → Actions npm build → commit dist → webhook → live (~2 min) |
 
 ---
 
@@ -148,6 +156,7 @@ powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina
 | MB360 → Ubuntu → nexo (28k+ checadas) | ✅ activo | cron 30min con flock |
 | Cloudflare Tunnel (nexo.iesef.edu.mx) | ✅ activo | |
 | Auto-deploy webhook `/deploy` | ✅ activo | os._exit funcionando — probado 2026-04-15 noche |
+| GitHub Actions build frontend | ✅ activo | Push .jsx → build automático → webhook → live (~2 min) |
 | Arranque automático Windows | ✅ activo | carpeta Startup del usuario |
 
 ---
@@ -160,18 +169,17 @@ powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina
 | Cron Ubuntu laptop | ✅ `*/30 con flock` |
 | Webhook GitHub | ✅ ID 606281234, ping 200 OK |
 | Arranque automático Windows | ✅ carpeta Startup del usuario |
-| node/npm | ❌ solo en PC casa — builds de frontend solo ahí |
+| node/npm | ✅ GitHub Actions hace el build automático — ya no se necesita PC casa para frontend |
 
 ---
 
 ## SIGUIENTE SPRINT
 
-### 🔴 CRÍTICO — Verificar en navegador (mañana o ahora)
-- [ ] Quincena "centro" → debe mostrar solo ~20 docentes de Bachillerato (no 145)
-- [ ] Excel exportado → Barrera Reyes debe mostrar $120 (no $75)
-- [ ] Sidebar → botón 🌙/☀️ visible sobre "Cerrar sesión"
-- [ ] Estadísticas → badge "Al día · MB360 HH:MM" en lugar de "En vivo"
-- [ ] Recalcular nómina Q6 (centro, id=6) — debe producir solo ~20 docentes
+### 🔴 CRÍTICO — Verificar en navegador
+- [x] Quincena "centro" → 22 docentes de Bachillerato ✅ correcto
+- [x] Excel exportado → Barrera Reyes $120 ✅ correcto, múltiplos de $120
+- [x] Excel solo genera hoja CENTRO para quincena centro ✅ fix aplicado hoy
+- [ ] Recalcular nómina Q6 (centro, id=6) — pendiente
 
 ### 🔴 Infraestructura — próxima semana
 - [ ] **NSSM** — convertir uvicorn en servicio Windows real
