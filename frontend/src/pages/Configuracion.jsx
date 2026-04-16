@@ -763,6 +763,323 @@ function TabCredenciales() {
   )
 }
 
+// ── Tab: Calendario Institucional ────────────────────────────────────────────
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const DIAS_SEMANA = ['D','L','M','M','J','V','S']
+
+const TIPO_COLOR = {
+  vacaciones:          { bg: 'bg-red-500',   ring: 'ring-red-400',   text: 'text-white',       label: 'Vacaciones' },
+  suspension_oficial:  { bg: 'bg-amber-400', ring: 'ring-amber-300', text: 'text-amber-900',   label: 'Suspensión oficial' },
+}
+
+function buildCalendar(year, month) {
+  // month: 0-11
+  const firstDay = new Date(year, month, 1).getDay()   // 0=Dom
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const cells = []
+  for (let i = 0; i < firstDay; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+  return cells
+}
+
+function toISO(year, month, day) {
+  return `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+}
+
+function TabCalendario({ puedeEditar }) {
+  const hoy = new Date()
+  const [anio, setAnio] = useState(hoy.getFullYear())
+  const [mes, setMes] = useState(hoy.getMonth())        // 0-11
+  const [dias, setDias] = useState([])                   // {fecha, tipo, descripcion, id}
+  const [loading, setLoading] = useState(false)
+  const [modal, setModal] = useState(null)               // {fecha, iso} — popup para agregar
+  const [tipoNuevo, setTipoNuevo] = useState('vacaciones')
+  const [descNueva, setDescNueva] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  const cargar = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get('/calendario/dias-no-laborables', { params: { anio } })
+      setDias(res.data)
+    } catch { setDias([]) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { cargar() }, [anio])
+
+  // Index por fecha ISO para O(1) lookup
+  const diasIdx = {}
+  for (const d of dias) diasIdx[d.fecha] = d
+
+  const cells = buildCalendar(anio, mes)
+
+  const irMes = (delta) => {
+    let m = mes + delta
+    let y = anio
+    if (m < 0)  { m = 11; y-- }
+    if (m > 11) { m = 0;  y++ }
+    setMes(m)
+    setAnio(y)
+  }
+
+  const handleClickDia = (day) => {
+    if (!puedeEditar || !day) return
+    const iso = toISO(anio, mes, day)
+    const existente = diasIdx[iso]
+    if (existente) {
+      // Eliminar
+      if (!confirm(`¿Quitar "${existente.descripcion || existente.tipo}" del ${iso}?`)) return
+      setSaving(true)
+      api.delete(`/calendario/dias-no-laborables/${existente.id}`)
+        .then(() => { setMsg({ tipo: 'ok', texto: `${iso} eliminado.` }); cargar() })
+        .catch(() => setMsg({ tipo: 'error', texto: 'Error al eliminar.' }))
+        .finally(() => setSaving(false))
+    } else {
+      setTipoNuevo('vacaciones')
+      setDescNueva('')
+      setModal({ dia: day, iso })
+    }
+  }
+
+  const guardarDia = async () => {
+    if (!modal) return
+    setSaving(true)
+    setMsg(null)
+    try {
+      await api.post('/calendario/dias-no-laborables', null, {
+        params: {
+          fecha:       modal.iso,
+          tipo:        tipoNuevo,
+          descripcion: descNueva || undefined,
+          ciclo:       String(anio),
+        }
+      })
+      setMsg({ tipo: 'ok', texto: `${modal.iso} marcado como ${TIPO_COLOR[tipoNuevo].label}.` })
+      setModal(null)
+      cargar()
+    } catch (err) {
+      setMsg({ tipo: 'error', texto: err.response?.data?.detail || 'Error al guardar.' })
+    } finally { setSaving(false) }
+  }
+
+  // Resumen del mes actual
+  const diasMes = dias.filter(d => {
+    const [y, m] = d.fecha.split('-').map(Number)
+    return y === anio && m === mes + 1
+  })
+  const vacMes  = diasMes.filter(d => d.tipo === 'vacaciones').length
+  const suspMes = diasMes.filter(d => d.tipo === 'suspension_oficial').length
+
+  // Total del año
+  const vacAnio  = dias.filter(d => d.tipo === 'vacaciones').length
+  const suspAnio = dias.filter(d => d.tipo === 'suspension_oficial').length
+
+  return (
+    <div className="max-w-2xl">
+      {/* Encabezado */}
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h2 className="text-base font-semibold text-slate-800">Calendario Institucional</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Días no laborables para docentes virtuales · {vacAnio} vacaciones + {suspAnio} suspensiones en {anio}
+          </p>
+        </div>
+        <div className="flex gap-2 text-xs">
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-50 text-red-700 border border-red-200">
+            <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block"></span>Vacaciones
+          </span>
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block"></span>Suspensión oficial
+          </span>
+        </div>
+      </div>
+
+      {msg && (
+        <div className={`mb-4 px-4 py-2.5 rounded-lg text-sm ${
+          msg.tipo === 'ok'
+            ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+            : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          {msg.texto}
+          <button onClick={() => setMsg(null)} className="ml-2 opacity-50 hover:opacity-100">×</button>
+        </div>
+      )}
+
+      {/* Navegación de mes */}
+      <div className="flex items-center justify-between mb-3">
+        <button
+          onClick={() => irMes(-1)}
+          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <span className="text-sm font-semibold text-slate-700">
+          {MESES[mes]} {anio}
+          {(vacMes > 0 || suspMes > 0) && (
+            <span className="ml-2 text-xs font-normal text-slate-400">
+              ({vacMes > 0 ? `${vacMes} vac` : ''}{vacMes > 0 && suspMes > 0 ? ' · ' : ''}{suspMes > 0 ? `${suspMes} susp` : ''})
+            </span>
+          )}
+        </span>
+        <button
+          onClick={() => irMes(1)}
+          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Grilla del calendario */}
+      <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+        {/* Cabecera días de la semana */}
+        <div className="grid grid-cols-7 border-b border-slate-200">
+          {DIAS_SEMANA.map((d, i) => (
+            <div key={i} className={`py-2 text-center text-xs font-semibold ${
+              i === 0 || i === 6 ? 'text-slate-400' : 'text-slate-500'
+            }`}>{d}</div>
+          ))}
+        </div>
+
+        {/* Días */}
+        {loading ? (
+          <div className="py-12 text-center text-sm text-slate-400">Cargando...</div>
+        ) : (
+          <div className="grid grid-cols-7">
+            {cells.map((day, idx) => {
+              if (!day) {
+                return <div key={`e${idx}`} className="h-10 border-b border-r border-slate-100 last:border-r-0" />
+              }
+              const iso     = toISO(anio, mes, day)
+              const marcado = diasIdx[iso]
+              const col     = marcado ? TIPO_COLOR[marcado.tipo] : null
+              const esHoy   = iso === toISO(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
+              const esFinde = (idx % 7 === 0) || (idx % 7 === 6)
+
+              return (
+                <div
+                  key={iso}
+                  onClick={() => handleClickDia(day)}
+                  title={marcado ? `${marcado.descripcion || marcado.tipo}` : puedeEditar ? 'Clic para marcar' : ''}
+                  className={[
+                    'h-10 flex items-center justify-center text-sm border-b border-r border-slate-100 last:border-r-0 select-none transition-colors',
+                    puedeEditar && !marcado ? 'cursor-pointer hover:bg-blue-50' : '',
+                    marcado ? `${col.bg} ${col.text} cursor-pointer font-semibold` : '',
+                    !marcado && esFinde ? 'text-slate-400' : '',
+                    !marcado && !esFinde ? 'text-slate-700' : '',
+                  ].join(' ')}>
+                  <span className={[
+                    'w-7 h-7 flex items-center justify-center rounded-full text-sm',
+                    esHoy && !marcado ? 'ring-2 ring-blue-400 font-bold text-blue-600' : '',
+                    saving ? 'opacity-50' : '',
+                  ].join(' ')}>
+                    {day}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Lista del mes si hay días marcados */}
+      {diasMes.length > 0 && (
+        <div className="mt-4 space-y-1">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+            Días no laborables en {MESES[mes]}
+          </p>
+          {diasMes.map(d => {
+            const col = TIPO_COLOR[d.tipo]
+            return (
+              <div key={d.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${col.bg}`} />
+                  <span className="text-sm text-slate-700 font-medium">
+                    {new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric' })}
+                  </span>
+                  {d.descripcion && (
+                    <span className="text-xs text-slate-500">— {d.descripcion}</span>
+                  )}
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  d.tipo === 'vacaciones' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {col.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {puedeEditar && (
+        <p className="text-xs text-slate-400 mt-3">
+          Clic en un día libre para marcarlo · Clic en un día marcado para quitarlo
+        </p>
+      )}
+
+      {/* Modal: tipo y descripción */}
+      {modal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-5 w-80">
+            <h3 className="font-semibold text-slate-800 mb-1">Marcar día no laborable</h3>
+            <p className="text-sm text-slate-500 mb-4">{modal.iso}</p>
+
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
+              <div className="flex gap-2">
+                {['vacaciones','suspension_oficial'].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setTipoNuevo(t)}
+                    className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                      tipoNuevo === t
+                        ? t === 'vacaciones'
+                          ? 'bg-red-500 text-white border-red-500'
+                          : 'bg-amber-400 text-amber-900 border-amber-400'
+                        : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                    }`}>
+                    {TIPO_COLOR[t].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-slate-600 mb-1">Descripción (opcional)</label>
+              <input
+                value={descNueva}
+                onChange={e => setDescNueva(e.target.value)}
+                placeholder="Ej. Semana Santa"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setModal(null)}
+                className="flex-1 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button
+                onClick={guardarDia}
+                disabled={saving}
+                className="flex-1 py-2 text-sm text-white bg-blue-600 hover:bg-blue-500 rounded-lg disabled:opacity-50 transition-colors">
+                {saving ? 'Guardando…' : 'Marcar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 const TABS = [
@@ -770,6 +1087,7 @@ const TABS = [
   { id: 'tolerancias',  label: 'Tolerancias' },
   { id: 'usuarios',     label: 'Administradores' },
   { id: 'credenciales', label: 'Credenciales portal' },
+  { id: 'calendario',   label: 'Calendario' },
 ]
 
 export default function Configuracion() {
@@ -778,6 +1096,7 @@ export default function Configuracion() {
 
   const puedeEditarTarifas = ['superadmin', 'director_cap_humano', 'finanzas'].includes(usuario?.rol)
   const puedeEditarTolerencias = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
+  const puedeEditarCalendario = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
 
   // Solo director y cap_humano acceden a esta página (restringido en nav)
   return (
@@ -808,6 +1127,7 @@ export default function Configuracion() {
       {tab === 'tolerancias'  && <TabTolerencias puedeEditar={puedeEditarTolerencias} />}
       {tab === 'usuarios'     && <TabUsuarios />}
       {tab === 'credenciales' && <TabCredenciales />}
+      {tab === 'calendario'   && <TabCalendario puedeEditar={puedeEditarCalendario} />}
     </div>
   )
 }

@@ -408,6 +408,21 @@ def calcular_nomina_docente(
             n_sem_virt += 1
             _l += timedelta(weeks=1)
 
+        # Ajuste por días no laborables: reducir horas proporcional a días L-V perdidos.
+        # Fórmula: n_sem_virt_efectivo = n_sem_virt - (dias_no_lab_en_quincena / 5.0)
+        # Solo días de L-V (DOW 1-5 en PostgreSQL) afectan horas virtuales.
+        cur.execute("""
+            SELECT COUNT(*) AS dias_perdidos
+            FROM dias_no_laborables
+            WHERE fecha BETWEEN %s AND %s
+              AND activo = true
+              AND EXTRACT(DOW FROM fecha) BETWEEN 1 AND 5
+        """, (fecha_inicio, fecha_fin))
+        dias_no_lab = cur.fetchone()["dias_perdidos"] or 0
+        # Factor efectivo de semanas (puede ser fraccionario, mínimo 0)
+        n_sem_virt_efectivo = max(Decimal("0"),
+                                  Decimal(str(n_sem_virt)) - Decimal(str(dias_no_lab)) / Decimal("5"))
+
         cur.execute("""
             -- Resultados explícitos aprobados
             SELECT evr.asignacion_id,
@@ -445,7 +460,7 @@ def calcular_nomina_docente(
                     AND evr2.quincena_id   = %s
               )
         """, (quincena_id, docente_id,
-              n_sem_virt,
+              n_sem_virt_efectivo,
               docente_id, fecha_fin, fecha_inicio,
               quincena_id))
 

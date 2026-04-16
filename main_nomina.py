@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from pathlib import Path
 import mimetypes
-from routers import auth, docentes, catalogos, quincenas, nomina, exportar, usuarios, evaluacion, administrativos, portal, asistencias, estadisticas, deploy
+from routers import auth, docentes, catalogos, quincenas, nomina, exportar, usuarios, evaluacion, administrativos, portal, asistencias, estadisticas, deploy, calendario
 
 app = FastAPI(title="IESEF Nómina — Dev", docs_url="/docs")
 
@@ -24,6 +24,7 @@ app.include_router(portal.router,          prefix="/api")
 app.include_router(asistencias.router,     prefix="/api")
 app.include_router(asistencias.router)          # sin /api — compatible con agente Ubuntu
 app.include_router(estadisticas.router,    prefix="/api")
+app.include_router(calendario.router,      prefix="/api")
 app.include_router(deploy.router)
 
 # ── Frontend estático (React build) ──────────────────────────────────────────
