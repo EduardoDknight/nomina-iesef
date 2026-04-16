@@ -6,138 +6,284 @@ import {
 import api from '../api/client'
 import { SyncBadgeFull } from '../components/SyncBadge'
 
-// ── Paleta ──────────────────────────────────────────────────────────────────
-const C_RED    = '#8B1020'
-const C_BLUE   = '#1e40af'
-const C_TEAL   = '#0d9488'
-const C_AMBER  = '#d97706'
-const C_PURPLE = '#7c3aed'
-const C_ROSE   = '#e11d48'
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const T = {
+  bg:        '#05091a',
+  surface:   '#0a1128',
+  surface2:  '#0d1635',
+  border:    'rgba(34,211,238,0.09)',
+  borderMid: 'rgba(34,211,238,0.18)',
+  cyan:      '#22d3ee',
+  cyanGlow:  'rgba(34,211,238,0.15)',
+  red:       '#f87171',
+  green:     '#4ade80',
+  amber:     '#fbbf24',
+  violet:    '#a78bfa',
+  orange:    '#fb923c',
+  blue:      '#60a5fa',
+  text:      '#e2e8f0',
+  textMuted: '#64748b',
+  textDim:   '#1e293b',
+  mono:      '"JetBrains Mono", "Fira Code", "Courier New", monospace',
+  sans:      '"DM Sans", system-ui, sans-serif',
+  display:   '"Syne", system-ui, sans-serif',
+}
 
-const PIE_COLORS = [C_RED, C_BLUE, C_TEAL, C_AMBER, C_PURPLE, C_ROSE,
-  '#0891b2', '#65a30d', '#dc2626', '#7c3aed', '#ea580c', '#0284c7']
+const PROGRAM_COLORS = [
+  T.red, T.blue, T.green, T.amber, T.violet, T.orange, T.cyan, '#34d399',
+]
 
-// ── Hooks ────────────────────────────────────────────────────────────────────
-function useCounter(target, duration = 1200) {
+// ── CSS global injected once ──────────────────────────────────────────────────
+const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@600;700;800&display=swap');
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50%       { opacity: 1;   transform: scale(1.2); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes scanIn {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0% 0 0); }
+  }
+  .kpi-card {
+    opacity: 0;
+    animation: fadeUp 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+  .kpi-card:hover .kpi-glow { opacity: 1 !important; }
+  .stats-row-hover:hover { background: ${T.surface2} !important; }
+
+  @media (max-width: 768px) {
+    .stats-grid-3-2 { grid-template-columns: 1fr !important; }
+    .stats-grid-2   { grid-template-columns: 1fr !important; }
+  }
+`
+
+// ── Counter hook ──────────────────────────────────────────────────────────────
+function useCounter(target, duration = 1400) {
   const [val, setVal] = useState(0)
   const frame = useRef(null)
   useEffect(() => {
-    if (target === 0) { setVal(0); return }
+    if (!target) { setVal(0); return }
     const start = performance.now()
-    const animate = (now) => {
+    const tick = (now) => {
       const p = Math.min((now - start) / duration, 1)
-      const ease = 1 - Math.pow(1 - p, 3)
+      const ease = 1 - Math.pow(1 - p, 4)
       setVal(Math.round(ease * target))
-      if (p < 1) frame.current = requestAnimationFrame(animate)
+      if (p < 1) frame.current = requestAnimationFrame(tick)
     }
-    frame.current = requestAnimationFrame(animate)
+    frame.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame.current)
   }, [target, duration])
   return val
 }
 
-// ── KPI Card ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, icon, color, prefix = '', suffix = '' }) {
-  const displayed = useCounter(value)
+// ── KPI Card ──────────────────────────────────────────────────────────────────
+function KpiCard({ label, value, sub, accent, index, prefix = '', suffix = '' }) {
+  const n = useCounter(value)
   return (
-    <div className="rounded-2xl p-5 flex flex-col gap-3 relative overflow-hidden"
-      style={{ background: 'white', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-      {/* Fondo decorativo */}
-      <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-8"
-        style={{ background: color, opacity: 0.08 }} />
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#6b7280' }}>
-          {label}
-        </span>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ background: `${color}18` }}>
-          <span style={{ color }}>{icon}</span>
-        </div>
+    <div className="kpi-card" style={{
+      animationDelay: `${index * 55}ms`,
+      background: T.surface,
+      border: `1px solid ${T.border}`,
+      borderLeft: `3px solid ${accent}`,
+      borderRadius: 10,
+      padding: '16px 18px',
+      display: 'flex', flexDirection: 'column', gap: 8,
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* ambient glow behind number */}
+      <div className="kpi-glow" style={{
+        position: 'absolute', inset: 0,
+        background: `radial-gradient(ellipse at 20% 50%, ${accent}0d 0%, transparent 65%)`,
+        opacity: 0, transition: 'opacity 0.3s', pointerEvents: 'none',
+      }} />
+      {/* index badge */}
+      <span style={{
+        position: 'absolute', top: 11, right: 13,
+        fontFamily: T.mono, fontSize: 9, color: T.textDim, letterSpacing: 1,
+      }}>
+        {String(index).padStart(2, '0')}
+      </span>
+      {/* label */}
+      <span style={{
+        fontFamily: T.display, fontSize: 9.5, fontWeight: 700,
+        letterSpacing: '0.13em', textTransform: 'uppercase', color: T.textMuted,
+      }}>
+        {label}
+      </span>
+      {/* value */}
+      <div style={{
+        fontFamily: T.mono, fontSize: 30, fontWeight: 700,
+        color: '#f0f9ff', lineHeight: 1,
+        textShadow: `0 0 18px ${accent}50`,
+      }}>
+        {prefix}{n.toLocaleString()}{suffix}
       </div>
-      <div>
-        <span className="text-3xl font-bold tracking-tight" style={{ color: '#111827' }}>
-          {prefix}{displayed.toLocaleString()}{suffix}
+      {sub && (
+        <span style={{ fontFamily: T.sans, fontSize: 10.5, color: T.textMuted }}>
+          {sub}
         </span>
-        {sub && <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>{sub}</p>}
+      )}
+      {/* bottom accent line */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0,
+        width: '50%', height: 1,
+        background: `linear-gradient(90deg, ${accent}60, transparent)`,
+      }} />
+    </div>
+  )
+}
+
+// ── Quincenas card ────────────────────────────────────────────────────────────
+const ESTADO_MAP = {
+  abierta:     { color: '#4ade80', label: 'Abierta' },
+  en_revision: { color: '#fbbf24', label: 'En revisión' },
+  cerrada:     { color: '#60a5fa', label: 'Cerrada' },
+  pagada:      { color: '#64748b', label: 'Pagada' },
+}
+
+function QuincenasCard({ data, index }) {
+  return (
+    <div className="kpi-card" style={{
+      animationDelay: `${index * 55}ms`,
+      background: T.surface,
+      border: `1px solid ${T.border}`,
+      borderLeft: `3px solid ${T.green}`,
+      borderRadius: 10,
+      padding: '16px 18px',
+      display: 'flex', flexDirection: 'column', gap: 8,
+    }}>
+      <span style={{
+        fontFamily: T.display, fontSize: 9.5, fontWeight: 700,
+        letterSpacing: '0.13em', textTransform: 'uppercase', color: T.textMuted,
+      }}>
+        Quincenas
+      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {Object.entries(data ?? {}).map(([k, v]) => {
+          const s = ESTADO_MAP[k] || { color: T.textMuted, label: k }
+          return (
+            <div key={k} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <span style={{
+                fontFamily: T.mono, fontSize: 9.5, color: s.color,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>
+                {s.label}
+              </span>
+              <span style={{
+                fontFamily: T.mono, fontSize: 22, fontWeight: 700, color: '#f0f9ff',
+              }}>
+                {v}
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-// ── Tooltip personalizado ────────────────────────────────────────────────────
-function CustomTooltip({ active, payload, label, formatter }) {
+// ── Dark tooltip ──────────────────────────────────────────────────────────────
+function DarkTip({ active, payload, label, fmt }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl p-3 shadow-xl text-xs"
-      style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', color: 'white', minWidth: 140 }}>
-      <p className="font-semibold mb-2 text-slate-300">{label}</p>
+    <div style={{
+      background: '#030712', border: `1px solid ${T.borderMid}`,
+      borderRadius: 8, padding: '10px 14px',
+      fontFamily: T.mono, fontSize: 11,
+      boxShadow: `0 4px 24px rgba(0,0,0,0.6), 0 0 16px ${T.cyanGlow}`,
+    }}>
+      <p style={{ color: T.cyan, marginBottom: 7, fontSize: 10, letterSpacing: '0.08em' }}>
+        {label}
+      </p>
       {payload.map((p, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full inline-block" style={{ background: p.color }} />
-          <span className="text-slate-400">{p.name}:</span>
-          <span className="font-bold ml-auto">{formatter ? formatter(p.value) : p.value.toLocaleString()}</span>
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: p.color, display: 'inline-block', flexShrink: 0,
+          }} />
+          <span style={{ color: T.textMuted }}>{p.name}</span>
+          <span style={{ color: '#f0f9ff', fontWeight: 600, marginLeft: 'auto', paddingLeft: 20 }}>
+            {fmt ? fmt(p.value) : p.value.toLocaleString()}
+          </span>
         </div>
       ))}
     </div>
   )
 }
 
-// ── Badge de estado quincena ──────────────────────────────────────────────────
-const ESTADO_STYLE = {
-  abierta:     { bg: '#dcfce7', color: '#15803d', label: 'Abierta' },
-  en_revision: { bg: '#fef9c3', color: '#b45309', label: 'En revisión' },
-  cerrada:     { bg: '#e0e7ff', color: '#3730a3', label: 'Cerrada' },
-  pagada:      { bg: '#f3f4f6', color: '#374151', label: 'Pagada' },
-}
-
-function EstadoBadge({ estado }) {
-  const s = ESTADO_STYLE[estado] || { bg: '#f3f4f6', color: '#374151', label: estado }
+// ── Panel wrapper ─────────────────────────────────────────────────────────────
+function Panel({ title, children, style = {}, delay = 0 }) {
   return (
-    <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: s.bg, color: s.color }}>
-      {s.label}
-    </span>
-  )
-}
-
-// ── Label personalizado para PieChart ────────────────────────────────────────
-function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, name, percent }) {
-  if (percent < 0.05) return null
-  const RADIAN = Math.PI / 180
-  const r = innerRadius + (outerRadius - innerRadius) * 0.5
-  const x = cx + r * Math.cos(-midAngle * RADIAN)
-  const y = cy + r * Math.sin(-midAngle * RADIAN)
-  return (
-    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central"
-      fontSize={10} fontWeight={600}>
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  )
-}
-
-// ── Sección con título ────────────────────────────────────────────────────────
-function Section({ title, children, span = 1 }) {
-  return (
-    <div className={`rounded-2xl p-5 flex flex-col gap-4`}
-      style={{ background: 'white', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-      <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: '#374151' }}>{title}</h3>
+    <div style={{
+      background: T.surface,
+      border: `1px solid ${T.border}`,
+      borderRadius: 10,
+      padding: '20px 22px',
+      display: 'flex', flexDirection: 'column', gap: 16,
+      opacity: 0,
+      animation: `fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) ${delay}ms forwards`,
+      ...style,
+    }}>
+      {title && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div style={{
+            width: 3, height: 13, borderRadius: 2,
+            background: T.cyan,
+            boxShadow: `0 0 8px ${T.cyanGlow}`,
+          }} />
+          <h3 style={{
+            fontFamily: T.display, fontSize: 9.5, fontWeight: 700,
+            letterSpacing: '0.14em', textTransform: 'uppercase',
+            color: T.textMuted, margin: 0,
+          }}>
+            {title}
+          </h3>
+        </div>
+      )}
       {children}
     </div>
   )
 }
 
-// ── Página principal ──────────────────────────────────────────────────────────
+// ── Estado badge ──────────────────────────────────────────────────────────────
+function EstadoBadge({ estado }) {
+  const s = ESTADO_MAP[estado] || { color: T.textMuted, label: estado }
+  return (
+    <span style={{
+      padding: '2px 8px', borderRadius: 4,
+      fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+      textTransform: 'uppercase', fontFamily: T.mono,
+      color: s.color, background: `${s.color}18`,
+      border: `1px solid ${s.color}40`,
+      whiteSpace: 'nowrap',
+    }}>
+      {s.label}
+    </span>
+  )
+}
+
+// ── Página ────────────────────────────────────────────────────────────────────
 export default function Estadisticas() {
-  const [resumen, setResumen] = useState(null)
+  const [resumen, setResumen]           = useState(null)
   const [checadasSemana, setChecadasSemana] = useState([])
-  const [porPrograma, setPorPrograma]       = useState([])
-  const [quincenas, setQuincenas]           = useState([])
-  const [evalVirtual, setEvalVirtual]       = useState([])
-  const [loading, setLoading]               = useState(true)
-  const [error, setError]                   = useState(null)
+  const [porPrograma, setPorPrograma]   = useState([])
+  const [quincenas, setQuincenas]       = useState([])
+  const [evalVirtual, setEvalVirtual]   = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState(null)
 
   useEffect(() => {
-    const fetchAll = async () => {
+    const load = async () => {
       try {
         const [r1, r2, r3, r4, r5] = await Promise.all([
           api.get('/estadisticas/resumen'),
@@ -152,358 +298,386 @@ export default function Estadisticas() {
         setQuincenas(r4.data)
         setEvalVirtual(r5.data)
       } catch (e) {
-        setError(e.response?.status ? `Error ${e.response.status}` : e.message)
+        setError(e.response?.status ? `HTTP ${e.response.status}` : e.message)
       } finally {
         setLoading(false)
       }
     }
-    fetchAll()
+    load()
   }, [])
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-center">
-        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-3"
-          style={{ borderColor: `${C_RED} transparent ${C_RED} ${C_RED}` }} />
-        <p className="text-sm" style={{ color: '#6b7280' }}>Cargando estadísticas…</p>
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: 320, background: T.bg, fontFamily: T.mono,
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          border: `2px solid ${T.cyan}`, borderTopColor: 'transparent',
+          animation: 'spin 0.75s linear infinite',
+          margin: '0 auto 14px',
+          boxShadow: `0 0 12px ${T.cyanGlow}`,
+        }} />
+        <p style={{ color: T.textMuted, fontSize: 11, letterSpacing: '0.18em' }}>CARGANDO…</p>
       </div>
     </div>
   )
 
   if (error) return (
-    <div className="p-6">
-      <div className="rounded-xl p-4 text-sm" style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
-        Error al cargar estadísticas: {error}
+    <div style={{ padding: 24, background: T.bg, minHeight: '100%' }}>
+      <div style={{
+        background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)',
+        borderRadius: 8, padding: '14px 18px',
+        color: T.red, fontSize: 12, fontFamily: T.mono,
+      }}>
+        ERR: {error}
       </div>
     </div>
   )
 
-  const quincenasPie = resumen?.quincenas
-    ? Object.entries(resumen.quincenas).map(([k, v]) => ({
-        name: (ESTADO_STYLE[k]?.label || k),
-        value: v,
-      }))
-    : []
+  const topProgramas = [...porPrograma].sort((a, b) => b.horas_semana - a.horas_semana).slice(0, 8)
+  const maxHrs = Math.max(...porPrograma.map(x => x.horas_semana), 1)
 
-  // Top 5 programas por horas para el BarChart (evita overflow)
-  const topProgramas = [...porPrograma]
-    .sort((a, b) => b.horas_semana - a.horas_semana)
-    .slice(0, 8)
+  const kpis = [
+    { label: 'Docentes activos',    value: resumen?.docentes_activos ?? 0,    sub: 'Registrados en sistema', accent: T.cyan },
+    { label: 'Asignaciones activas', value: resumen?.asignaciones_activas ?? 0, sub: 'Horario vigente',      accent: T.blue },
+    { label: 'Horas por semana',    value: resumen?.horas_semana ?? 0,        sub: 'Carga programada total', accent: T.green, suffix: ' h' },
+    { label: 'Checadas hoy',        value: resumen?.checadas_hoy ?? 0,        sub: `Semana: ${(resumen?.checadas_semana ?? 0).toLocaleString()}`, accent: T.amber },
+    { label: 'Total histórico BD',  value: resumen?.checadas_total ?? 0,      sub: 'Desde 2025', accent: T.violet },
+    { label: 'Programas activos',   value: resumen?.programas_activos ?? 0,   sub: 'Centro + Instituto', accent: T.red },
+    { label: 'Docentes virtuales',  value: resumen?.docentes_virtuales ?? 0,  sub: 'Virtual o mixta', accent: T.orange },
+  ]
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-screen-xl mx-auto">
+    <>
+      <style>{GLOBAL_CSS}</style>
+      <div style={{
+        background: T.bg,
+        minHeight: '100%',
+        padding: '22px 20px 52px',
+        fontFamily: T.sans,
+        color: T.text,
+        backgroundImage: `radial-gradient(circle, rgba(34,211,238,0.06) 1px, transparent 1px)`,
+        backgroundSize: '26px 26px',
+      }}>
+        <div style={{ maxWidth: 1300, margin: '0 auto' }}>
 
-      {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#111827' }}>
-            Estadísticas
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#6b7280' }}>
-            Indicadores generales del sistema NEXO
-          </p>
-        </div>
-        <SyncBadgeFull />
-      </div>
-
-      {/* ── KPIs ─────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard
-          label="Docentes activos"
-          value={resumen?.docentes_activos ?? 0}
-          sub="Registrados en el sistema"
-          color={C_RED}
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          }
-        />
-        <KpiCard
-          label="Asignaciones activas"
-          value={resumen?.asignaciones_activas ?? 0}
-          sub="Clases en horario vigente"
-          color={C_BLUE}
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          }
-        />
-        <KpiCard
-          label="Horas / semana"
-          value={resumen?.horas_semana ?? 0}
-          sub="Horas programadas totales"
-          color={C_TEAL}
-          suffix=" hrs"
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        />
-        <KpiCard
-          label="Checadas hoy"
-          value={resumen?.checadas_hoy ?? 0}
-          sub={`Esta semana: ${(resumen?.checadas_semana ?? 0).toLocaleString()}`}
-          color={C_AMBER}
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        />
-      </div>
-
-      {/* ── Segunda fila de KPIs ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard
-          label="Total checadas BD"
-          value={resumen?.checadas_total ?? 0}
-          sub="Histórico desde 2025"
-          color={C_PURPLE}
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8 4m0 0c4.418 0 8-1.79 8-4" />
-            </svg>
-          }
-        />
-        <KpiCard
-          label="Programas activos"
-          value={resumen?.programas_activos ?? 0}
-          sub="Centro + Instituto"
-          color={C_ROSE}
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-          }
-        />
-        <KpiCard
-          label="Docentes virtuales"
-          value={resumen?.docentes_virtuales ?? 0}
-          sub="Con asignación virtual o mixta"
-          color="#0891b2"
-          icon={
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          }
-        />
-        {/* Quincenas por estado como mini-KPI */}
-        <div className="rounded-2xl p-5 flex flex-col gap-2 relative overflow-hidden"
-          style={{ background: 'white', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-          <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full" style={{ background: '#65a30d', opacity: 0.08 }} />
-          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#6b7280' }}>Quincenas</span>
-          <div className="flex flex-col gap-1.5 mt-1">
-            {Object.entries(resumen?.quincenas ?? {}).map(([k, v]) => {
-              const s = ESTADO_STYLE[k] || { label: k, bg: '#f3f4f6', color: '#374151' }
-              return (
-                <div key={k} className="flex items-center justify-between">
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                    style={{ background: s.bg, color: s.color }}>{s.label}</span>
-                  <span className="text-sm font-bold" style={{ color: '#111827' }}>{v}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Gráfico de tendencia de checadas ─────────────────────────────── */}
-      <Section title="Tendencia de checadas — últimas 16 semanas">
-        {checadasSemana.length === 0 ? (
-          <p className="text-sm text-center py-8" style={{ color: '#9ca3af' }}>Sin datos suficientes</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={checadasSemana} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={C_RED}  stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={C_RED}  stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradPersonas" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={C_BLUE} stopOpacity={0.25} />
-                  <stop offset="95%" stopColor={C_BLUE} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="semana" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              <Area type="monotone" dataKey="total" name="Checadas" stroke={C_RED}
-                strokeWidth={2.5} fill="url(#gradTotal)" dot={false} activeDot={{ r: 4 }} />
-              <Area type="monotone" dataKey="personas" name="Personas" stroke={C_BLUE}
-                strokeWidth={2} fill="url(#gradPersonas)" dot={false} activeDot={{ r: 4 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </Section>
-
-      {/* ── Fila: BarChart programas + PieChart quincenas ────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-
-        {/* Bar: horas por programa */}
-        <div className="md:col-span-3 rounded-2xl p-5 flex flex-col gap-4"
-          style={{ background: 'white', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-          <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: '#374151' }}>
-            Horas semanales por programa
-          </h3>
-          {topProgramas.length === 0 ? (
-            <p className="text-sm text-center py-8" style={{ color: '#9ca3af' }}>Sin datos</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={topProgramas} layout="vertical"
-                margin={{ top: 0, right: 24, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="codigo" tick={{ fontSize: 10, fill: '#374151' }}
-                  tickLine={false} axisLine={false} width={60} />
-                <Tooltip content={<CustomTooltip formatter={(v) => `${v} hrs`} />} />
-                <Bar dataKey="horas_semana" name="Horas/sem" radius={[0, 4, 4, 0]} maxBarSize={22}>
-                  {topProgramas.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Pie: docentes por programa */}
-        <div className="md:col-span-2 rounded-2xl p-5 flex flex-col gap-4"
-          style={{ background: 'white', border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-          <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: '#374151' }}>
-            Docentes por programa
-          </h3>
-          {porPrograma.length === 0 ? (
-            <p className="text-sm text-center py-8" style={{ color: '#9ca3af' }}>Sin datos</p>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={porPrograma} dataKey="docentes" nameKey="codigo"
-                    cx="50%" cy="50%" outerRadius={80} innerRadius={40}
-                    labelLine={false} label={<PieLabel />}>
-                    {porPrograma.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip formatter={(v) => `${v} docentes`} />} />
-                </PieChart>
-              </ResponsiveContainer>
-              {/* Leyenda manual */}
-              <div className="flex flex-col gap-1.5 overflow-y-auto" style={{ maxHeight: 120 }}>
-                {porPrograma.map((p, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                      style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                    <span className="truncate flex-1" style={{ color: '#374151' }}>{p.codigo}</span>
-                    <span className="font-semibold tabular-nums" style={{ color: '#111827' }}>{p.docentes}</span>
-                  </div>
-                ))}
+          {/* ── HEADER ──────────────────────────────────────────────────── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 24,
+            opacity: 0,
+            animation: 'fadeUp 0.4s ease forwards',
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                <span style={{
+                  fontFamily: T.mono, fontSize: 10, color: T.cyan,
+                  letterSpacing: '0.16em', textTransform: 'uppercase',
+                }}>
+                  NEXO · PANEL DE CONTROL
+                </span>
+                <span style={{
+                  display: 'inline-block', width: 5, height: 5, borderRadius: '50%',
+                  background: T.cyan,
+                  animation: 'pulseDot 2s ease-in-out infinite',
+                  boxShadow: `0 0 6px ${T.cyan}`,
+                }} />
               </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ── Evaluación virtual + Historial quincenas ─────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        {/* Evaluación virtual */}
-        <Section title="Cumplimiento evaluación virtual">
-          {evalVirtual.length === 0 ? (
-            <p className="text-sm text-center py-8" style={{ color: '#9ca3af' }}>
-              Sin datos de evaluación virtual
-            </p>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={evalVirtual} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="ciclo" tick={{ fontSize: 9, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="aprobadas"  name="Aprobadas"  fill={C_TEAL}  radius={[4,4,0,0]} maxBarSize={24} />
-                <Bar dataKey="rechazadas" name="Rechazadas" fill={C_ROSE}  radius={[4,4,0,0]} maxBarSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Section>
-
-        {/* Historial quincenas */}
-        <Section title="Historial de quincenas">
-          {quincenas.length === 0 ? (
-            <p className="text-sm text-center py-8" style={{ color: '#9ca3af' }}>Sin quincenas</p>
-          ) : (
-            <div className="overflow-y-auto space-y-1.5" style={{ maxHeight: 260 }}>
-              {quincenas.map((q) => (
-                <div key={q.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs"
-                  style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate" style={{ color: '#1e293b' }}>
-                      {q.ciclo_label || q.razon_social || 'Quincena'}
-                    </p>
-                    <p style={{ color: '#94a3b8' }}>
-                      {q.fecha_inicio} — {q.fecha_fin}
-                    </p>
-                  </div>
-                  <EstadoBadge estado={q.estado} />
-                </div>
-              ))}
+              <h1 style={{
+                fontFamily: T.display, fontSize: 26, fontWeight: 800,
+                color: '#f0f9ff', margin: 0, letterSpacing: '-0.02em',
+                lineHeight: 1,
+              }}>
+                Estadísticas
+              </h1>
             </div>
-          )}
-        </Section>
-      </div>
+            <SyncBadgeFull />
+          </div>
 
-      {/* ── Tabla detallada programas ─────────────────────────────────────── */}
-      <Section title="Distribución por programa">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                <th className="text-left py-2 pr-4 font-semibold uppercase tracking-wide" style={{ color: '#6b7280' }}>Programa</th>
-                <th className="text-right py-2 px-3 font-semibold uppercase tracking-wide" style={{ color: '#6b7280' }}>Docentes</th>
-                <th className="text-right py-2 px-3 font-semibold uppercase tracking-wide" style={{ color: '#6b7280' }}>Horas/sem</th>
-                <th className="py-2 pl-3 w-32 font-semibold uppercase tracking-wide" style={{ color: '#6b7280' }}>Carga</th>
-              </tr>
-            </thead>
-            <tbody>
-              {porPrograma.map((p, i) => {
-                const maxHrs = Math.max(...porPrograma.map(x => x.horas_semana), 1)
-                const pct    = Math.round((p.horas_semana / maxHrs) * 100)
-                return (
-                  <tr key={i} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td className="py-2.5 pr-4 font-medium" style={{ color: '#374151' }}>{p.programa}</td>
-                    <td className="py-2.5 px-3 text-right font-semibold tabular-nums" style={{ color: '#1e293b' }}>{p.docentes}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: '#6b7280' }}>{p.horas_semana}</td>
-                    <td className="py-2.5 pl-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 rounded-full" style={{ background: '#f1f5f9' }}>
-                          <div className="h-1.5 rounded-full transition-all"
-                            style={{ width: `${pct}%`, background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                        </div>
-                        <span className="text-[10px] tabular-nums w-7 text-right" style={{ color: '#9ca3af' }}>{pct}%</span>
+          {/* ── KPI GRID ────────────────────────────────────────────────── */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
+            gap: 10,
+            marginBottom: 14,
+          }}>
+            {kpis.map((k, i) => (
+              <KpiCard key={i} {...k} index={i + 1} />
+            ))}
+            <QuincenasCard data={resumen?.quincenas} index={kpis.length + 1} />
+          </div>
+
+          {/* ── TENDENCIA CHECADAS ───────────────────────────────────────── */}
+          <Panel title="Tendencia de checadas — últimas 4 semanas" delay={420} style={{ marginBottom: 14 }}>
+            {checadasSemana.length === 0 ? (
+              <p style={{ color: T.textMuted, textAlign: 'center', padding: '28px 0', fontFamily: T.mono, fontSize: 11 }}>
+                SIN DATOS SUFICIENTES
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={210}>
+                <AreaChart data={checadasSemana} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gC" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor={T.cyan} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={T.cyan} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gP" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor={T.red} stopOpacity={0.28} />
+                      <stop offset="100%" stopColor={T.red} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={T.textDim} vertical={false} />
+                  <XAxis dataKey="semana"
+                    tick={{ fontSize: 10, fill: T.textMuted, fontFamily: T.mono }}
+                    tickLine={false} axisLine={{ stroke: T.textDim }} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: T.textMuted, fontFamily: T.mono }}
+                    tickLine={false} axisLine={false} />
+                  <Tooltip content={<DarkTip />} />
+                  <Legend iconType="circle" iconSize={6}
+                    wrapperStyle={{ fontSize: 10, fontFamily: T.mono, color: T.textMuted }} />
+                  <Area type="monotone" dataKey="total" name="CHECADAS"
+                    stroke={T.cyan} strokeWidth={2.5} fill="url(#gC)"
+                    dot={false} activeDot={{ r: 4, fill: T.cyan, stroke: T.surface, strokeWidth: 2 }} />
+                  <Area type="monotone" dataKey="personas" name="PERSONAS"
+                    stroke={T.red} strokeWidth={2} fill="url(#gP)"
+                    dot={false} activeDot={{ r: 4, fill: T.red, stroke: T.surface, strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </Panel>
+
+          {/* ── HORAS POR PROGRAMA + DOCENTES PIE ───────────────────────── */}
+          <div className="stats-grid-3-2" style={{
+            display: 'grid', gridTemplateColumns: '3fr 2fr',
+            gap: 14, marginBottom: 14,
+          }}>
+            <Panel title="Horas semanales por programa" delay={520}>
+              {topProgramas.length === 0 ? (
+                <p style={{ color: T.textMuted, textAlign: 'center', padding: '28px 0', fontFamily: T.mono, fontSize: 11 }}>SIN DATOS</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={topProgramas} layout="vertical"
+                    margin={{ top: 0, right: 12, left: 4, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={T.textDim} horizontal={false} />
+                    <XAxis type="number"
+                      tick={{ fontSize: 9.5, fill: T.textMuted, fontFamily: T.mono }}
+                      tickLine={false} axisLine={false} />
+                    <YAxis type="category" dataKey="codigo" width={58}
+                      tick={{ fontSize: 10.5, fill: T.text, fontFamily: T.mono }}
+                      tickLine={false} axisLine={false} />
+                    <Tooltip content={<DarkTip fmt={(v) => `${v} hrs`} />} />
+                    <Bar dataKey="horas_semana" name="Hrs/sem" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                      {topProgramas.map((_, i) => (
+                        <Cell key={i} fill={PROGRAM_COLORS[i % PROGRAM_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </Panel>
+
+            <Panel title="Docentes por programa" delay={580}>
+              {porPrograma.length === 0 ? (
+                <p style={{ color: T.textMuted, textAlign: 'center', padding: '28px 0', fontFamily: T.mono, fontSize: 11 }}>SIN DATOS</p>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={170}>
+                    <PieChart>
+                      <Pie data={porPrograma} dataKey="docentes" nameKey="codigo"
+                        cx="50%" cy="50%" outerRadius={76} innerRadius={40}
+                        labelLine={false}
+                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                          if (percent < 0.05) return null
+                          const r = innerRadius + (outerRadius - innerRadius) * 0.5
+                          const rad = Math.PI / 180
+                          const x = cx + r * Math.cos(-midAngle * rad)
+                          const y = cy + r * Math.sin(-midAngle * rad)
+                          return (
+                            <text x={x} y={y} fill="white" textAnchor="middle"
+                              dominantBaseline="central" fontSize={9} fontWeight={700}
+                              fontFamily={T.mono}>
+                              {`${(percent * 100).toFixed(0)}%`}
+                            </text>
+                          )
+                        }}>
+                        {porPrograma.map((_, i) => (
+                          <Cell key={i} fill={PROGRAM_COLORS[i % PROGRAM_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<DarkTip fmt={(v) => `${v} docentes`} />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', gap: 6,
+                    overflowY: 'auto', maxHeight: 110,
+                  }}>
+                    {porPrograma.map((p, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                          width: 8, height: 8, borderRadius: 2, flexShrink: 0,
+                          background: PROGRAM_COLORS[i % PROGRAM_COLORS.length],
+                        }} />
+                        <span style={{ flex: 1, color: T.textMuted, fontFamily: T.mono, fontSize: 10 }}>
+                          {p.codigo}
+                        </span>
+                        <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: T.text }}>
+                          {p.docentes}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Section>
+                    ))}
+                  </div>
+                </>
+              )}
+            </Panel>
+          </div>
 
-    </div>
+          {/* ── EVALUACIÓN VIRTUAL + HISTORIAL QUINCENAS ────────────────── */}
+          <div className="stats-grid-2" style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            gap: 14, marginBottom: 14,
+          }}>
+            <Panel title="Cumplimiento evaluación virtual" delay={640}>
+              {evalVirtual.length === 0 ? (
+                <p style={{ color: T.textMuted, textAlign: 'center', padding: '28px 0', fontFamily: T.mono, fontSize: 11 }}>SIN DATOS</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={evalVirtual} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={T.textDim} />
+                    <XAxis dataKey="ciclo"
+                      tick={{ fontSize: 9, fill: T.textMuted, fontFamily: T.mono }}
+                      tickLine={false} axisLine={false} />
+                    <YAxis
+                      tick={{ fontSize: 9, fill: T.textMuted, fontFamily: T.mono }}
+                      tickLine={false} axisLine={false} />
+                    <Tooltip content={<DarkTip />} />
+                    <Legend iconType="circle" iconSize={6}
+                      wrapperStyle={{ fontSize: 10, fontFamily: T.mono, color: T.textMuted }} />
+                    <Bar dataKey="aprobadas"  name="APROBADAS"  fill={T.green} radius={[4,4,0,0]} maxBarSize={22} />
+                    <Bar dataKey="rechazadas" name="RECHAZADAS" fill={T.red}   radius={[4,4,0,0]} maxBarSize={22} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </Panel>
+
+            <Panel title="Historial de quincenas" delay={700}>
+              {quincenas.length === 0 ? (
+                <p style={{ color: T.textMuted, textAlign: 'center', padding: '28px 0', fontFamily: T.mono, fontSize: 11 }}>SIN DATOS</p>
+              ) : (
+                <div style={{ overflowY: 'auto', maxHeight: 240, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {quincenas.map((q) => (
+                    <div key={q.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '8px 12px', borderRadius: 6,
+                      background: T.surface2, border: `1px solid ${T.textDim}`,
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                          fontFamily: T.display, fontSize: 11.5, fontWeight: 600,
+                          color: T.text, margin: 0,
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>
+                          {q.ciclo_label || q.razon_social || 'Quincena'}
+                        </p>
+                        <p style={{
+                          fontFamily: T.mono, fontSize: 10, color: T.textMuted,
+                          margin: '2px 0 0',
+                        }}>
+                          {q.fecha_inicio} — {q.fecha_fin}
+                        </p>
+                      </div>
+                      <EstadoBadge estado={q.estado} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
+          </div>
+
+          {/* ── TABLA DISTRIBUCIÓN POR PROGRAMA ─────────────────────────── */}
+          <Panel title="Distribución detallada por programa" delay={760}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                    {[
+                      { label: 'Programa',        align: 'left' },
+                      { label: 'Docentes',         align: 'right' },
+                      { label: 'Hrs / semana',     align: 'right' },
+                      { label: 'Carga relativa',   align: 'left' },
+                    ].map((h, i) => (
+                      <th key={i} style={{
+                        padding: '8px 12px', textAlign: h.align,
+                        fontFamily: T.display, fontSize: 9, fontWeight: 700,
+                        letterSpacing: '0.14em', textTransform: 'uppercase',
+                        color: T.textMuted, whiteSpace: 'nowrap',
+                      }}>
+                        {h.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {porPrograma.map((p, i) => {
+                    const pct = Math.round((p.horas_semana / maxHrs) * 100)
+                    const color = PROGRAM_COLORS[i % PROGRAM_COLORS.length]
+                    return (
+                      <tr key={i} className="stats-row-hover" style={{
+                        borderBottom: `1px solid ${T.textDim}`,
+                        transition: 'background 0.12s',
+                      }}>
+                        <td style={{
+                          padding: '10px 12px', fontFamily: T.sans,
+                          fontSize: 13, color: T.text,
+                        }}>
+                          {p.programa}
+                        </td>
+                        <td style={{
+                          padding: '10px 12px', textAlign: 'right',
+                          fontFamily: T.mono, fontSize: 14,
+                          fontWeight: 700, color: '#f0f9ff',
+                        }}>
+                          {p.docentes}
+                        </td>
+                        <td style={{
+                          padding: '10px 12px', textAlign: 'right',
+                          fontFamily: T.mono, fontSize: 12, color: T.textMuted,
+                        }}>
+                          {p.horas_semana}
+                        </td>
+                        <td style={{ padding: '10px 12px', minWidth: 140 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{
+                              flex: 1, height: 3, borderRadius: 2,
+                              background: T.textDim, overflow: 'hidden',
+                            }}>
+                              <div style={{
+                                height: '100%', borderRadius: 2,
+                                width: `${pct}%`,
+                                background: `linear-gradient(90deg, ${color}, ${color}90)`,
+                                boxShadow: `0 0 6px ${color}60`,
+                              }} />
+                            </div>
+                            <span style={{
+                              fontFamily: T.mono, fontSize: 9.5,
+                              color: T.textMuted, width: 28, textAlign: 'right',
+                            }}>
+                              {pct}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+
+        </div>
+      </div>
+    </>
   )
 }

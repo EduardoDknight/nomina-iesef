@@ -90,7 +90,7 @@ async def resumen(_: UsuarioActual = Depends(get_usuario_actual)):
 
 @router.get("/checadas-por-semana")
 async def checadas_por_semana(_: UsuarioActual = Depends(get_usuario_actual)):
-    """Checadas agrupadas por semana — últimas 16 semanas."""
+    """Checadas agrupadas por semana — últimas 4 semanas (mes en curso)."""
     conn = get_conn()
     cur  = conn.cursor()
     cur.execute("""
@@ -99,7 +99,7 @@ async def checadas_por_semana(_: UsuarioActual = Depends(get_usuario_actual)):
             COUNT(*) AS total,
             COUNT(DISTINCT user_id) AS personas
         FROM asistencias_checadas
-        WHERE timestamp_checada >= NOW() - INTERVAL '16 weeks'
+        WHERE timestamp_checada >= NOW() - INTERVAL '4 weeks'
         GROUP BY semana
         ORDER BY semana
     """)
