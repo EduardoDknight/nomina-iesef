@@ -173,7 +173,7 @@ SELECT
 FROM nomina_quincena nq
 JOIN docentes d ON d.id = nq.docente_id
 WHERE nq.quincena_id = %s
-  AND (%s = 'ambas' OR d.adscripcion IN (%s, 'ambos'))
+  AND (%s = 'ambas' OR d.adscripcion::text IN (%s, 'ambos'))
 ORDER BY d.nombre_completo
 """
 
@@ -195,7 +195,7 @@ WHERE a.vigente_desde <= %s
   AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
   AND a.activa = true
   AND a.docente_id = ANY(%s)
-  AND (%s = 'ambas' OR p.razon_social = %s)
+  AND (%s = 'ambas' OR p.razon_social::text = %s)
 GROUP BY a.docente_id, p.id, p.nombre, p.razon_social, p.nivel,
          a.costo_hora, p.costo_hora, a.modalidad
 ORDER BY a.docente_id, p.nombre

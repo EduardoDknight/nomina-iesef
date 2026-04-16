@@ -107,7 +107,7 @@ async def listar_docentes(
             sql += " AND activo = %s"
             params.append(activo)
         if adscripcion:
-            sql += " AND adscripcion = %s"
+            sql += " AND adscripcion::text = %s"
             params.append(adscripcion)
         sql += " ORDER BY nombre_completo"
         cur.execute(sql, params)

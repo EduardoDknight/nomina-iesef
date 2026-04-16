@@ -232,7 +232,7 @@ def calcular_nomina_docente(
                 JOIN materias m    ON a.materia_id = m.id
                 JOIN programas p   ON m.programa_id = p.id
                 WHERE hc.activo = true
-                  AND (%s = 'ambas' OR p.razon_social = %s)
+                  AND (%s = 'ambas' OR p.razon_social::text = %s)
             ),
             bloques_por_fecha AS (
                 SELECT b.*, f.fecha

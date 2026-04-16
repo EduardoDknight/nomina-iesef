@@ -120,7 +120,7 @@ async def get_quincena(
             FROM nomina_quincena nq
             JOIN docentes d ON d.id = nq.docente_id
             WHERE nq.quincena_id = %s
-              AND d.adscripcion IN (%s, 'ambos')
+              AND d.adscripcion::text IN (%s, 'ambos')
         """, (quincena_id, rs))
     resumen = cur.fetchone()
 
@@ -944,7 +944,7 @@ async def get_checadas_docente(
         WHERE a.docente_id = %s
           AND a.vigente_desde <= %s AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
           AND a.activa = true
-          AND (%s = 'ambas' OR p.razon_social = %s)
+          AND (%s = 'ambas' OR p.razon_social::text = %s)
     """, (docente_id, q['fecha_fin'], q['fecha_inicio'],
           q['razon_social'], q['razon_social']))
     horarios = list(cur.fetchall())
