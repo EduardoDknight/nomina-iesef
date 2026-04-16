@@ -160,6 +160,10 @@ SELECT id, fecha_inicio, fecha_fin, ciclo, razon_social
 FROM quincenas WHERE id = %s
 """
 
+# SIN filtro por d.adscripcion — la clasificación centro/instituto se hace
+# a partir de programas.razon_social en nomina_detalle_programa.
+# Esto resuelve el bug donde docentes con adscripcion='instituto' pero con
+# asignaciones en Bachillerato (centro) no aparecían en el Excel de Centro.
 SQL_NOMINA = """
 SELECT
     nq.docente_id,
@@ -173,32 +177,30 @@ SELECT
 FROM nomina_quincena nq
 JOIN docentes d ON d.id = nq.docente_id
 WHERE nq.quincena_id = %s
-  AND (%s = 'ambas' OR d.adscripcion::text IN (%s, 'ambos'))
 ORDER BY d.nombre_completo
 """
 
-SQL_ASIGNACIONES = """
+# Datos REALES per-programa desde nomina_detalle_programa.
+# Antes se usaba SQL_ASIGNACIONES con distribución proporcional por horas
+# programadas — daba montos incorrectos (ej. $75 en vez de $120).
+SQL_DETALLE = """
 SELECT
-    a.docente_id,
-    p.id            AS programa_id,
+    nq.docente_id,
+    ndp.programa_id,
     p.nombre        AS programa_nombre,
-    p.razon_social,
+    p.razon_social::text  AS razon_social,
     p.nivel,
-    COALESCE(a.costo_hora, p.costo_hora, 0) AS costo_hora,
-    a.modalidad,
-    COALESCE(SUM(hc.horas_bloque), 0)       AS horas_semana_prog
-FROM asignaciones a
-JOIN materias  m ON m.id = a.materia_id
-JOIN programas p ON p.id = m.programa_id
-LEFT JOIN horario_clases hc ON hc.asignacion_id = a.id
-WHERE a.vigente_desde <= %s
-  AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
-  AND a.activa = true
-  AND a.docente_id = ANY(%s)
-  AND (%s = 'ambas' OR p.razon_social::text = %s)
-GROUP BY a.docente_id, p.id, p.nombre, p.razon_social, p.nivel,
-         a.costo_hora, p.costo_hora, a.modalidad
-ORDER BY a.docente_id, p.nombre
+    ndp.horas_presenciales,
+    ndp.horas_virtuales,
+    ndp.horas_suplencia,
+    ndp.costo_hora,
+    ndp.honorarios
+FROM nomina_detalle_programa ndp
+JOIN nomina_quincena nq ON nq.id = ndp.nomina_id
+JOIN programas p         ON p.id = ndp.programa_id
+WHERE nq.quincena_id = %s
+  AND nq.docente_id  = ANY(%s)
+ORDER BY nq.docente_id, p.nombre
 """
 
 
@@ -211,11 +213,16 @@ def _r(v: Decimal) -> Decimal:
     return v.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-# ── Distribución proporcional ──────────────────────────────────────────────────
+# ── Desglose por programa (datos reales) ─────────────────────────────────────
 
-def _distribuir(nomina: dict, asig: List[dict]) -> List[dict]:
-    """Distribuye el total de honorarios proporcionalmente entre programas."""
-    if not asig:
+def _distribuir(nomina: dict, detalles: List[dict]) -> List[dict]:
+    """
+    Genera desglose por programa usando datos REALES de nomina_detalle_programa.
+    Los descuentos y ajustes se distribuyen proporcional al peso de honorarios
+    de cada programa (mucho más preciso que la distribución por horas programadas).
+    """
+    if not detalles:
+        # Docente sin detalle — fallback (no debería pasar con cálculo correcto)
         return [{
             "programa_nombre":    "SIN ASIGNACIÓN",
             "razon_social":       str(nomina.get("adscripcion") or ""),
@@ -226,70 +233,66 @@ def _distribuir(nomina: dict, asig: List[dict]) -> List[dict]:
             "monto_otros":        _d(nomina["ajustes"]),
         }]
 
-    asig_clinico  = [a for a in asig
-                     if any(k in a["programa_nombre"].upper()
-                            for k in ("CAMPO", "CLINICO", "CLÍNICO"))]
-    asig_norm     = [a for a in asig if a not in asig_clinico]
-
-    h_pres = sum(_d(a["horas_semana_prog"]) for a in asig_norm
-                 if a["modalidad"] in ("presencial", "mixta"))
-    h_virt = sum(_d(a["horas_semana_prog"]) for a in asig_norm
-                 if a["modalidad"] in ("virtual", "mixta"))
-    h_tot  = h_pres + h_virt or Decimal("1")
-
-    hon = _d(nomina["honorarios"])
     dsc = _d(nomina["descuentos_total"])
     adj = _d(nomina["ajustes"])
 
+    # Agrupar detalles por programa (pueden haber múltiples filas por programa
+    # si el docente tiene varias asignaciones en el mismo programa)
     prog_map: Dict[str, dict] = {}
-    for a in asig_norm:
-        pnom = a["programa_nombre"]
+    for det in detalles:
+        pnom = det["programa_nombre"]
         if pnom not in prog_map:
             prog_map[pnom] = {
                 "programa_nombre": pnom,
-                "razon_social":    str(a["razon_social"]),
+                "razon_social":    str(det["razon_social"]),
                 "hp": Decimal("0"), "hv": Decimal("0"),
+                "costo_hora": _d(det["costo_hora"]),
+                "hon": Decimal("0"),
             }
-        h = _d(a["horas_semana_prog"])
-        if a["modalidad"] in ("presencial", "mixta"):
-            prog_map[pnom]["hp"] += h
-        if a["modalidad"] in ("virtual", "mixta"):
-            prog_map[pnom]["hv"] += h
+        prog_map[pnom]["hp"]  += _d(det["horas_presenciales"])
+        prog_map[pnom]["hv"]  += _d(det["horas_virtuales"])
+        prog_map[pnom]["hon"] += _d(det["honorarios"])
+
+    hon_total = sum(p["hon"] for p in prog_map.values()) or Decimal("1")
 
     resultado = []
+    es_clinico = lambda n: any(k in n.upper() for k in ("CAMPO", "CLINICO", "CLÍNICO"))
+
     for pnom, pd_ in prog_map.items():
-        pp = pd_["hp"] / h_tot
-        pv = pd_["hv"] / h_tot
-        pt = pp + pv
+        if es_clinico(pnom):
+            resultado.append({
+                "programa_nombre": pnom,
+                "razon_social":    pd_["razon_social"],
+                "monto_presencial": Decimal("0"),
+                "monto_virtual":    Decimal("0"),
+                "desc_presencial":  Decimal("0"),
+                "desc_virtual":     Decimal("0"),
+                "monto_otros":      Decimal("2500.00"),
+            })
+            continue
+
+        prop = pd_["hon"] / hon_total
+        mp   = _r(pd_["hp"] * pd_["costo_hora"])
+        mv   = _r(pd_["hv"] * pd_["costo_hora"])
         resultado.append({
             "programa_nombre": pnom,
             "razon_social":    pd_["razon_social"],
-            "monto_presencial": _r(hon * pp),
-            "monto_virtual":    _r(hon * pv),
-            "desc_presencial":  _r(dsc * pp),
-            "desc_virtual":     _r(dsc * pv),
-            "monto_otros":      _r(adj * pt),
-        })
-
-    for a in asig_clinico:
-        resultado.append({
-            "programa_nombre": a["programa_nombre"],
-            "razon_social":    str(a["razon_social"]),
-            "monto_presencial": Decimal("0"),
-            "monto_virtual":    Decimal("0"),
-            "desc_presencial":  Decimal("0"),
+            "monto_presencial": mp,
+            "monto_virtual":    mv,
+            "desc_presencial":  _r(dsc * prop),
             "desc_virtual":     Decimal("0"),
-            "monto_otros":      Decimal("2500.00"),
+            "monto_otros":      _r(adj * prop),
         })
 
     return resultado
 
 
-def _clasificar(nominas, asig_por_docente):
+def _clasificar(nominas, detalle_por_docente):
+    """Clasifica filas en centro_rows e instituto_map usando razon_social del programa."""
     centro_rows   = []
     instituto_map = {}
     for nom in nominas:
-        desglose = _distribuir(nom, asig_por_docente.get(nom["docente_id"], []))
+        desglose = _distribuir(nom, detalle_por_docente.get(nom["docente_id"], []))
         for dp in desglose:
             rs = str(dp.get("razon_social") or "").lower()
             if rs == "centro":
@@ -396,7 +399,7 @@ def generar_nomina_resumen_excel(conn, quincena_id: int) -> bytes:
 
     rs = quincena["razon_social"]  # 'centro', 'instituto', 'ambas'
 
-    cur.execute(SQL_NOMINA, (quincena_id, rs, rs))
+    cur.execute(SQL_NOMINA, (quincena_id,))
     nominas = [dict(r) for r in cur.fetchall()]
     if not nominas:
         raise ValueError(
@@ -406,17 +409,16 @@ def generar_nomina_resumen_excel(conn, quincena_id: int) -> bytes:
 
     ids = list({n["docente_id"] for n in nominas})
     if ids:
-        # Pasar razon_social para filtrar solo los programas de esta quincena
-        cur.execute(SQL_ASIGNACIONES,
-                    (quincena["fecha_fin"], quincena["fecha_inicio"], ids, rs, rs))
-        asig_por_doc = {}
+        # Datos REALES per-programa desde nomina_detalle_programa
+        cur.execute(SQL_DETALLE, (quincena_id, ids))
+        detalle_por_doc = {}
         for row in cur.fetchall():
-            asig_por_doc.setdefault(row["docente_id"], []).append(dict(row))
+            detalle_por_doc.setdefault(row["docente_id"], []).append(dict(row))
     else:
-        asig_por_doc = {}
+        detalle_por_doc = {}
     cur.close()
 
-    centro_rows, instituto_map = _clasificar(nominas, asig_por_doc)
+    centro_rows, instituto_map = _clasificar(nominas, detalle_por_doc)
 
     # Ordenar programas CENTRO (por orden de aparición / alfabético)
     centro_prog_order = []
