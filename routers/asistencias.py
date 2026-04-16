@@ -4,7 +4,7 @@ Compatible con el agente Ubuntu que enviaba a api.iesef.edu.mx
 """
 from fastapi import APIRouter, Request
 from typing import Any
-from datetime import datetime, timezone as _UTC
+from datetime import datetime
 import psycopg2, logging
 from psycopg2.extras import RealDictCursor
 from config import settings
@@ -102,30 +102,26 @@ async def recibir_checadas(request: Request):
 @router.get("/ultimo_sync")
 def ultimo_sync():
     """
-    Devuelve la última vez que el AGENTE corrió (sync_log.timestamp_agente),
-    no la última checada nueva — el agente corre cada 5 min aunque no haya
-    checadas nuevas, pero asistencias_checadas.sincronizado_en solo cambia
-    cuando se insertan registros nuevos.
+    Devuelve la última vez que el servidor recibió datos del agente.
+    Usa sync_log.recibido_en (TIMESTAMPTZ, llenado automáticamente con NOW()
+    en el servidor al momento de recibir el POST). Es la hora real del servidor,
+    sin depender del reloj del agente ni de conversiones de zona horaria.
     """
     conn = get_conn()
     cur  = conn.cursor()
     cur.execute("""
         SELECT
-            (SELECT MAX(timestamp_agente) FROM sync_log)    AS ultimo,
-            (SELECT COUNT(*)              FROM asistencias_checadas) AS total
+            (SELECT MAX(recibido_en) FROM sync_log)               AS ultimo,
+            (SELECT COUNT(*)         FROM asistencias_checadas)   AS total
     """)
     row = cur.fetchone()
     cur.close()
     conn.close()
 
-    # El agente envía timestamp_agente en UTC (datetime.utcnow() en la laptop Ubuntu).
-    # PostgreSQL lo almacena como TIMESTAMP naive (sin zona horaria) pero su valor ES UTC.
-    # Adjuntamos +00:00 para que JavaScript lo interprete como UTC y lo convierta
-    # correctamente a hora local del navegador (America/Mexico_City).
-    # NUNCA adjuntar -06:00 aquí — ese era el bug original (6 horas de desfase).
-    ultimo_iso = None
-    if row["ultimo"]:
-        ultimo_iso = row["ultimo"].replace(tzinfo=_UTC.utc).isoformat()
+    # recibido_en es TIMESTAMPTZ — psycopg2 lo devuelve timezone-aware.
+    # .isoformat() produce un string con offset correcto (p.ej. "2026-04-15T20:30:00-06:00").
+    # El frontend lo parsea directo, sin manipulación extra.
+    ultimo_iso = row["ultimo"].isoformat() if row["ultimo"] else None
 
     return {
         "ultimo_sync":     ultimo_iso,
