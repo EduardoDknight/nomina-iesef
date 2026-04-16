@@ -313,7 +313,7 @@ def limpiar_horarios(cur, prog_ids_limpiar):
         FROM asignaciones a
         JOIN materias m ON a.materia_id = m.id
         WHERE hc.asignacion_id = a.id
-          AND a.ciclo = %s
+          AND a.ciclo_label = %s
           AND m.programa_id = ANY(%s)
           AND hc.activo = true
     """, (CICLO, prog_ids_limpiar))
@@ -325,7 +325,7 @@ def limpiar_horarios(cur, prog_ids_limpiar):
         SET activa = false
         FROM materias m
         WHERE a.materia_id = m.id
-          AND a.ciclo = %s
+          AND a.ciclo_label = %s
           AND m.programa_id = ANY(%s)
           AND a.activa = true
     """, (CICLO, prog_ids_limpiar))
@@ -514,7 +514,7 @@ def importar(pdf_path, dry_run=False, aprobar_mae=False):
         # Crear asignación
         cur.execute("""
             INSERT INTO asignaciones
-                (docente_id, materia_id, grupo, ciclo, activa, costo_hora, modalidad, horas_semana)
+                (docente_id, materia_id, grupo, ciclo_label, activa, costo_hora, modalidad, horas_semana)
             VALUES (%s, %s, %s, %s, true, %s, 'presencial', %s)
             RETURNING id
         """, (doc_id, mat_id, grupo, CICLO, tarifa, horas_sem))

@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from difflib import SequenceMatcher
+from datetime import date, timedelta
 import pandas as pd
 
 # ── Configuración ─────────────────────────────────────────────────────────────
@@ -35,6 +36,11 @@ EXCEL_PATH = r'C:\Users\Admin\Downloads\Virtual marzo 2- Excel con la parte que 
 CICLO      = '2026-1'
 HOJA       = 'VIRTUAL'
 HEADER_ROW = 14   # fila 0-indexada con PROGRAMA/GRUPO/MATERIA/DOCENTE
+
+# ID de la quincena de referencia para calcular n_semanas a partir de la cual
+# se deriva horas_semana = round(horas_quincena_excel / n_semanas).
+# Cambiar si el Excel es de una quincena diferente.
+QUINCENA_REF_ID = 3
 
 # Índices de columnas en el Excel (0-indexed, después de header)
 COL_PROG     = 1
@@ -72,6 +78,20 @@ TITULOS = {
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def semanas_del_periodo(fecha_inicio: date, fecha_fin: date) -> list:
+    """Retorna lista de semanas L-S que intersectan con el período."""
+    lunes = fecha_inicio - timedelta(days=fecha_inicio.weekday())
+    semanas = []
+    num = 1
+    while lunes <= fecha_fin:
+        sabado = lunes + timedelta(days=5)
+        ini = max(lunes, fecha_inicio)
+        fin = min(sabado, fecha_fin)
+        semanas.append({'semana_num': num, 'inicio': ini, 'fin': fin})
+        num += 1
+        lunes += timedelta(weeks=1)
+    return semanas
 
 def quitar_acentos(s):
     return (s.replace('á','a').replace('é','e').replace('í','i')
@@ -159,6 +179,16 @@ def main(dry_run=False):
     conn = psycopg2.connect(DB_URL)
     cur  = conn.cursor(cursor_factory=RealDictCursor)
 
+    # ── Calcular n_semanas de la quincena de referencia ─────────────────────
+    cur.execute("SELECT fecha_inicio, fecha_fin FROM quincenas WHERE id = %s", (QUINCENA_REF_ID,))
+    q_ref = cur.fetchone()
+    if q_ref:
+        n_semanas = len(semanas_del_periodo(q_ref['fecha_inicio'], q_ref['fecha_fin']))
+        print(f"Quincena ref Q{QUINCENA_REF_ID}: {q_ref['fecha_inicio']} → {q_ref['fecha_fin']}  ({n_semanas} semanas)")
+    else:
+        n_semanas = 3   # fallback razonable
+        print(f"AVISO: no se encontró quincena {QUINCENA_REF_ID}, usando n_semanas={n_semanas}")
+
     # Cargar docentes y materias
     cur.execute("SELECT id, nombre_completo FROM docentes WHERE activo=true")
     docentes_db = list(cur.fetchall())
@@ -217,7 +247,10 @@ def main(dry_run=False):
             horas_q = float(row.iloc[COL_HORAS_Q]) if str(row.iloc[COL_HORAS_Q]) != 'nan' else 0.0
         except:
             horas_q = 0.0
-        horas_sem = round(horas_q / 3.0, 2) if horas_q > 0 else 0.0
+        # horas_semana = horas_quincena / n_semanas_de_esa_quincena (redondeado a entero)
+        # NO dividir por 3 fijo: cada quincena puede tener 2, 3 o 4 semanas.
+        # evaluacion.py recalcula: horas_pagar = horas_semana × n_semanas_quincena_actual
+        horas_sem = max(1, round(horas_q / n_semanas)) if horas_q > 0 else 0
 
         # Match docente
         doc_id, score = buscar_docente(docente_raw, docentes_db, by_nombre)
@@ -234,7 +267,7 @@ def main(dry_run=False):
                 'grupo':         grupo_norm,
                 'prog_id':       prog_id,
                 'modalidad':     get_modalidad(grupo_norm),
-                'horas_sem':     horas_sem,
+                'horas_sem':     int(horas_sem),   # siempre entero
                 'horas_q':       horas_q,
                 'tarifa':        PROG_COSTO.get(prog_id, 0),
             }
