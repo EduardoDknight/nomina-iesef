@@ -85,23 +85,27 @@ git pull --rebase && git push
 ## ARRANQUE DEL SERVIDOR (PC casa)
 
 ```powershell
-# Reinicio manual del watchdog (si se cerró accidentalmente)
-powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina-iesef\watchdog.ps1
+# Estado de los servicios NSSM
+nssm status nomina-iesef          # Running / Stopped
+nssm status cloudflared-nomina
 
-# Autostart ya instalado — watchdog se lanza solo al iniciar sesión:
-# C:\Users\Admin\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\IESEF-Nomina-Watchdog.bat
+# Reiniciar manualmente
+nssm restart nomina-iesef
+nssm restart cloudflared-nomina
 
-# Logs del watchdog y uvicorn:
-# C:\Proyectos\nomina-iesef\logs\watchdog.log
+# Logs
 # C:\Proyectos\nomina-iesef\logs\uvicorn.log
 # C:\Proyectos\nomina-iesef\logs\uvicorn_err.log
+# C:\Proyectos\nomina-iesef\logs\cloudflared.log
 ```
 
-### Arquitectura watchdog (activa desde 2026-04-15 noche)
-- `uvicorn` corre SIN `--reload` → proceso único, mata limpia
-- `watchdog.ps1` corre en paralelo, bucle infinito
-- Cuando uvicorn muere (por deploy, crash, reboot) → watchdog lo reinicia en 2s
-- No requiere intervención manual. Funciona con pushes desde PC trabajo.
+### Arquitectura NSSM (activa desde 2026-04-16 noche PC casa)
+- `nomina-iesef` — servicio Windows que corre uvicorn (StartType: Automatic)
+- `cloudflared-nomina` — servicio Windows que corre cloudflared (StartType: Automatic)
+- Ambos arrancan al **inicio del sistema** (antes del login del usuario)
+- Si cualquiera muere → NSSM lo reinicia automáticamente (2s uvicorn, 5s cloudflared)
+- `watchdog.ps1` ya no se usa (Startup .bat desactivado)
+- `deploy.py` usa `os._exit(0)` → NSSM detecta la caída y reinicia con código nuevo
 
 ---
 
@@ -144,20 +148,20 @@ powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina
 | Horarios Por Grupo: grilla semanal visual | ✅ activo | |
 | Quincenas: crear, estados, colores por mes, eliminar | ✅ activo | |
 | QuincenaDetalle: nómina, asistencia, virtual, incidencias, campo clínico | ✅ activo | |
-| Modal incidencias: dropdown de asignaciones | ✅ activo | |
+| Incidencias: flujo coord→validar→aprobar, todos los permisos correctos | ✅ activo | fix 2026-04-16: superadmin + botón aprobar en validada_coord |
 | Evaluación virtual (CA 40% + EV 60%) | ✅ activo | |
-| Cálculo nómina filtrado por razon_social | ✅ activo | uvicorn reiniciado 2026-04-15 noche |
-| Exportación Excel resumen (fix $75→$120) | ✅ activo | uvicorn reiniciado 2026-04-15 noche |
+| Cálculo nómina filtrado por razon_social | ✅ activo | |
+| Exportación Excel resumen (fix $75→$120) | ✅ activo | |
 | Personal Administrativo: CRUD + asistencia | ✅ activo | |
 | Portales docente/trabajador | ✅ activo | |
 | Estadísticas: KPIs + 5 gráficas | ✅ activo | |
-| SyncBadge en 7 vistas | ✅ activo | dist compilado 2026-04-15 noche |
-| Dark mode (toggle 🌙/☀️ + CSS global) | ✅ activo | dist compilado 2026-04-15 noche |
+| SyncBadge en 7 vistas | ✅ activo | |
+| Dark mode (toggle 🌙/☀️ + CSS global) | ✅ activo | |
 | MB360 → Ubuntu → nexo (28k+ checadas) | ✅ activo | cron 30min con flock |
-| Cloudflare Tunnel (nexo.iesef.edu.mx) | ✅ activo | |
-| Auto-deploy webhook `/deploy` | ✅ activo | os._exit funcionando — probado 2026-04-15 noche |
+| Cloudflare Tunnel (nexo.iesef.edu.mx) | ✅ activo | servicio NSSM cloudflared-nomina |
+| Auto-deploy webhook `/deploy` | ✅ activo | os._exit → NSSM reinicia en 2s |
 | GitHub Actions build frontend | ✅ activo | Push .jsx → build automático → webhook → live (~2 min) |
-| Arranque automático Windows | ✅ activo | carpeta Startup del usuario |
+| **Servicios Windows NSSM** | ✅ activo | nomina-iesef + cloudflared-nomina · Automatic · arrancan sin login |
 
 ---
 
@@ -168,8 +172,9 @@ powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina
 | Zona horaria PC casa / PostgreSQL | ✅ `America/Mexico_City` (UTC-6) |
 | Cron Ubuntu laptop | ✅ `*/30 con flock` |
 | Webhook GitHub | ✅ ID 606281234, ping 200 OK |
-| Arranque automático Windows | ✅ carpeta Startup del usuario |
+| Arranque automático Windows | ✅ Servicios NSSM (Automatic) — arrancan sin necesidad de login |
 | node/npm | ✅ GitHub Actions hace el build automático — ya no se necesita PC casa para frontend |
+| NSSM | ✅ Instalado via choco · `nomina-iesef` (uvicorn) + `cloudflared-nomina` |
 
 ---
 
@@ -182,14 +187,13 @@ powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\Proyectos\nomina
 - [ ] Recalcular nómina Q6 (centro, id=6) — pendiente
 
 ### 🔴 Infraestructura — próxima semana
-- [ ] **NSSM** — convertir uvicorn en servicio Windows real
-  ```powershell
-  # Descargar nssm.cc, luego:
-  nssm install nomina-iesef "C:\Python312\python.exe" "-m uvicorn main_nomina:app --host 0.0.0.0 --port 8000"
-  nssm set nomina-iesef AppDirectory "C:\Proyectos\nomina-iesef"
-  nssm start nomina-iesef
-  ```
-  En `deploy.py` reemplazar `os._exit(0)` con `subprocess.run(["sc", "stop/start", "nomina-iesef"])`
+- [x] **NSSM** ✅ — servicios Windows instalados y corriendo (2026-04-16 noche PC casa)
+  - `nomina-iesef` (uvicorn): Automatic, restart 2s
+  - `cloudflared-nomina` (túnel): Automatic, restart 5s
+  - Startup .bat desactivado — ya no se necesita para uvicorn ni cloudflared
+  - `deploy.py` mantiene `os._exit(0)` — NSSM detecta la caída y reinicia en 2s
+  - Instalación: `choco install nssm` via fodhelper (UAC bypass); configuración via fodhelper también
+  - Administrar: `nssm status nomina-iesef` · `nssm restart nomina-iesef`
 
 ### 🟠 Desarrollo prioritario
 - [ ] **Excel HONORARIOS completo** — formato fiscal final con firma
