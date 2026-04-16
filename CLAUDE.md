@@ -306,16 +306,24 @@ Una sola checada **NO** cuenta para dos clases consecutivas. El docente debe hac
 
 > **Nota:** El estado `retardo` NO aplica a docentes. Solo aplica a administrativos (ver sección 17) y a la Capa 1 de docentes TC (permanencia institucional, no sus clases).
 
-### Retardos — SOLO para administrativos y TC Capa 1
-- `solo_nota` — solo queda registrado
-- `tres_retardos_falta` — 3 retardos en quincena = 1 día descontado (solo administrativos y TC jornada)
+### Retardos y faltas — SOLO para administrativos y TC Capa 1 (jornada)
+> **No existen horas parciales para NADIE.** El pago siempre es en unidades enteras.
+
+**Reglas para administrativos y TC Capa 1 (jornada fija):**
+- Llegada ≤ 10 min tarde → `retardo` (se registra, no descuenta automáticamente)
+- Llegada > 30 min tarde → `falta` automática — ese día NO se paga (Cap.Humano puede revertir)
+- Salida ≥ 30 min antes de su hora → `falta` automática — ese día NO se paga (Cap.Humano puede revertir)
+- 3 `retardo` en la quincena → `falta` (1 día descontado del sueldo fijo)
+- En todos los casos el descuento es de **1 día completo** — nunca fracciones de día/hora
+
+> La franja entre 10 y 30 minutos es `retardo` que acumula. Cap.Humano y Director deciden si aplican descuento directo o esperan a los 3 retardos.
 
 ### Valores configurables en `config_asistencia`
 | Parámetro | Aplica a | Valor actual |
 |---|---|---|
 | tolerancia_entrada_min | Todos | 10 |
-| max_tolerancia_salida_min | Todos | 20 |
-| minutos_falta (falta directa sin checada) | Administrativos | 21 |
+| max_tolerancia_salida_min (docentes) | Docentes | 20 |
+| minutos_falta_directa | Administrativos + TC Capa 1 | 30 |
 | retardos_por_falta | Administrativos + TC Capa 1 | 3 |
 
 ---
@@ -324,16 +332,17 @@ Una sola checada **NO** cuenta para dos clases consecutivas. El docente debe hac
 
 ### Capa 1 — Permanencia institucional (sueldo fijo quincenal)
 - Jornada estándar: L-V 8:00-16:00 / S 7:00-15:00 (configurable por contrato)
-- Retardo institucional: entrada después de `hora_entrada + 10 min`
-- 3 retardos en quincena = 1 día descontado del sueldo fijo (configurable)
-- Salida anticipada → incidencia, Capital Humano decide
+- Llegada ≤ 10 min tarde → `retardo`; acumula 3 → descuento de 1 día completo
+- Llegada > 30 min tarde → `falta` automática (día completo no pagado; Cap.Humano puede revertir)
+- Salida ≥ 30 min antes → `falta` automática (día completo no pagado; Cap.Humano puede revertir)
+- **No existen descuentos parciales de horas** — siempre es 1 día completo o nada
 
 ### Capa 2 — Horas frente a grupo
-- Aplican exactamente las mismas reglas de ventana que cualquier docente
+- Aplican exactamente las mismas reglas de ventana que cualquier docente (binario: bloque completo o cero)
 - Horas **dentro** de la jornada → cubiertas por sueldo fijo, no pago extra
-- Horas **fuera** de la jornada → se pagan como honorario adicional por hora
+- Horas **fuera** de la jornada → se pagan como honorario adicional, siempre en **horas enteras**
 
-**Ejemplo:** Jornada 8:00-16:00. Clase 15:00-17:00 → solo se paga 16:00-17:00 (1 hora fuera de jornada).
+**Ejemplo:** Jornada 8:00-16:00. Clase 15:00-17:00 → solo se paga 16:00-17:00 = **1 hora entera** fuera de jornada.
 
 ---
 
