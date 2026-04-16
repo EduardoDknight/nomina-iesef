@@ -33,6 +33,12 @@ function getMesColor(fechaInicio) {
   return MES_COLOR[mes] || { border: '#94a3b8', bg: '#f8fafc', label: '' }
 }
 
+const RS_CONFIG = {
+  centro:    { label: 'CENTRO',    color: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
+  instituto: { label: 'INSTITUTO', color: 'bg-violet-100 text-violet-700 border border-violet-200' },
+  ambas:     { label: 'C + I',     color: 'bg-slate-100 text-slate-500 border border-slate-200' },
+}
+
 function Modal({ onClose, onSave }) {
   const [form, setForm] = useState({ fecha_inicio: '', fecha_fin: '', ciclo: '', razon_social: 'ambas' })
   const [loading, setLoading] = useState(false)
@@ -249,9 +255,20 @@ export default function Quincenas() {
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>
                           {cfg.label}
                         </span>
+                        {/* Badge de razón social — solo destaca cuando NO es 'ambas' */}
+                        {(() => {
+                          const rsCfg = RS_CONFIG[q.razon_social] || RS_CONFIG.ambas
+                          return q.razon_social !== 'ambas'
+                            ? <span className={`px-2 py-0.5 rounded text-xs font-semibold tracking-wide ${rsCfg.color}`}>
+                                {rsCfg.label}
+                              </span>
+                            : <span className={`px-2 py-0.5 rounded text-xs font-medium ${rsCfg.color}`}>
+                                {rsCfg.label}
+                              </span>
+                        })()}
                       </div>
                       <p className="text-xs text-slate-400 ml-5">
-                        Ciclo {q.ciclo} · {q.razon_social === 'ambas' ? 'Centro + Instituto' : q.razon_social} · #{q.id}
+                        Ciclo {q.ciclo} · #{q.id}
                       </p>
                     </div>
 
