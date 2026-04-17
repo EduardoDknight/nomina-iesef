@@ -1324,7 +1324,7 @@ function ModalImportarPDF({ onClose, onImported }) {
 
 export default function Horarios() {
   const { usuario } = useAuth()
-  const [tab, setTab]       = useState('programa')
+  const [tab, setTab]       = useState('grupo')
   const [modalPDF, setModalPDF] = useState(false)
   const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano',
                    'coord_docente', 'servicios_escolares'].includes(usuario?.rol)
@@ -1356,8 +1356,8 @@ export default function Horarios() {
       {/* Pestañas principales */}
       <div className="flex border-b border-gray-200 mb-5">
         {[
-          { key: 'programa', label: 'Por Programa', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
           { key: 'grupo',    label: 'Por Grupo',    icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+          { key: 'programa', label: 'Por Programa', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
