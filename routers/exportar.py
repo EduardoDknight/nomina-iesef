@@ -1,6 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response
 from datetime import date
+import sys
+import subprocess
+import importlib.util
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import logging
@@ -12,6 +15,30 @@ from services.exportar_nomina_resumen import generar_nomina_resumen_excel
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/exportar", tags=["exportar"])
+
+
+@router.get("/env")
+async def env_diagnostico():
+    """Diagnóstico temporal — entorno Python y estado de openpyxl."""
+    tiene = importlib.util.find_spec("openpyxl") is not None
+    pip_show = subprocess.run(
+        [sys.executable, "-m", "pip", "show", "openpyxl"],
+        capture_output=True, text=True, timeout=15
+    )
+    pip_install = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "openpyxl==3.1.5", "-q"],
+        capture_output=True, text=True, timeout=60
+    )
+    tiene_post = importlib.util.find_spec("openpyxl") is not None
+    return {
+        "python": sys.executable,
+        "openpyxl_antes": tiene,
+        "pip_show": pip_show.stdout.strip() or pip_show.stderr.strip(),
+        "pip_install_stdout": pip_install.stdout.strip(),
+        "pip_install_stderr": pip_install.stderr.strip(),
+        "pip_install_rc": pip_install.returncode,
+        "openpyxl_despues": tiene_post,
+    }
 
 def get_conn():
     return psycopg2.connect(settings.database_url_nomina, cursor_factory=RealDictCursor)

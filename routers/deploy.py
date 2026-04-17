@@ -56,24 +56,6 @@ def _restart_after_delay(delay: float = 1.5):
     os._exit(0)
 
 
-@router.get("/deploy/diagnostico")
-async def diagnostico():
-    """Endpoint temporal de diagnóstico — muestra entorno Python del servidor."""
-    import importlib.util
-    tiene_openpyxl = importlib.util.find_spec("openpyxl") is not None
-    pip_list = subprocess.run(
-        [sys.executable, "-m", "pip", "show", "openpyxl"],
-        capture_output=True, text=True
-    )
-    return {
-        "python": sys.executable,
-        "version": sys.version,
-        "openpyxl_importable": tiene_openpyxl,
-        "pip_show": pip_list.stdout or pip_list.stderr,
-        "cwd": str(ROOT),
-    }
-
-
 @router.post("/deploy")
 async def deploy(
     request: Request,
