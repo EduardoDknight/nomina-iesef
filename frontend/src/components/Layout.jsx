@@ -178,6 +178,18 @@ function UserAvatar({ usuario, size = 'sm' }) {
   const cls = size === 'sm'  ? 'w-7 h-7 text-xs'
             : size === 'md'  ? 'w-9 h-9 text-sm'
             :                  'w-8 h-8 text-xs'
+
+  if (usuario?.foto_perfil) {
+    return (
+      <img
+        src={usuario.foto_perfil}
+        alt={usuario?.nombre ?? ''}
+        className={`${cls} rounded-full object-cover flex-shrink-0 select-none`}
+        style={{ border: '1.5px solid rgba(139,16,32,0.55)' }}
+      />
+    )
+  }
+
   return (
     <div className={`${cls} rounded-full flex items-center justify-center flex-shrink-0 font-bold select-none`}
       style={{ background: 'rgba(139,16,32,0.30)', border: '1.5px solid rgba(139,16,32,0.55)', color: '#f87171' }}>

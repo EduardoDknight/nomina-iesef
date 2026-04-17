@@ -16,6 +16,7 @@ import PortalDocente from './pages/PortalDocente'
 import PortalTrabajador from './pages/PortalTrabajador'
 import Estadisticas from './pages/Estadisticas'
 import AsistenciaClasificada from './pages/AsistenciaClasificada'
+import Perfil from './pages/Perfil'
 
 // Ruta que requiere autenticación — si debe cambiar password redirige ahí primero
 function PrivateRoute({ children }) {
@@ -80,6 +81,7 @@ export default function App() {
           <Route path="admin/personal" element={<PersonalAdmin />} />
           <Route path="admin/nomina" element={<AdminQuincenas />} />
           <Route path="admin/nomina/:id" element={<AdminQuincenaDetalle />} />
+          <Route path="perfil" element={<Perfil />} />
         </Route>
       </Routes>
     </BrowserRouter>

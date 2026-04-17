@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
       rol:                   data.rol,
       programa_id:           data.programa_id,
       debe_cambiar_password: data.debe_cambiar_password ?? false,
+      foto_perfil:           data.foto_perfil ?? null,
     }
     localStorage.setItem('usuario', JSON.stringify(u))
     setUsuario(u)
@@ -29,6 +30,15 @@ export function AuthProvider({ children }) {
     })
   }
 
+  /** Actualiza la foto de perfil en estado y localStorage sin re-login */
+  const actualizarFoto = (foto_perfil) => {
+    setUsuario(prev => {
+      const updated = { ...prev, foto_perfil: foto_perfil ?? null }
+      localStorage.setItem('usuario', JSON.stringify(updated))
+      return updated
+    })
+  }
+
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('usuario')
@@ -36,7 +46,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, login, logout, marcarPasswordCambiado }}>
+    <AuthContext.Provider value={{ usuario, login, logout, marcarPasswordCambiado, actualizarFoto }}>
       {children}
     </AuthContext.Provider>
   )

@@ -29,6 +29,7 @@ class TokenResponse(BaseModel):
     usuario_id:            int
     programa_id:           Optional[int] = None
     debe_cambiar_password: bool = False
+    foto_perfil:           Optional[str] = None
 
 class CambiarPasswordRequest(BaseModel):
     password_actual:  str
@@ -44,6 +45,10 @@ class UsuarioActual(BaseModel):
     docente_id:            Optional[int] = None
     trabajador_id:         Optional[int] = None
     debe_cambiar_password: bool = False
+    foto_perfil:           Optional[str] = None
+
+class ActualizarPerfilRequest(BaseModel):
+    foto_perfil: Optional[str] = None  # data URL base64 (ya redimensionada en cliente)
 
 # ── DB ─────────────────────────────────────────────────────────────────────────
 
@@ -81,7 +86,7 @@ def get_usuario_actual(token: dict = Depends(verificar_token)) -> UsuarioActual:
         cur = conn.cursor()
         cur.execute(
             """SELECT id, nombre, email, rol, programa_id, docente_id,
-                      trabajador_id, debe_cambiar_password
+                      trabajador_id, debe_cambiar_password, foto_perfil
                FROM usuarios WHERE id = %s AND activo = true""",
             (int(token["sub"]),)
         )
@@ -137,7 +142,8 @@ async def login(body: LoginRequest):
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
-            """SELECT id, nombre, email, password_hash, rol, programa_id, debe_cambiar_password
+            """SELECT id, nombre, email, password_hash, rol, programa_id,
+                      debe_cambiar_password, foto_perfil
                FROM usuarios WHERE email = %s AND activo = true""",
             (body.email.lower().strip(),)
         )
@@ -166,6 +172,7 @@ async def login(body: LoginRequest):
             usuario_id=user["id"],
             programa_id=user["programa_id"],
             debe_cambiar_password=user["debe_cambiar_password"],
+            foto_perfil=user.get("foto_perfil"),
         )
     except HTTPException:
         raise
@@ -210,6 +217,46 @@ async def cambiar_password(
     except Exception as e:
         conn.rollback()
         logger.error(f"Error cambiar_password: {e}")
+        raise HTTPException(status_code=500, detail="Error interno")
+    finally:
+        cur.close()
+        conn.close()
+
+@router.patch("/perfil", status_code=200)
+async def actualizar_perfil(
+    body: ActualizarPerfilRequest,
+    usuario: UsuarioActual = Depends(get_usuario_actual)
+):
+    """Actualiza la foto de perfil del usuario autenticado.
+    Solo roles de plataforma (no docente/trabajador)."""
+    ROLES_PLATAFORMA = {
+        "superadmin", "director_cap_humano", "cap_humano", "finanzas",
+        "coord_docente", "servicios_escolares", "coord_academica", "educacion_virtual",
+    }
+    if usuario.rol not in ROLES_PLATAFORMA:
+        raise HTTPException(status_code=403, detail="No permitido para este rol")
+
+    # Validar formato
+    if body.foto_perfil is not None:
+        if not body.foto_perfil.startswith("data:image/"):
+            raise HTTPException(status_code=400, detail="Formato de imagen inválido")
+        # Tamaño máximo: ~300KB de base64 (≈ 225KB imagen real)
+        if len(body.foto_perfil) > 400_000:
+            raise HTTPException(status_code=400,
+                detail="Imagen demasiado grande — redimensiona antes de subir (máx. ~200×200 px)")
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE usuarios SET foto_perfil = %s WHERE id = %s",
+            (body.foto_perfil, usuario.id)
+        )
+        conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error actualizar_perfil: {e}")
         raise HTTPException(status_code=500, detail="Error interno")
     finally:
         cur.close()
