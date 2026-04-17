@@ -5,38 +5,32 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-16 (PC trabajo, sesión completa)
+**Fecha:** 2026-04-16 (PC casa, sesión completa)
 **Rama:** `main`
-**Último commit:** `25a20ae` docs: firma digital como proyecto futuro
+**Último commit:** `adbe062` feat: Excel fiscal + PWA + asistencia clasificada
 
 ### Commits del día (en orden)
 | Hash | Descripción |
 |---|---|
-| `7ba2c61` | fix: GET nómina lee razon_social directamente de la quincena |
-| `c43da08` | fix: asistencia y resumen count filtran por razon_social |
-| `0de0ceb` | fix: asistencia usa p.razon_social (no d.adscripcion) |
-| `807da08` | fix: deploy usa os._exit(0) para restart real del worker |
-| `4495264` | fix: exportar nómina filtra SQL por razon_social ($75 → $120) |
-| `7d3c38f` | docs: agregar problema reload uvicorn como prioridad crítica |
-| `2132626` | feat: SyncBadge — indicador último sync MB360 en 7 vistas |
-| `426a370` | docs: actualizar estado sesión con SyncBadge y pasos build |
-| `5fc21aa` | docs: reescribir NEXO_ESTADO.md + crear NEXO_PROYECTO_CHAT.md |
-| `62bc564` | feat: dark mode con persistencia en localStorage |
-| `f96cf28` | build: dark mode + SyncBadge + fixes razon_social (**dist compilado**) |
+| `7b6cfa1` | docs: CLAUDE.md — reglas binarias de asistencia (sin retardos ni parciales para docentes) |
+| `8903caa` | docs: NEXO_ESTADO.md — NSSM documentado, infraestructura actualizada |
+| `bfc4c75` | fix: NSSM servicios + incidencias (superadmin aprobar + botón validada_coord) |
+| `adbe062` | feat: Excel fiscal (IVA+ISR), PWA instalable y vista asistencia por bloques |
 
 ---
 
-## ✅ ACCIONES COMPLETADAS (noche 2026-04-15)
+## ✅ ACCIONES COMPLETADAS (noche 2026-04-16 PC casa)
 
-1. ✅ Uvicorn reiniciado con código nuevo (os._exit activo)
-2. ✅ `npm run build` ejecutado → dist compilado y pusheado (`f96cf28`)
-3. ✅ Webhook disparó correctamente → servidor se reinició solo en ~5s
-4. ⬜ **Pendiente verificar manualmente en el navegador:**
-   - Quincena "centro" → debe mostrar solo ~20 docentes de Bachillerato (no 145)
-   - Excel exportado → Barrera Reyes debe mostrar $120 (no $75)
-   - Sidebar → botón 🌙 / ☀️ visible sobre "Cerrar sesión"
-   - Estadísticas → badge "Al día · MB360 HH:MM"
-   - Recalcular nómina Q6 (centro, id=6)
+1. ✅ NSSM instalado: `nomina-iesef` (uvicorn) + `cloudflared-nomina` (túnel), ambos Automatic
+2. ✅ Incidencias fix: superadmin puede aprobar + botón Aprobar visible en estado validada_coord
+3. ✅ CLAUDE.md corregido: regla binaria de asistencia, sin retardos para docentes, sin horas parciales
+4. ✅ Excel Nómina: columnas fiscales (IVA 16%, RET. ISR, RET. IVA, TOTAL A PAGAR)
+5. ✅ PWA: manifest.json + Service Worker + iconos 192/512 — app instalable en móvil
+6. ✅ Vista Asistencia Clasificada: endpoint + página /quincenas/:id/asistencia-clasificada
+7. ⬜ **Pendiente verificar en navegador:**
+   - Excel exportado → nuevas columnas fiscales visibles (IVA, ISR, Total)
+   - En Chrome Android/Desktop: banner "Instalar app" debe aparecer
+   - Botón "Asistencia por Bloques" visible en QuincenaDetalle para coord+
 
 ---
 
@@ -136,6 +130,10 @@ nssm restart cloudflared-nomina
 | 2026-04-16 | PC trabajo | **Fix Excel: solo hojas por razon_social** | Centro solo genera hoja CENTRO, Instituto solo INSTITUTO, ambas ambas |
 | 2026-04-16 | PC trabajo | **Badges visuales razon_social en Quincenas** | Centro=verde, Instituto=violeta, C+I=gris |
 | 2026-04-16 | PC trabajo | **GitHub Actions build automático frontend** | Push .jsx → Actions npm build → commit dist → webhook → live (~2 min) |
+| 2026-04-16 noche | PC casa | **NSSM + incidencias fixes** | Servicios Windows auto-restart + superadmin aprobar incidencias |
+| 2026-04-16 noche | PC casa | **Excel columnas fiscales (IVA/ISR/Total)** | Nómina ahora muestra desglose fiscal completo |
+| 2026-04-16 noche | PC casa | **PWA — app instalable** | manifest.json + SW + iconos institucionales |
+| 2026-04-16 noche | PC casa | **Vista Asistencia Clasificada** | /quincenas/:id/asistencia-clasificada — bloques con semáforo verde/rojo |
 
 ---
 
@@ -148,15 +146,17 @@ nssm restart cloudflared-nomina
 | Horarios Por Grupo: grilla semanal visual | ✅ activo | |
 | Quincenas: crear, estados, colores por mes, eliminar | ✅ activo | |
 | QuincenaDetalle: nómina, asistencia, virtual, incidencias, campo clínico | ✅ activo | |
-| Incidencias: flujo coord→validar→aprobar, todos los permisos correctos | ✅ activo | fix 2026-04-16: superadmin + botón aprobar en validada_coord |
+| Incidencias: flujo coord→validar→aprobar, todos los permisos correctos | ✅ activo | fix: superadmin + botón aprobar en validada_coord |
 | Evaluación virtual (CA 40% + EV 60%) | ✅ activo | |
 | Cálculo nómina filtrado por razon_social | ✅ activo | |
-| Exportación Excel resumen (fix $75→$120) | ✅ activo | |
+| Exportación Excel Nómina + columnas fiscales | ✅ activo | IVA 16%, RET ISR, RET IVA, TOTAL A PAGAR |
+| Vista Asistencia Clasificada por Bloques | ✅ activo | /quincenas/:id/asistencia-clasificada |
 | Personal Administrativo: CRUD + asistencia | ✅ activo | |
 | Portales docente/trabajador | ✅ activo | |
 | Estadísticas: KPIs + 5 gráficas | ✅ activo | |
 | SyncBadge en 7 vistas | ✅ activo | |
 | Dark mode (toggle 🌙/☀️ + CSS global) | ✅ activo | |
+| PWA — app instalable en móvil/escritorio | ✅ activo | manifest.json + SW + iconos 192/512 |
 | MB360 → Ubuntu → nexo (28k+ checadas) | ✅ activo | cron 30min con flock |
 | Cloudflare Tunnel (nexo.iesef.edu.mx) | ✅ activo | servicio NSSM cloudflared-nomina |
 | Auto-deploy webhook `/deploy` | ✅ activo | os._exit → NSSM reinicia en 2s |
@@ -183,34 +183,25 @@ nssm restart cloudflared-nomina
 ### 🔴 CRÍTICO — Verificar en navegador
 - [x] Quincena "centro" → 22 docentes de Bachillerato ✅ correcto
 - [x] Excel exportado → Barrera Reyes $120 ✅ correcto, múltiplos de $120
-- [x] Excel solo genera hoja CENTRO para quincena centro ✅ fix aplicado hoy
-- [ ] Recalcular nómina Q6 (centro, id=6) — pendiente
-
-### 🔴 Infraestructura — próxima semana
-- [x] **NSSM** ✅ — servicios Windows instalados y corriendo (2026-04-16 noche PC casa)
-  - `nomina-iesef` (uvicorn): Automatic, restart 2s
-  - `cloudflared-nomina` (túnel): Automatic, restart 5s
-  - Startup .bat desactivado — ya no se necesita para uvicorn ni cloudflared
-  - `deploy.py` mantiene `os._exit(0)` — NSSM detecta la caída y reinicia en 2s
-  - Instalación: `choco install nssm` via fodhelper (UAC bypass); configuración via fodhelper también
-  - Administrar: `nssm status nomina-iesef` · `nssm restart nomina-iesef`
+- [x] Excel solo genera hoja CENTRO para quincena centro ✅
+- [x] NSSM servicios corriendo ✅ (2026-04-16 noche)
+- [ ] Excel: verificar columnas IVA/ISR/Total en próxima exportación
+- [ ] PWA: verificar banner "Instalar app" en Chrome/Android
+- [ ] Vista Asistencia Clasificada: verificar botón en QuincenaDetalle
 
 ### 🟠 Desarrollo prioritario
-- [ ] **Excel HONORARIOS completo** — formato fiscal final con firma
-  `PROGRAMA | DOCENTE | H.PROG | H.PRES | H.VIRT | DESC | $/HR | HONORARIOS | IVA 16% | SUBTOTAL | RET ISR | RET IVA | TOTAL A PAGAR | FIRMA`
-  Dos archivos: HONORARIOS CENTRO y HONORARIOS INSTITUTO
-- [ ] **Verificar cálculo fiscal multi-programa** en `services/calculo_nomina.py`
+- [ ] **Carga horarios desde PDF aSc** — botón ya existe, falta implementar el parser
 - [ ] **Módulo incidencias completo** — Coord.Académica → Coord.Docente → Cap.Humano
+- [ ] **Recalcular nómina Q6** (centro, id=6) — pendiente verificar
 
 ### 🟡 Media prioridad
-- [ ] Cargar horarios desde PDF aSc
-- [ ] Clasificador de checadas con ventanas de horario
-- [ ] Eliminar grupo "Segundo 1" de PREPA (inexistente)
-
-### 🟢 Baja prioridad
+- [ ] Integración Aspel NOI (Eduardo debe confirmar el formato con Finanzas primero)
+- [ ] Clasificador comparativo de checadas (ejecutar en quincenas activas y comparar)
 - [ ] Más indicadores en Estadísticas
-- [ ] Integración Aspel NOI
-- [ ] PWA (manifest.json + Service Worker)
+
+### 🟢 Baja prioridad / Proyectos futuros
+- [x] ~~PWA~~ ✅ Implementado
+- [ ] Firma digital de documentos (requiere módulo de calificaciones primero)
 
 ### 🔵 Proyectos futuros (pendientes de madurar)
 - [ ] **Firma digital de documentos** — reemplazar listas físicas de calificaciones y asistencia
@@ -256,12 +247,19 @@ total_a_pagar  = sub_total - retencion_isr - retencion_iva
 - Quincenas: Q3 pagada · Q4 en_revision · Q5 abierta · Q6 centro en_revision (pendiente recalcular)
 - `iesef_chatbot` → NUNCA TOCAR (chatbot WhatsApp de HostGator)
 
-### Componentes frontend clave nuevos (2026-04-15)
+### Componentes frontend clave nuevos
 | Archivo | Qué hace |
 |---|---|
 | `src/components/SyncBadge.jsx` | 3 variantes: Full/Compact/Portal — polling cada 5min |
 | `src/context/ThemeContext.jsx` | dark/light con localStorage + prefers-color-scheme |
 | `src/index.css` | overrides globales dark mode (Tailwind + inline styles React) |
+| `src/pages/AsistenciaClasificada.jsx` | Vista bloques por docente — semáforo pagado/no_pagado/virtual |
+| `public/manifest.json` + `public/sw.js` | PWA: instalable en móvil/escritorio |
+| `public/pwa-192.png` + `public/pwa-512.png` | Iconos PWA generados desde logo IESEF |
+
+### Excel Nómina — columnas actuales (2026-04-16)
+**CENTRO (11 cols):** PROGRAMA | DOCENTE | NOI | PRESENCIAL ($) | DESCUENTO | AJUSTES | HONORARIOS | IVA 16% | RET. ISR 10% | RET. IVA | TOTAL A PAGAR
+**INSTITUTO (12 cols):** ídem + VIRTUAL ($) después de PRESENCIAL
 
 ---
 
