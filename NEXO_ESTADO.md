@@ -180,12 +180,38 @@ nssm restart cloudflared-nomina
 
 ## SIGUIENTE SPRINT
 
+### 🚨 ACCIONES URGENTES — PC CASA ESTA NOCHE (2026-04-17)
+> El webhook está roto por divergencia git y falta openpyxl. El export Excel NO funciona hasta resolver esto.
+
+```powershell
+cd C:\Proyectos\nomina-iesef
+
+# 1. Resolver divergencia + traer código nuevo (deploy.py con git fetch+reset+pip install)
+git fetch origin
+git reset --hard origin/main
+pip install -r requirements.txt
+
+# 2. Actualizar DEPLOY_SECRET en .env
+notepad .env
+# Cambiar: DEPLOY_SECRET=iesef-nexo-RMEbFH_dRdhAFyuXnHbcyuxRB9AP70Dak6SjXW89180
+
+# 3. Reiniciar servicio
+nssm restart nomina-iesef
+
+# 4. En GitHub → Webhooks → Change secret → mismo valor → Redeliver → debe dar 200
+
+# 5. Instalar Tailscale (acceso remoto futuro)
+winget install tailscale
+tailscale up
+# Anotar la IP de Tailscale de PC casa para futuras sesiones desde PC trabajo
+```
+
 ### 🔴 CRÍTICO — Verificar en navegador
 - [x] Quincena "centro" → 22 docentes de Bachillerato ✅ correcto
 - [x] Excel exportado → Barrera Reyes $120 ✅ correcto, múltiplos de $120
 - [x] Excel solo genera hoja CENTRO para quincena centro ✅
 - [x] NSSM servicios corriendo ✅ (2026-04-16 noche)
-- [ ] Excel: verificar columnas IVA/ISR/Total en próxima exportación
+- [ ] **Excel: verificar columnas IVA/ISR/Total** (bloqueado hasta resolver urgente de arriba)
 - [ ] PWA: verificar banner "Instalar app" en Chrome/Android
 - [ ] Vista Asistencia Clasificada: verificar botón en QuincenaDetalle
 
