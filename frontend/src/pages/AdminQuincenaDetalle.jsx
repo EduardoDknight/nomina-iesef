@@ -675,6 +675,7 @@ export default function AdminQuincenaDetalle() {
   const [loading, setLoading]         = useState(true)
   const [tab, setTab]                 = useState('nomina')
   const [descargando, setDescargando] = useState(false)
+  const [descargandoV2, setDescargandoV2] = useState(false)
 
   const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
 
@@ -698,6 +699,29 @@ export default function AdminQuincenaDetalle() {
       // silencioso — el error es visible si el archivo no descarga
     } finally {
       setDescargando(false)
+    }
+  }
+
+  const descargarReporteV2 = async () => {
+    setDescargandoV2(true)
+    try {
+      const res = await api.get(`/admin/periodos/${id}/exportar_reporte_v2`, {
+        responseType: 'blob',
+      })
+      const url  = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href  = url
+      const fi   = quincena?.fecha_inicio ?? id
+      const ff   = quincena?.fecha_fin    ?? ''
+      link.setAttribute('download', `reporte_admin_v2_${fi}_${ff}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      // silencioso
+    } finally {
+      setDescargandoV2(false)
     }
   }
 
@@ -746,18 +770,39 @@ export default function AdminQuincenaDetalle() {
             Ciclo {quincena.ciclo} · Personal Administrativo · #{quincena.id}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {canEdit && (
             <button
               onClick={descargarReporte}
-              disabled={descargando}
-              title="Descargar reporte de checador (Excel)"
+              disabled={descargando || descargandoV2}
+              title="Reporte de checador — formato Sistema v1 (comparativo)"
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg disabled:opacity-50 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              {descargando ? 'Generando...' : 'Reporte Excel'}
+              {descargando ? 'Generando...' : 'Reporte v1'}
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={descargarReporteV2}
+              disabled={descargando || descargandoV2}
+              title="Reporte de checador — diseño mejorado NEXO v2.0"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors"
+              style={{
+                background: descargandoV2 ? '#1a7a3a' : '#217346',
+                color: 'white',
+                border: '1px solid #1a5c38',
+              }}
+              onMouseEnter={e => { if (!descargandoV2 && !descargando) e.currentTarget.style.background = '#1a5c38' }}
+              onMouseLeave={e => { if (!descargandoV2 && !descargando) e.currentTarget.style.background = '#217346' }}
+            >
+              {/* Ícono Excel */}
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM8.5 17l2-3-2-3h1.6l1.2 2 1.2-2H14l-2 3 2 3h-1.6l-1.2-2-1.2 2H8.5z"/>
+              </svg>
+              {descargandoV2 ? 'Generando...' : 'Exportar Nómina'}
             </button>
           )}
           <SyncBadge />
