@@ -8,9 +8,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import api from '../api/client'
 import SyncBadge from '../components/SyncBadge'
-
-const API = import.meta.env.VITE_API_URL || ''
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -153,7 +152,7 @@ function DocenteRow({ docente, expandido, toggleExpand }) {
 export default function AsistenciaClasificada() {
   const { id: quincenaId } = useParams()
   const navigate = useNavigate()
-  const { token } = useAuth()
+  const { usuario } = useAuth()
 
   const [quincena, setQuincena]       = useState(null)
   const [docentes, setDocentes]       = useState([])
@@ -168,23 +167,18 @@ export default function AsistenciaClasificada() {
     setCargando(true)
     setError(null)
     try {
-      const headers = { Authorization: `Bearer ${token}` }
-
       const [qRes, aRes] = await Promise.all([
-        fetch(`${API}/quincenas/${quincenaId}`, { headers }),
-        fetch(`${API}/quincenas/${quincenaId}/asistencia-clasificada`, { headers }),
+        api.get(`/quincenas/${quincenaId}`),
+        api.get(`/quincenas/${quincenaId}/asistencia-clasificada`),
       ])
-
-      if (!qRes.ok || !aRes.ok) throw new Error('Error cargando datos')
-
-      setQuincena(await qRes.json())
-      setDocentes(await aRes.json())
+      setQuincena(qRes.data)
+      setDocentes(aRes.data)
     } catch (e) {
-      setError(e.message)
+      setError(e.response?.data?.detail || e.message)
     } finally {
       setCargando(false)
     }
-  }, [quincenaId, token])
+  }, [quincenaId])
 
   useEffect(() => { cargar() }, [cargar])
 
