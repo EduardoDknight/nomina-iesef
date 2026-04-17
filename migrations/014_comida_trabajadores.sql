@@ -3,7 +3,7 @@
 -- debe checar entrada y salida de comida (media hora al punto medio de su jornada).
 
 ALTER TABLE horarios_trabajador
-    ADD COLUMN IF NOT EXISTS tiene_comida BOOLEAN NOT NULL DEFAULT FALSE;
+    ADD COLUMN IF NOT EXISTS tiene_comida BOOLEAN NOT NULL DEFAULT TRUE;
 
 COMMENT ON COLUMN horarios_trabajador.tiene_comida IS
     'Si TRUE, el trabajador debe checar salida y regreso de comida. '

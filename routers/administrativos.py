@@ -58,7 +58,7 @@ class HorarioBlock(BaseModel):
     domingo:      bool = False
     hora_entrada: str  # "HH:MM"
     hora_salida:  str  # "HH:MM"
-    tiene_comida: bool = False
+    tiene_comida: bool = True
 
 
 class TrabajadorCreate(BaseModel):

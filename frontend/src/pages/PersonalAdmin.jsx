@@ -17,7 +17,7 @@ const EMPTY_BLOQUE = {
   lunes: true, martes: true, miercoles: true, jueves: true,
   viernes: true, sabado: false, domingo: false,
   hora_entrada: '09:00', hora_salida: '17:00',
-  tiene_comida: false,
+  tiene_comida: true,
 }
 
 const EMPTY_FORM = {
