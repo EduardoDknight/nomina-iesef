@@ -1,854 +1,890 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NEXO — Manual de Usuario · IESEF 2026</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NEXO — Guía de Usuario · IESEF 2026</title>
 <style>
-  /* ── Reset & base ─────────────────────────────────────────────── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --navy:    #061833;
-    --navy2:   #0a2244;
-    --red:     #8B1020;
-    --red2:    #6f0d1a;
-    --white:   #ffffff;
-    --glass:   rgba(255,255,255,0.05);
-    --border:  rgba(255,255,255,0.10);
-    --muted:   rgba(255,255,255,0.45);
-  }
-  html, body { width:100%; height:100%; overflow:hidden; background:#000; }
-  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--white); }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#061833;--navy2:#0a2244;--red:#8B1020;--red2:#6f0d1a;
+  --glass:rgba(255,255,255,.05);--border:rgba(255,255,255,.10);--muted:rgba(255,255,255,.45);
+  --green:rgba(16,185,129,.2);--green-b:rgba(16,185,129,.35);--green-t:#6ee7b7;
+  --blue:rgba(59,130,246,.2);--blue-b:rgba(59,130,246,.35);--blue-t:#93c5fd;
+  --amber:rgba(245,158,11,.18);--amber-b:rgba(245,158,11,.35);--amber-t:#fcd34d;
+  --purple:rgba(168,85,247,.18);--purple-b:rgba(168,85,247,.35);--purple-t:#d8b4fe;
+  --teal:rgba(6,182,212,.18);--teal-b:rgba(6,182,212,.35);--teal-t:#67e8f9;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:#fff}
 
-  /* ── Slide engine ─────────────────────────────────────────────── */
-  .deck { width:100%; height:100%; position:relative; overflow:hidden; }
-  .slide {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 48px 60px;
-    opacity: 0; pointer-events: none;
-    transform: translateX(60px);
-    transition: opacity .45s ease, transform .45s ease;
-    background: linear-gradient(150deg, var(--navy) 0%, var(--navy2) 55%, #040f1f 100%);
-    overflow: hidden;
-  }
-  .slide.active  { opacity:1; pointer-events:all; transform:translateX(0); }
-  .slide.leaving { opacity:0; transform:translateX(-60px); }
+/* ── Layout ────────────────────────────────────── */
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{
+  width:220px;flex-shrink:0;
+  background:rgba(4,15,31,.95);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;
+  transition:transform .3s;
+}
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column}
 
-  /* ── Decoraciones comunes ─────────────────────────────────────── */
-  .glow-tl {
-    position:absolute; top:-120px; right:-120px;
-    width:400px; height:400px; border-radius:50%;
-    background: var(--red); opacity:.07; filter:blur(80px); pointer-events:none;
-  }
-  .glow-br {
-    position:absolute; bottom:-120px; left:-60px;
-    width:340px; height:340px; border-radius:50%;
-    background: var(--red); opacity:.07; filter:blur(100px); pointer-events:none;
-  }
-  .line-left {
-    position:absolute; top:0; left:0; width:2px; height:100%;
-    background: linear-gradient(to bottom, transparent, var(--red) 30%, var(--red) 70%, transparent);
-    opacity:.5; pointer-events:none;
-  }
+/* ── Sidebar ───────────────────────────────────── */
+.sb-logo{
+  padding:20px 16px 12px;
+  font-size:.95rem;font-weight:800;letter-spacing:.2em;color:rgba(255,255,255,.9);
+  border-bottom:1px solid var(--border);
+}
+.sb-logo span{display:block;font-size:.65rem;letter-spacing:.08em;color:var(--muted);font-weight:400;margin-top:2px}
+.sb-section{padding:16px 10px 4px;font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.25);font-weight:600}
+.sb-btn{
+  display:flex;align-items:center;gap:10px;
+  width:100%;padding:9px 12px;border:none;background:none;
+  color:var(--muted);cursor:pointer;border-radius:8px;
+  font-size:.8rem;text-align:left;transition:.2s;
+  margin-bottom:2px;
+}
+.sb-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.sb-btn.active{background:rgba(139,16,32,.25);color:#fff;border:1px solid rgba(139,16,32,.3)}
+.sb-btn .icon{font-size:1rem;width:20px;text-align:center}
+.role-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:6px;font-size:.68rem;font-weight:600;
+  margin:16px 10px 0;
+}
 
-  /* ── Canvas neural (cover) ────────────────────────────────────── */
-  #neural-canvas {
-    position:absolute; inset:0; width:100%; height:100%;
-    pointer-events:none; opacity:.6;
-  }
+/* ── Slide area ────────────────────────────────── */
+.slide-wrap{flex:1;position:relative;overflow:hidden}
+.slide{
+  position:absolute;inset:0;padding:40px 48px;
+  background:linear-gradient(150deg,var(--navy) 0%,var(--navy2) 55%,#040f1f 100%);
+  overflow-y:auto;
+  opacity:0;pointer-events:none;transform:translateX(30px);
+  transition:opacity .35s,transform .35s;
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.leaving{opacity:0;transform:translateX(-30px)}
 
-  /* ── Tipografía ───────────────────────────────────────────────── */
-  .eyebrow {
-    font-size:.7rem; letter-spacing:.25em; text-transform:uppercase;
-    color: var(--muted); margin-bottom:10px; font-weight:500;
-    display:flex; align-items:center; gap:8px;
-  }
-  .eyebrow::before { content:''; display:inline-block; width:28px; height:2px; background:var(--red); border-radius:2px; }
-  h1.cover-title {
-    font-size: clamp(3.2rem, 8vw, 6.5rem);
-    font-weight: 800; letter-spacing: .18em; text-transform:uppercase;
-    background: linear-gradient(135deg, #fff 40%, rgba(255,255,255,.6));
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    background-clip:text; line-height:1;
-  }
-  h2.slide-title {
-    font-size: clamp(1.8rem, 4vw, 2.8rem);
-    font-weight:700; margin-bottom:6px;
-  }
-  .subtitle { font-size:1rem; color: var(--muted); margin-bottom:32px; }
+/* Decoraciones */
+.glow-tl{position:absolute;top:-100px;right:-100px;width:350px;height:350px;border-radius:50%;
+  background:var(--red);opacity:.07;filter:blur(80px);pointer-events:none}
+.line-l{position:absolute;top:0;left:0;width:2px;height:100%;
+  background:linear-gradient(to bottom,transparent,var(--red) 30%,var(--red) 70%,transparent);
+  opacity:.4;pointer-events:none}
 
-  /* ── Badge chip ───────────────────────────────────────────────── */
-  .chip {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:4px 12px; border-radius:999px; font-size:.75rem; font-weight:600;
-    background: rgba(139,16,32,.25); border:1px solid rgba(139,16,32,.4);
-    color:#fca5a5;
-  }
+/* ── Tipografía ────────────────────────────────── */
+.eyebrow{font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.eyebrow::before{content:'';width:24px;height:2px;background:var(--red);border-radius:2px}
+h2{font-size:clamp(1.5rem,3vw,2.2rem);font-weight:700;margin-bottom:4px}
+.subtitle{font-size:.85rem;color:var(--muted);margin-bottom:24px}
 
-  /* ── Grid layouts ─────────────────────────────────────────────── */
-  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; width:100%; }
-  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; width:100%; }
-  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; width:100%; }
+/* ── UI Mockup ─────────────────────────────────── */
+.mockup{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;overflow:hidden;font-size:.75rem;
+}
+.mockup-bar{
+  background:rgba(255,255,255,.06);padding:8px 14px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.7rem;
+}
+.mockup-bar .url{flex:1;background:rgba(255,255,255,.05);border-radius:4px;padding:3px 8px;font-size:.65rem}
+.mockup-body{padding:16px}
 
-  /* ── Cards ────────────────────────────────────────────────────── */
-  .card {
-    background: var(--glass); border:1px solid var(--border);
-    border-radius:16px; padding:20px 22px;
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-  }
-  .card-sm { border-radius:12px; padding:14px 16px; }
-  .card-icon {
-    font-size:1.8rem; margin-bottom:10px; display:block;
-  }
-  .card h3 { font-size:.9rem; font-weight:700; margin-bottom:5px; }
-  .card p  { font-size:.78rem; color:var(--muted); line-height:1.5; }
+.ui-topbar{
+  background:rgba(255,255,255,.06);border-radius:8px;
+  padding:8px 14px;margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:.72rem;color:var(--muted);
+}
+.ui-topbar strong{color:#fff;font-size:.8rem}
+.ui-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:8px}
+.ui-tab{padding:5px 12px;border-radius:6px;font-size:.7rem;cursor:default;color:var(--muted)}
+.ui-tab.sel{background:rgba(139,16,32,.25);color:#fff;border:1px solid rgba(139,16,32,.3)}
+.ui-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:.73rem}
+.ui-card h4{font-size:.76rem;font-weight:700;margin-bottom:3px}
+.ui-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 12px;border-radius:6px;font-size:.7rem;font-weight:600;cursor:default;
+}
+.ui-btn-red{background:var(--red);color:#fff}
+.ui-btn-ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff}
+.ui-btn-green{background:rgba(16,185,129,.25);border:1px solid var(--green-b);color:var(--green-t)}
+.badge{display:inline-block;padding:2px 7px;border-radius:5px;font-size:.65rem;font-weight:600}
+.badge-green{background:var(--green);color:var(--green-t)}
+.badge-amber{background:var(--amber);color:var(--amber-t)}
+.badge-red{background:rgba(239,68,68,.18);color:#fca5a5}
+.badge-blue{background:var(--blue);color:var(--blue-t)}
 
-  /* ── Módulos con acento ───────────────────────────────────────── */
-  .mod-card {
-    background: var(--glass); border:1px solid var(--border);
-    border-radius:12px; padding:14px 16px;
-    display:flex; align-items:flex-start; gap:12px;
-  }
-  .mod-icon {
-    width:36px; height:36px; border-radius:8px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    font-size:1.1rem;
-    background: rgba(139,16,32,.25); border:1px solid rgba(139,16,32,.3);
-  }
-  .mod-info h4 { font-size:.82rem; font-weight:700; margin-bottom:2px; }
-  .mod-info p  { font-size:.72rem; color:var(--muted); line-height:1.4; }
+/* ── Steps ─────────────────────────────────────── */
+.steps{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.step{display:flex;gap:12px;align-items:flex-start;
+  padding:10px 14px;border-radius:10px;
+  background:var(--glass);border:1px solid var(--border)}
+.step-n{width:26px;height:26px;border-radius:50%;flex-shrink:0;
+  background:var(--red);display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:800}
+.step h4{font-size:.78rem;font-weight:700;margin-bottom:2px}
+.step p{font-size:.72rem;color:var(--muted);line-height:1.4}
 
-  /* ── Flujo de pasos ───────────────────────────────────────────── */
-  .step-row {
-    display:flex; align-items:flex-start; gap:14px;
-    padding:12px 16px; border-radius:12px;
-    background: var(--glass); border:1px solid var(--border);
-    width:100%;
-  }
-  .step-num {
-    width:30px; height:30px; border-radius:50%; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    font-size:.8rem; font-weight:800;
-    background: var(--red); color:white;
-  }
-  .step-body h4 { font-size:.82rem; font-weight:700; }
-  .step-body p  { font-size:.73rem; color:var(--muted); margin-top:2px; }
+/* ── Grid ───────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.card h3{font-size:.8rem;font-weight:700;margin-bottom:5px}
+.card p{font-size:.73rem;color:var(--muted);line-height:1.45}
 
-  /* ── Tabla de roles ───────────────────────────────────────────── */
-  .role-table { width:100%; border-collapse:collapse; font-size:.78rem; }
-  .role-table th {
-    text-align:left; padding:8px 12px; font-size:.68rem;
-    letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
-    border-bottom:1px solid var(--border);
-  }
-  .role-table td { padding:9px 12px; border-bottom:1px solid rgba(255,255,255,.04); }
-  .role-table tr:hover td { background:rgba(255,255,255,.03); }
-  .role-tag {
-    display:inline-block; padding:2px 8px; border-radius:6px; font-size:.68rem; font-weight:600;
-  }
+/* ── Tip/warning ────────────────────────────────── */
+.tip{padding:10px 14px;border-radius:8px;font-size:.75rem;line-height:1.5;
+  background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#bfdbfe;margin-top:10px}
+.warn{padding:10px 14px;border-radius:8px;font-size:.75rem;line-height:1.5;
+  background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--amber-t);margin-top:10px}
 
-  /* ── Timeline ─────────────────────────────────────────────────── */
-  .timeline { display:flex; gap:0; width:100%; }
-  .tl-step {
-    flex:1; text-align:center; padding:16px 8px;
-    position:relative;
-  }
-  .tl-step::after {
-    content:''; position:absolute; top:22px; left:60%; width:80%; height:2px;
-    background: linear-gradient(to right, var(--red), rgba(139,16,32,.2));
-  }
-  .tl-step:last-child::after { display:none; }
-  .tl-dot {
-    width:36px; height:36px; border-radius:50%; margin:0 auto 10px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:1rem; background:var(--red); position:relative; z-index:1;
-  }
-  .tl-step h4 { font-size:.72rem; font-weight:700; margin-bottom:3px; }
-  .tl-step p  { font-size:.65rem; color:var(--muted); line-height:1.3; }
+/* ── Nav bottom ─────────────────────────────────── */
+#nav{
+  padding:12px 24px;display:flex;align-items:center;justify-content:space-between;
+  background:rgba(4,15,31,.9);border-top:1px solid var(--border);
+}
+#nav button{background:none;border:1px solid var(--border);color:var(--muted);
+  cursor:pointer;padding:6px 18px;border-radius:8px;font-size:.8rem;transition:.2s}
+#nav button:hover:not(:disabled){background:rgba(255,255,255,.08);color:#fff}
+#nav button:disabled{opacity:.25;cursor:not-allowed}
+#slide-info{font-size:.75rem;color:var(--muted)}
 
-  /* ── Stat boxes ───────────────────────────────────────────────── */
-  .stat-box {
-    text-align:center; padding:20px 16px; border-radius:16px;
-    background:var(--glass); border:1px solid var(--border);
-  }
-  .stat-num { font-size:2.2rem; font-weight:800; color:white; line-height:1; }
-  .stat-label { font-size:.72rem; color:var(--muted); margin-top:6px; }
+/* ── Role selector cards ────────────────────────── */
+.role-card{
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:14px;padding:18px 16px;cursor:pointer;
+  transition:background .2s,border-color .2s,transform .15s;
+  text-align:left;width:100%;
+}
+.role-card:hover{background:rgba(255,255,255,.09);transform:translateY(-2px)}
+.role-card .ri{font-size:1.8rem;margin-bottom:8px;display:block}
+.role-card h3{font-size:.88rem;font-weight:700;margin-bottom:4px}
+.role-card p{font-size:.73rem;color:var(--muted);line-height:1.4}
 
-  /* ── Nav controls ─────────────────────────────────────────────── */
-  #nav {
-    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-    display:flex; align-items:center; gap:12px; z-index:100;
-    background: rgba(6,24,51,.85); border:1px solid var(--border);
-    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-    border-radius:999px; padding:8px 16px;
-  }
-  #nav button {
-    background:none; border:none; color:rgba(255,255,255,.7); cursor:pointer;
-    font-size:1.2rem; padding:4px 8px; border-radius:8px; transition:.2s;
-  }
-  #nav button:hover { background:rgba(255,255,255,.1); color:white; }
-  #nav button:disabled { opacity:.25; cursor:not-allowed; }
-  #slide-counter { font-size:.75rem; color:var(--muted); min-width:50px; text-align:center; }
-
-  /* ── Dots ─────────────────────────────────────────────────────── */
-  #dots {
-    position:fixed; right:24px; top:50%; transform:translateY(-50%);
-    display:flex; flex-direction:column; gap:8px; z-index:100;
-  }
-  .dot {
-    width:8px; height:8px; border-radius:4px; cursor:pointer;
-    background:rgba(255,255,255,.2); transition:.3s; border:none;
-  }
-  .dot.active { background:var(--red); width:8px; height:24px; }
-  .dot:hover:not(.active) { background:rgba(255,255,255,.5); }
-
-  /* ── Keyboard hint ────────────────────────────────────────────── */
-  #hint {
-    position:fixed; top:20px; right:24px; z-index:100;
-    font-size:.65rem; color:rgba(255,255,255,.25);
-    display:flex; gap:8px; align-items:center;
-  }
-  .key {
-    display:inline-flex; align-items:center; justify-content:center;
-    width:22px; height:22px; border-radius:5px; font-size:.6rem;
-    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
-  }
-
-  /* ── Logo NEXO (pequeño en esquina) ──────────────────────────── */
-  #logo-corner {
-    position:fixed; top:20px; left:24px; z-index:100;
-    font-size:.85rem; font-weight:800; letter-spacing:.2em;
-    color:rgba(255,255,255,.35);
-  }
-
-  /* ── Slide contenido scrollable ───────────────────────────────── */
-  .slide-content { width:100%; max-width:960px; position:relative; z-index:1; }
-
-  /* ── Fiscal formula ───────────────────────────────────────────── */
-  .formula-row {
-    display:flex; align-items:center; gap:12px; padding:10px 16px;
-    border-radius:10px; margin-bottom:6px;
-    background:var(--glass); border:1px solid var(--border);
-    font-size:.8rem; font-family: 'Courier New', monospace;
-  }
-  .formula-eq { color:var(--muted); }
-  .formula-val { color:#93c5fd; font-weight:700; margin-left:auto; }
-
-  /* ── Infra diagram ────────────────────────────────────────────── */
-  .infra-node {
-    padding:10px 16px; border-radius:10px; text-align:center;
-    background:var(--glass); border:1px solid var(--border);
-    font-size:.78rem; font-weight:600;
-  }
-  .infra-arrow {
-    display:flex; align-items:center; justify-content:center;
-    color:var(--red); font-size:1.2rem;
-  }
-
-  /* ── Intro animation ─────────────────────────────────────────── */
-  @keyframes fadeUp {
-    from { opacity:0; transform:translateY(20px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
-  .slide.active .animate-1 { animation: fadeUp .5s ease .1s both; }
-  .slide.active .animate-2 { animation: fadeUp .5s ease .2s both; }
-  .slide.active .animate-3 { animation: fadeUp .5s ease .3s both; }
-  .slide.active .animate-4 { animation: fadeUp .5s ease .4s both; }
-  .slide.active .animate-5 { animation: fadeUp .5s ease .5s both; }
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.slide.active>*{animation:fadeUp .4s ease .05s both}
 </style>
 </head>
 <body>
+<div id="app">
 
-<!-- Hint teclado -->
-<div id="hint">
-  <span class="key">←</span><span class="key">→</span>
-  <span style="margin-left:4px">navegar</span>
+<!-- ── Sidebar ───────────────────────────────────────────────────── -->
+<div id="sidebar">
+  <div class="sb-logo">NEXO <span>Guía de usuario</span></div>
+
+  <div class="sb-section">Inicio</div>
+  <button class="sb-btn active" onclick="showSection('home')" id="btn-home">
+    <span class="icon">🏠</span> Seleccionar rol
+  </button>
+
+  <div class="sb-section" id="sb-sec-ch" style="display:none">Capital Humano</div>
+  <button class="sb-btn" onclick="showSection('ch',0)" id="btn-ch-0" style="display:none"><span class="icon">📋</span> Quincenas</button>
+  <button class="sb-btn" onclick="showSection('ch',1)" id="btn-ch-1" style="display:none"><span class="icon">💰</span> Nómina y exportar</button>
+  <button class="sb-btn" onclick="showSection('ch',2)" id="btn-ch-2" style="display:none"><span class="icon">🔄</span> Incidencias</button>
+  <button class="sb-btn" onclick="showSection('ch',3)" id="btn-ch-3" style="display:none"><span class="icon">⏱️</span> Asistencia</button>
+
+  <div class="sb-section" id="sb-sec-coord" style="display:none">Coordinaciones</div>
+  <button class="sb-btn" onclick="showSection('coord',0)" id="btn-coord-0" style="display:none"><span class="icon">📅</span> Horarios</button>
+  <button class="sb-btn" onclick="showSection('coord',1)" id="btn-coord-1" style="display:none"><span class="icon">🔄</span> Suplencias</button>
+  <button class="sb-btn" onclick="showSection('coord',2)" id="btn-coord-2" style="display:none"><span class="icon">💻</span> Eval. virtual</button>
+
+  <div class="sb-section" id="sb-sec-fin" style="display:none">Finanzas</div>
+  <button class="sb-btn" onclick="showSection('fin',0)" id="btn-fin-0" style="display:none"><span class="icon">👁️</span> Ver nómina</button>
+  <button class="sb-btn" onclick="showSection('fin',1)" id="btn-fin-1" style="display:none"><span class="icon">✏️</span> Ajustes</button>
+
+  <div class="sb-section" id="sb-sec-doc" style="display:none">Portal Docente</div>
+  <button class="sb-btn" onclick="showSection('doc',0)" id="btn-doc-0" style="display:none"><span class="icon">📱</span> Mi portal</button>
+  <button class="sb-btn" onclick="showSection('doc',1)" id="btn-doc-1" style="display:none"><span class="icon">📣</span> Aclaraciones</button>
+
+  <div style="flex:1"></div>
+  <div style="padding:14px 10px;font-size:.65rem;color:rgba(255,255,255,.18);border-top:1px solid var(--border)">
+    nexo.iesef.edu.mx · 2026
+  </div>
 </div>
 
-<div id="logo-corner">NEXO</div>
+<!-- ── Main ──────────────────────────────────────────────────────── -->
+<div id="main">
+  <div class="slide-wrap">
 
-<!-- Dots nav -->
-<div id="dots"></div>
-
-<!-- Nav bar -->
-<div id="nav">
-  <button id="btn-prev" onclick="prevSlide()">&#8592;</button>
-  <span id="slide-counter">1 / 12</span>
-  <button id="btn-next" onclick="nextSlide()">&#8594;</button>
-</div>
-
-<div class="deck" id="deck">
-
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S1 — PORTADA                            ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide active">
-    <canvas id="neural-canvas"></canvas>
-    <div class="glow-tl"></div>
-    <div class="glow-br"></div>
-    <div class="line-left"></div>
-    <div class="slide-content" style="text-align:center; padding-bottom:40px;">
-      <div class="animate-1" style="margin-bottom:24px;">
-        <div style="display:inline-block; padding:16px 28px; border-radius:20px;
-          background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10);">
-          <div style="font-size:2.2rem; font-weight:900; letter-spacing:.06em; color:rgba(255,255,255,.15);">
-            IESEF
+    <!-- HOME -->
+    <div class="slide active" id="slide-home">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:800px;margin:0 auto">
+        <div class="eyebrow">Guía de usuario</div>
+        <h2>¿Quién eres en Nexo?</h2>
+        <p class="subtitle">Selecciona tu rol para ver exactamente cómo usar la plataforma</p>
+        <div class="g3" style="margin-top:8px">
+          <button class="role-card" onclick="activateRole('ch')">
+            <span class="ri">🏛️</span>
+            <h3>Capital Humano</h3>
+            <p>Administras quincenas, calculas nómina, validas incidencias y exportas honorarios</p>
+          </button>
+          <button class="role-card" onclick="activateRole('coord')">
+            <span class="ri">📚</span>
+            <h3>Coordinación</h3>
+            <p>Coord. Docente · Coord. Académica · Servicios Escolares</p>
+          </button>
+          <button class="role-card" onclick="activateRole('fin')">
+            <span class="ri">💵</span>
+            <h3>Finanzas</h3>
+            <p>Consultas, ajustes manuales y exportación a Aspel NOI</p>
+          </button>
+          <button class="role-card" onclick="activateRole('doc')">
+            <span class="ri">👨‍🏫</span>
+            <h3>Docente / Trabajador</h3>
+            <p>Consulta tus checadas, nómina en curso e historial personal</p>
+          </button>
+          <button class="role-card" onclick="activateRole('ev')">
+            <span class="ri">💻</span>
+            <h3>Educación Virtual</h3>
+            <p>Captura los criterios de evaluación virtual del 60% para todos los programas</p>
+          </button>
+          <div class="card" style="cursor:default">
+            <div style="font-size:1.4rem;margin-bottom:6px">🔐</div>
+            <h3>Acceso al sistema</h3>
+            <p>Abre <strong style="color:#fff">nexo.iesef.edu.mx</strong> en tu navegador o app instalada. Ingresa con tu correo institucional y contraseña asignada por TI.</p>
           </div>
         </div>
       </div>
-      <h1 class="cover-title animate-2">NEXO</h1>
-      <p class="animate-3" style="font-size:1.1rem; color:rgba(255,255,255,.50); letter-spacing:.15em;
-        text-transform:uppercase; margin-top:10px; font-weight:400;">
-        Plataforma de Gestión Institucional
-      </p>
-      <div class="animate-4" style="margin-top:32px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-        <span class="chip">Manual de Usuario</span>
-        <span class="chip">Ciclo 2026</span>
-        <span class="chip">v1.0</span>
-      </div>
-      <p class="animate-5" style="margin-top:40px; font-size:.75rem; color:rgba(255,255,255,.18);">
-        Instituto de Estudios Superiores Elise Freinet · Hidalgo, México
-      </p>
     </div>
-  </div>
 
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S2 — QUÉ ES NEXO                        ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Visión general</div>
-      <h2 class="slide-title animate-2">¿Qué es Nexo?</h2>
-      <p class="subtitle animate-3">Sistema web que integra biométrico, nómina y gestión docente en una sola plataforma</p>
+    <!-- ══ CAPITAL HUMANO ══ -->
 
-      <div class="grid-2 animate-4" style="margin-top:8px;">
-        <div class="card">
-          <span class="card-icon">🎯</span>
-          <h3>El problema que resuelve</h3>
-          <p>El proceso de nómina quincenal se llevaba en Excel entre varias áreas — sin control de accesos, sin integración con el checador biométrico y con errores de cálculo fiscal.</p>
-        </div>
-        <div class="card">
-          <span class="card-icon">⚡</span>
-          <h3>La solución</h3>
-          <p>Sistema único que conecta el checador MB360, calcula honorarios con la fórmula fiscal exacta del Art. 106 LISR y genera los documentos en un clic.</p>
-        </div>
-        <div class="card">
-          <span class="card-icon">🏛️</span>
-          <h3>Dos razones sociales</h3>
-          <p><strong>Centro</strong> — Preparatoria · $120/hr<br/><strong>Instituto</strong> — Universidad, Especialidades, Maestrías · $130–$220/hr</p>
-        </div>
-        <div class="card">
-          <span class="card-icon">👥</span>
-          <h3>466 docentes activos</h3>
-          <p>Presenciales, virtuales, suplentes, tiempo completo y campo clínico. Cada uno con su tarifa, programa y modalidad correspondientes.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S3 — MÓDULOS PRINCIPALES                ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Sistema</div>
-      <h2 class="slide-title animate-2">Módulos principales</h2>
-      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:20px;" class="animate-3">
-        <div class="mod-card"><div class="mod-icon">📋</div><div class="mod-info"><h4>Quincenas</h4><p>Crear, abrir, cerrar y consultar quincenas por razón social y ciclo</p></div></div>
-        <div class="mod-card"><div class="mod-icon">💰</div><div class="mod-info"><h4>Nómina</h4><p>Cálculo automático con fórmula fiscal Art. 106 LISR por docente</p></div></div>
-        <div class="mod-card"><div class="mod-icon">📊</div><div class="mod-info"><h4>Exportar Excel</h4><p>Genera HONORARIOS CENTRO e INSTITUTO con IVA, ISR y Total</p></div></div>
-        <div class="mod-card"><div class="mod-icon">⏱️</div><div class="mod-info"><h4>Asistencia</h4><p>Checadas del MB360 clasificadas por bloque: asistencia, incompleta, fuera ventana</p></div></div>
-        <div class="mod-card"><div class="mod-icon">🔄</div><div class="mod-info"><h4>Incidencias</h4><p>Flujo Coord. Académica → Coord. Docente → Capital Humano</p></div></div>
-        <div class="mod-card"><div class="mod-icon">💻</div><div class="mod-info"><h4>Evaluación Virtual</h4><p>Criterios CA (40%) + EV (60%). Pago binario si supera el 60%</p></div></div>
-        <div class="mod-card"><div class="mod-icon">👨‍🏫</div><div class="mod-info"><h4>Portal Docente</h4><p>Checadas propias, nómina en curso, historial y aclaraciones</p></div></div>
-        <div class="mod-card"><div class="mod-icon">🏢</div><div class="mod-info"><h4>Administrativos</h4><p>Jornada fija, retardos y descuentos por día completo</p></div></div>
-        <div class="mod-card"><div class="mod-icon">📈</div><div class="mod-info"><h4>Estadísticas</h4><p>KPIs animados + 5 gráficas de asistencia y nómina en tiempo real</p></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S4 — ROLES Y ACCESOS                    ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Seguridad</div>
-      <h2 class="slide-title animate-2">Roles y accesos</h2>
-      <p class="subtitle animate-3">Cada usuario ve y hace exactamente lo que le corresponde</p>
-      <table class="role-table animate-4">
-        <thead>
-          <tr>
-            <th>Rol</th>
-            <th>Usado por</th>
-            <th>Acceso principal</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><span class="role-tag" style="background:rgba(139,16,32,.3);color:#fca5a5">Director Cap. Humano</span></td>
-            <td>Dirección</td>
-            <td>Todo + cambiar régimen fiscal, aprobar cambios de tarifa</td>
-          </tr>
-          <tr>
-            <td><span class="role-tag" style="background:rgba(59,130,246,.2);color:#93c5fd">Capital Humano</span></td>
-            <td>Operador</td>
-            <td>Quincenas, validar incidencias, exportar honorarios</td>
-          </tr>
-          <tr>
-            <td><span class="role-tag" style="background:rgba(16,185,129,.2);color:#6ee7b7">Finanzas</span></td>
-            <td>Contador</td>
-            <td>Ver todo, cargar NOI, exportar Aspel NOI</td>
-          </tr>
-          <tr>
-            <td><span class="role-tag" style="background:rgba(168,85,247,.2);color:#d8b4fe">Coord. Docente</span></td>
-            <td>Coordinación</td>
-            <td>Cargar horarios, validar suplencias, ver asistencia</td>
-          </tr>
-          <tr>
-            <td><span class="role-tag" style="background:rgba(245,158,11,.2);color:#fcd34d">Coord. Académica</span></td>
-            <td>1 por programa</td>
-            <td>Evaluación virtual 40% de su programa, suplencias</td>
-          </tr>
-          <tr>
-            <td><span class="role-tag" style="background:rgba(6,182,212,.2);color:#67e8f9">Educación Virtual</span></td>
-            <td>Área virtual</td>
-            <td>Evaluación virtual 60% de todos los programas</td>
-          </tr>
-          <tr>
-            <td><span class="role-tag" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)">Docente / Trabajador</span></td>
-            <td>Personal</td>
-            <td>Portal propio: checadas, nómina borrador, aclaraciones</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S5 — FLUJO DE QUINCENA                  ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Proceso</div>
-      <h2 class="slide-title animate-2">Flujo de una quincena</h2>
-      <div style="display:flex; flex-direction:column; gap:8px; margin-top:20px;" class="animate-3">
-        <div class="step-row"><div class="step-num">1</div><div class="step-body"><h4>Capital Humano — Abrir quincena</h4><p>Define fechas, razón social y ciclo. El sistema pre-carga horarios vigentes automáticamente.</p></div></div>
-        <div class="step-row"><div class="step-num">2</div><div class="step-body"><h4>Docentes — Checan en MB360</h4><p>Cada checada llega al sistema en tiempo real. Se clasifica automáticamente según ventanas de entrada/salida.</p></div></div>
-        <div class="step-row"><div class="step-num">3</div><div class="step-body"><h4>Coordinaciones — Confirmar y registrar</h4><p>Confirman faltas, registran suplencias, capturan evaluación virtual (CA 40% + EV 60%).</p></div></div>
-        <div class="step-row"><div class="step-num">4</div><div class="step-body"><h4>Capital Humano — Revisar bandeja</h4><p>Atiende incidencias pendientes, aplica ajustes de quincenas anteriores y aprueba suplencias.</p></div></div>
-        <div class="step-row"><div class="step-num">5</div><div class="step-body"><h4>Capital Humano — Cerrar y exportar</h4><p>Cierra la quincena. Sistema genera borradores Excel HONORARIOS CENTRO e INSTITUTO en un clic.</p></div></div>
-        <div class="step-row"><div class="step-num">6</div><div class="step-body"><h4>Contador — Revisión y firma</h4><p>Da formato oficial. Docentes firman de recibido. Finanzas exporta a Aspel NOI para pago masivo.</p></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S6 — ASISTENCIA BIOMÉTRICA              ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Integración</div>
-      <h2 class="slide-title animate-2">Asistencia biométrica</h2>
-      <p class="subtitle animate-3">ZKTeco MB360 → Ubuntu Laptop → Nexo · sincronización cada 30 min</p>
-
-      <div class="grid-2 animate-4" style="margin-bottom:20px;">
-        <div class="card card-sm">
-          <h3 style="margin-bottom:8px;">Estados de checada — Docentes</h3>
-          <div style="display:flex; flex-direction:column; gap:5px; font-size:.78rem;">
-            <div style="display:flex; gap:8px; align-items:center;"><span style="color:#4ade80;">●</span><strong>Asistencia</strong><span style="color:var(--muted); margin-left:auto;">Pago de N horas completas</span></div>
-            <div style="display:flex; gap:8px; align-items:center;"><span style="color:#f59e0b;">●</span><strong>Pendiente revisión</strong><span style="color:var(--muted); margin-left:auto;">Fuera de ventana → Capital Humano</span></div>
-            <div style="display:flex; gap:8px; align-items:center;"><span style="color:#f87171;">●</span><strong>Incompleta</strong><span style="color:var(--muted); margin-left:auto;">Solo entrada o solo salida</span></div>
-            <div style="display:flex; gap:8px; align-items:center;"><span style="color:rgba(255,255,255,.3);">●</span><strong>Fuera ventana</strong><span style="color:var(--muted); margin-left:auto;">No corresponde a ninguna clase</span></div>
-          </div>
-        </div>
-        <div class="card card-sm">
-          <h3 style="margin-bottom:8px;">Regla crítica — Pago binario</h3>
-          <p style="font-size:.78rem; color:var(--muted); line-height:1.6;">
-            Un docente tiene un bloque de N horas.<br/>
-            <strong style="color:white;">O se pagan las N horas completas o cero.</strong><br/><br/>
-            No existen horas parciales ni retardos para docentes.<br/>
-            La tolerancia de entrada es <strong style="color:white;">10 minutos</strong>.<br/>
-            La tolerancia de salida anticipada es <strong style="color:white;">máximo 20 min</strong>.
-          </p>
-        </div>
-      </div>
-
-      <div class="card card-sm animate-5" style="font-size:.78rem; color:var(--muted);">
-        <strong style="color:white;">⚠️ Clases back-to-back:</strong> Si un docente tiene dos clases consecutivas, debe hacer
-        <strong style="color:white;">dos checadas físicas separadas</strong> — salida de clase 1 y entrada de clase 2.
-        Una sola checada no cuenta para ambas.
-      </div>
-    </div>
-  </div>
-
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S7 — CÁLCULO FISCAL                     ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Fiscalidad</div>
-      <h2 class="slide-title animate-2">Cálculo de honorarios</h2>
-      <p class="subtitle animate-3">Art. 106 LISR — Fórmula fija, 100% automática</p>
-
-      <div class="grid-2 animate-4">
-        <div>
-          <div class="formula-row"><span>Honorarios</span><span class="formula-eq">= horas × costo/hora</span><span class="formula-val">$ X</span></div>
-          <div class="formula-row"><span>IVA 16%</span><span class="formula-eq">= honorarios × 0.16</span><span class="formula-val">$ +</span></div>
-          <div class="formula-row" style="background:rgba(59,130,246,.08); border-color:rgba(59,130,246,.2);"><span><strong>Sub-total</strong></span><span class="formula-eq">= honorarios + IVA</span><span class="formula-val" style="color:white;">$ =</span></div>
-          <div class="formula-row"><span>Ret. ISR 10%</span><span class="formula-eq">= honorarios × 0.10</span><span class="formula-val" style="color:#f87171;">$ −</span></div>
-          <div class="formula-row"><span>Ret. IVA ⅔</span><span class="formula-eq">= IVA × 0.6667</span><span class="formula-val" style="color:#f87171;">$ −</span></div>
-          <div class="formula-row" style="background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.3);"><span><strong>Total a pagar</strong></span><span class="formula-eq">= sub-total − retenciones</span><span class="formula-val" style="color:#6ee7b7; font-size:1rem;">$ ✓</span></div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div class="card card-sm">
-            <h3 style="margin-bottom:8px;">Ejemplo verificado</h3>
-            <div style="font-size:.76rem; line-height:1.8; color:var(--muted);">
-              6 horas × $120 = <strong style="color:white;">$720</strong> honorarios<br/>
-              IVA: $720 × 0.16 = <strong style="color:white;">$115.20</strong><br/>
-              Sub-total: <strong style="color:white;">$835.20</strong><br/>
-              Ret. ISR: $720 × 0.10 = <strong style="color:white;">$72.00</strong><br/>
-              Ret. IVA: $115.20 × ⅔ = <strong style="color:white;">$76.80</strong><br/>
-              <strong style="color:#6ee7b7; font-size:.85rem;">Total a pagar: $686.40 ✓</strong>
+    <!-- CH-0: Quincenas -->
+    <div class="slide" id="slide-ch-0">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Capital Humano · 1 de 4</div>
+        <h2>Gestión de quincenas</h2>
+        <p class="subtitle">Menú lateral → <strong>Quincenas</strong></p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas</span></div>
+              <div class="mockup-body">
+                <div class="ui-topbar"><strong>Quincenas</strong><span class="ui-btn ui-btn-red">+ Nueva quincena</span></div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <h4>1 abr — 15 abr 2026</h4>
+                    <span class="badge badge-green">Abierta</span>
+                  </div>
+                  <div style="font-size:.68rem;color:var(--muted)">Centro + Instituto · Q7 · Ciclo 2026-1</div>
+                </div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <h4>16 mar — 31 mar 2026</h4>
+                    <span class="badge badge-amber">En revisión</span>
+                  </div>
+                  <div style="font-size:.68rem;color:var(--muted)">Centro + Instituto · Q6 · Ciclo 2026-1</div>
+                </div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <h4>1 mar — 15 mar 2026</h4>
+                    <span class="badge badge-blue">Pagada</span>
+                  </div>
+                  <div style="font-size:.68rem;color:var(--muted)">Centro + Instituto · Q5</div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="card card-sm">
-            <h3 style="margin-bottom:6px;">Multi-programa</h3>
-            <p style="font-size:.74rem;">Si un docente imparte en Enfermería ($140) y Especialidades ($200), los honorarios se consolidan primero y el cálculo fiscal aplica sobre el <strong style="color:white;">total consolidado</strong>, no por separado.</p>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h4>Crear nueva quincena</h4><p>Clic en <strong>+ Nueva quincena</strong>. Define: fechas de inicio y fin, razón social (Centro / Instituto / Ambas) y ciclo. El sistema pre-carga los horarios vigentes automáticamente.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div><h4>Los colores indican el estado</h4><p><span class="badge badge-green">Abierta</span> — en curso, se registran checadas.<br/><span class="badge badge-amber">En revisión</span> — cerrada, pendiente validar.<br/><span class="badge badge-blue">Pagada</span> — finalizada.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h4>Entrar al detalle</h4><p>Clic sobre cualquier quincena para ver sus 5 pestañas: <strong>Nómina, Asistencia, Virtual, Incidencias y Campo Clínico</strong>.</p></div></div>
           </div>
         </div>
+        <div class="warn">Solo puede haber una quincena <strong>Abierta</strong> por razón social al mismo tiempo. Ciérrala antes de crear la siguiente.</div>
       </div>
     </div>
-  </div>
 
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S8 — EVALUACIÓN VIRTUAL                 ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Modalidad virtual</div>
-      <h2 class="slide-title animate-2">Evaluación virtual</h2>
-      <p class="subtitle animate-3">Aplica a LENA, Especialidades, ADSE y Maestrías</p>
-
-      <div class="grid-2 animate-4">
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <div class="card card-sm">
-            <h3 style="margin-bottom:8px;">Criterios — Coord. Académica (40%)</h3>
-            <div style="font-size:.76rem; color:var(--muted); line-height:1.7;">
-              1. Vinculación de actividades<br/>
-              2. Respeto secuencial<br/>
-              3. Congruencia contenido/actividades<br/>
-              4. Material de apoyo
+    <!-- CH-1: Nómina y exportar -->
+    <div class="slide" id="slide-ch-1">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Capital Humano · 2 de 4</div>
+        <h2>Nómina y exportar Excel</h2>
+        <p class="subtitle">Dentro de la quincena → pestaña <strong>Nómina</strong></p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas/7</span></div>
+              <div class="mockup-body">
+                <div class="ui-tabs">
+                  <div class="ui-tab sel">📋 Nómina</div>
+                  <div class="ui-tab">⏱️ Asistencia</div>
+                  <div class="ui-tab">💻 Virtual</div>
+                  <div class="ui-tab">🔄 Incidencias</div>
+                </div>
+                <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+                  <span class="ui-btn ui-btn-ghost">↺ Recalcular</span>
+                  <span class="ui-btn ui-btn-ghost">📊 Asist. Bloques</span>
+                  <span class="ui-btn ui-btn-green">⬇ Exportar Nómina</span>
+                </div>
+                <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px">146 docentes · Total $234,270 · A pagar $223,337</div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between">
+                    <div><strong>García Mendoza, Ana</strong><br/><span style="font-size:.65rem;color:var(--muted)">Bachillerato · 6h · $120/h</span></div>
+                    <div style="text-align:right;font-size:.72rem">$686.40<br/><span class="badge badge-green">✓</span></div>
+                  </div>
+                </div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between">
+                    <div><strong>Hernández Torres, Luis</strong><br/><span style="font-size:.65rem;color:var(--muted)">Enfermería · 8h · $140/h</span></div>
+                    <div style="text-align:right;font-size:.72rem">$1,029.87<br/><span class="badge badge-green">✓</span></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="card card-sm">
-            <h3 style="margin-bottom:8px;">Criterios — Educación Virtual (60%)</h3>
-            <div style="font-size:.76rem; color:var(--muted); line-height:1.7;">
-              1. Formato institucional<br/>
-              2. Instrumento de evaluación<br/>
-              3. Publicación de actividades<br/>
-              4. Evaluación de actividades
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h4>Recalcular nómina</h4><p>Presiona <strong>Recalcular</strong> cada vez que cambies incidencias, suplencias o asistencia. El sistema recalcula honorarios con la fórmula fiscal completa (IVA, ISR, retenciones).</p></div></div>
+            <div class="step"><div class="step-n">2</div><div><h4>Revisar la lista</h4><p>Verifica totales por docente. Si un importe parece incorrecto, revisa su asistencia en la pestaña <strong>Asistencia por Bloques</strong>.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h4>Exportar a Excel</h4><p>Clic en <strong>⬇ Exportar Nómina</strong>. Se descarga automáticamente el Excel con columnas: HONORARIOS · IVA 16% · RET. ISR · RET. IVA · TOTAL A PAGAR, separado por razón social.</p></div></div>
+            <div class="step"><div class="step-n">4</div><div><h4>Cerrar quincena</h4><p>Cuando todo esté validado, usa el botón <strong>Cerrar quincena</strong> en la cabecera. El estado cambia a <span class="badge badge-amber">En revisión</span>.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CH-2: Incidencias -->
+    <div class="slide" id="slide-ch-2">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Capital Humano · 3 de 4</div>
+        <h2>Incidencias y suplencias</h2>
+        <p class="subtitle">Dentro de la quincena → pestaña <strong>Incidencias</strong></p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas/7</span></div>
+              <div class="mockup-body">
+                <div class="ui-tabs">
+                  <div class="ui-tab">📋 Nómina</div>
+                  <div class="ui-tab">⏱️ Asistencia</div>
+                  <div class="ui-tab">💻 Virtual</div>
+                  <div class="ui-tab sel">🔄 Incidencias</div>
+                </div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
+                    <div><strong>Ramírez Olvera</strong> · Falta · 14 abr<br/><span style="font-size:.65rem;color:var(--muted)">Registrada por: Coord. Académica</span></div>
+                    <span class="badge badge-amber">Pendiente</span>
+                  </div>
+                  <div style="display:flex;gap:6px;margin-top:6px">
+                    <span class="ui-btn ui-btn-green" style="font-size:.65rem">✓ Aprobar</span>
+                    <span class="ui-btn" style="background:rgba(239,68,68,.2);color:#fca5a5;font-size:.65rem">✗ Rechazar</span>
+                  </div>
+                </div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px">
+                    <div><strong>Suplencia:</strong> Luna → Pérez · 10 abr<br/><span style="font-size:.65rem;color:var(--muted)">2 horas · Validada por Coord. Docente</span></div>
+                    <span class="badge badge-blue">Validada Coord.</span>
+                  </div>
+                  <div style="display:flex;gap:6px;margin-top:6px">
+                    <span class="ui-btn ui-btn-green" style="font-size:.65rem">✓ Aprobar</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <div class="card card-sm">
-            <h3 style="margin-bottom:8px;">Regla de pago</h3>
-            <p style="font-size:.76rem; color:var(--muted); line-height:1.6;">
-              El porcentaje de cumplimiento debe ser
-              <strong style="color:white;">mayor al 60%</strong> para recibir pago.<br/><br/>
-              Si supera el umbral → se pagan <strong style="color:white;">todas las horas declaradas</strong>.<br/>
-              Si no supera → <strong style="color:#f87171;">pago = $0</strong>.<br/><br/>
-              Es una decisión <strong style="color:white;">100% binaria</strong>.
-            </p>
-          </div>
-          <div class="card card-sm" style="background:rgba(139,16,32,.1); border-color:rgba(139,16,32,.25);">
-            <h3 style="margin-bottom:4px; color:#fca5a5;">Importante</h3>
-            <p style="font-size:.74rem; color:var(--muted);">
-              Cada criterio por semana vale <strong style="color:white;">0.15</strong> o <strong style="color:white;">0</strong>. El cálculo es proporcional al número de semanas de la quincena (2 o 3 semanas).
-            </p>
+          <div>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div><h4>Flujo de una incidencia</h4><p>Coord. Académica registra → Coord. Docente valida → <strong>Capital Humano aprueba y aplica</strong> a la nómina.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div><h4>Aprobar o rechazar</h4><p>Las incidencias en estado <span class="badge badge-amber">Pendiente</span> o <span class="badge badge-blue">Validada Coord.</span> requieren tu acción. Revisa el detalle y presiona <strong>Aprobar</strong> o <strong>Rechazar</strong>.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div><h4>Recalcular tras aprobar</h4><p>Después de aprobar incidencias o suplencias, ve a la pestaña Nómina y presiona <strong>Recalcular</strong> para que los cambios se reflejen en los importes.</p></div></div>
+            </div>
+            <div class="tip" style="margin-top:10px">Las suplencias afectan a dos docentes: descuento al titular que faltó y suma de horas al suplente. Ambos se recalculan automáticamente.</div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S9 — PORTAL DEL DOCENTE                 ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Portal propio</div>
-      <h2 class="slide-title animate-2">Portal del docente y trabajador</h2>
-      <p class="subtitle animate-3">Acceso con número de empleado — visibilidad total de su situación</p>
-      <div class="grid-2 animate-4" style="gap:16px;">
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div class="card card-sm">
-            <span class="card-icon" style="font-size:1.3rem; margin-bottom:6px;">📅</span>
-            <h3>Checadas propias</h3>
-            <p>Historial completo con timestamps exactos del biométrico. El docente puede ver cada entrada y salida registrada.</p>
-          </div>
-          <div class="card card-sm">
-            <span class="card-icon" style="font-size:1.3rem; margin-bottom:6px;">💵</span>
-            <h3>Nómina en curso</h3>
-            <p>Borrador de la quincena activa — horas registradas, cálculo provisional y desglose fiscal en tiempo real.</p>
-          </div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div class="card card-sm">
-            <span class="card-icon" style="font-size:1.3rem; margin-bottom:6px;">📜</span>
-            <h3>Historial de quincenas</h3>
-            <p>Acceso a quincenas anteriores pagadas. Trazabilidad completa de honorarios percibidos por período.</p>
-          </div>
-          <div class="card card-sm">
-            <span class="card-icon" style="font-size:1.3rem; margin-bottom:6px;">📣</span>
-            <h3>Aclaraciones</h3>
-            <p>El docente puede enviar aclaraciones a Capital Humano sobre checadas dudosas o discrepancias en su nómina.</p>
-          </div>
-        </div>
-      </div>
-      <div class="card card-sm animate-5" style="margin-top:12px; display:flex; align-items:center; gap:12px;">
-        <span style="font-size:1.4rem;">📱</span>
-        <p style="font-size:.78rem;"><strong>App instalable (PWA)</strong> — Nexo puede instalarse como app nativa en Android e iOS. Acceso desde el ícono en la pantalla principal, sin necesidad de abrir el navegador.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S10 — INFRAESTRUCTURA                   ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Tecnología</div>
-      <h2 class="slide-title animate-2">Infraestructura técnica</h2>
-      <div class="grid-2 animate-3" style="margin-top:20px; align-items:start;">
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <div class="card card-sm">
-            <h3 style="margin-bottom:10px;">Stack tecnológico</h3>
-            <div style="display:flex; flex-direction:column; gap:6px; font-size:.77rem;">
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Backend</span><strong>FastAPI + Python 3.12</strong></div>
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Frontend</span><strong>React 18 + Vite + Tailwind</strong></div>
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Base de datos</span><strong>PostgreSQL 15</strong></div>
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Checador</span><strong>ZKTeco MB360 (pyzk)</strong></div>
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Tunnel</span><strong>Cloudflare Tunnel</strong></div>
-              <div style="display:flex; justify-content:space-between;"><span style="color:var(--muted)">Servicio</span><strong>NSSM (Windows Service)</strong></div>
+    <!-- CH-3: Asistencia -->
+    <div class="slide" id="slide-ch-3">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Capital Humano · 4 de 4</div>
+        <h2>Vista de asistencia por bloques</h2>
+        <p class="subtitle">Dentro de la quincena → botón <strong>Asistencia por Bloques</strong></p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas/7/asistencia-clasificada</span></div>
+              <div class="mockup-body">
+                <div class="ui-card">
+                  <h4 style="margin-bottom:6px">García Mendoza, Ana · Bachillerato</h4>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    <span class="badge" style="background:rgba(16,185,129,.2);color:#6ee7b7">Lun 6h ✓</span>
+                    <span class="badge" style="background:rgba(16,185,129,.2);color:#6ee7b7">Mié 6h ✓</span>
+                    <span class="badge badge-red">Vie 6h ✗</span>
+                    <span class="badge badge-amber">Jue 6h ⚠</span>
+                  </div>
+                </div>
+                <div class="ui-card">
+                  <h4 style="margin-bottom:6px">Torres Vega, Roberto · Enfermería</h4>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    <span class="badge" style="background:rgba(16,185,129,.2);color:#6ee7b7">Mar 4h ✓</span>
+                    <span class="badge" style="background:rgba(16,185,129,.2);color:#6ee7b7">Jue 4h ✓</span>
+                    <span class="badge" style="background:rgba(16,185,129,.2);color:#6ee7b7">Sáb 4h ✓</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="card card-sm">
-            <h3 style="margin-bottom:8px;">Auto-deploy</h3>
-            <p style="font-size:.76rem; color:var(--muted); line-height:1.6;">Cualquier cambio de código se despliega automáticamente en ~3 segundos via GitHub Webhook sin intervención manual.</p>
-          </div>
-        </div>
-        <div class="card" style="padding:20px;">
-          <h3 style="margin-bottom:16px; font-size:.82rem;">Flujo de datos</h3>
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:.75rem;">
-            <div class="infra-node" style="background:rgba(59,130,246,.12); border-color:rgba(59,130,246,.25);">🔵 MB360 · 192.168.1.201</div>
-            <div class="infra-arrow">↓ pyzk · cada 30 min</div>
-            <div class="infra-node" style="background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.2);">🟢 Ubuntu Laptop · Agente</div>
-            <div class="infra-arrow">↓ HTTPS · Cloudflare</div>
-            <div class="infra-node" style="background:rgba(139,16,32,.15); border-color:rgba(139,16,32,.3);">🔴 nexo.iesef.edu.mx · FastAPI</div>
-            <div class="infra-arrow">↓ psycopg2</div>
-            <div class="infra-node">🗄️ PostgreSQL · iesef_nomina</div>
+          <div>
+            <div class="g2" style="margin-bottom:10px">
+              <div class="card card-sm"><div style="font-size:1rem;margin-bottom:4px">🟢</div><h3>Verde — Pagado</h3><p>Checó entrada y salida dentro de las ventanas. Se pagan las N horas completas del bloque.</p></div>
+              <div class="card card-sm"><div style="font-size:1rem;margin-bottom:4px">🔴</div><h3>Rojo — No pagado</h3><p>No hay checadas válidas para ese bloque. Cero horas.</p></div>
+              <div class="card card-sm"><div style="font-size:1rem;margin-bottom:4px">🟡</div><h3>Amarillo — Revisión</h3><p>Checada fuera de ventana o incompleta. Capital Humano decide.</p></div>
+              <div class="card card-sm"><div style="font-size:1rem;margin-bottom:4px">💻</div><h3>Virtual</h3><p>Bloque virtual. El pago depende de la evaluación CA+EV.</p></div>
+            </div>
+            <div class="tip">Los bloques en amarillo son los que requieren tu revisión manual. Puedes aprobar o rechazar cada uno desde esta vista.</div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S11 — NÚMEROS                           ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <div class="glow-tl"></div>
-    <div class="line-left"></div>
-    <div class="slide-content">
-      <div class="eyebrow animate-1">Alcance</div>
-      <h2 class="slide-title animate-2">Nexo en números</h2>
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:28px;" class="animate-3">
-        <div class="stat-box"><div class="stat-num">466</div><div class="stat-label">Docentes activos</div></div>
-        <div class="stat-box"><div class="stat-num">28K+</div><div class="stat-label">Checadas sincronizadas</div></div>
-        <div class="stat-box"><div class="stat-num">12</div><div class="stat-label">Módulos en producción</div></div>
-        <div class="stat-box"><div class="stat-num">7</div><div class="stat-label">Roles de acceso</div></div>
-        <div class="stat-box"><div class="stat-num">2</div><div class="stat-label">Razones sociales</div></div>
-        <div class="stat-box"><div class="stat-num">8</div><div class="stat-label">Programas académicos</div></div>
-        <div class="stat-box"><div class="stat-num">~3s</div><div class="stat-label">Tiempo de deploy</div></div>
-        <div class="stat-box"><div class="stat-num">100%</div><div class="stat-label">Cálculo fiscal automático</div></div>
-      </div>
-      <div class="animate-4" style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
-        <span class="chip">✓ Login JWT + roles</span>
-        <span class="chip">✓ Asistencia biométrica en tiempo real</span>
-        <span class="chip">✓ Export Excel fiscal</span>
-        <span class="chip">✓ PWA instalable</span>
-        <span class="chip">✓ Dark mode</span>
-        <span class="chip">✓ Auto-deploy</span>
-      </div>
-    </div>
-  </div>
+    <!-- ══ COORDINACIONES ══ -->
 
-  <!-- ╔══════════════════════════════════════════╗ -->
-  <!-- ║  S12 — CIERRE                            ║ -->
-  <!-- ╚══════════════════════════════════════════╝ -->
-  <div class="slide">
-    <canvas id="neural-canvas-2"></canvas>
-    <div class="glow-tl"></div>
-    <div class="glow-br"></div>
-    <div class="line-left"></div>
-    <div class="slide-content" style="text-align:center;">
-      <div class="animate-1" style="margin-bottom:20px;">
-        <span class="chip" style="font-size:.8rem; padding:6px 16px;">IESEF · 2026</span>
-      </div>
-      <h1 class="cover-title animate-2" style="font-size:clamp(2.5rem,7vw,5rem);">NEXO</h1>
-      <p class="animate-3" style="font-size:1rem; color:rgba(255,255,255,.45); letter-spacing:.1em; margin-top:10px; text-transform:uppercase;">
-        Plataforma de Gestión Institucional
-      </p>
-      <div class="animate-4" style="margin-top:40px; max-width:500px; margin-left:auto; margin-right:auto;">
-        <div class="card" style="padding:24px;">
-          <p style="font-size:.9rem; color:var(--muted); line-height:1.7;">
-            Del Excel manual a un sistema integrado, seguro y auditado.<br/>
-            <strong style="color:white;">Nómina exacta. Siempre.</strong>
-          </p>
-          <div style="margin-top:16px; font-size:.8rem; color:rgba(255,255,255,.3);">
-            nexo.iesef.edu.mx
+    <!-- COORD-0: Horarios -->
+    <div class="slide" id="slide-coord-0">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Coordinación · 1 de 3</div>
+        <h2>Gestión de horarios</h2>
+        <p class="subtitle">Menú lateral → <strong>Horarios</strong></p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/horarios</span></div>
+              <div class="mockup-body">
+                <div class="ui-topbar"><strong>Horarios por grupo</strong>
+                  <div style="display:flex;gap:4px">
+                    <span class="ui-btn ui-btn-ghost" style="font-size:.65rem">Por Docente</span>
+                    <span class="ui-btn ui-btn-red" style="font-size:.65rem">Por Grupo</span>
+                  </div>
+                </div>
+                <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px">Bachillerato · 1°A · Ciclo 2026-1</div>
+                <table style="width:100%;font-size:.65rem;border-collapse:collapse">
+                  <tr style="color:var(--muted)"><td style="padding:3px 4px">Hora</td><td style="padding:3px 4px">Lun</td><td style="padding:3px 4px">Mar</td><td style="padding:3px 4px">Mié</td></tr>
+                  <tr><td style="padding:3px 4px;color:var(--muted)">07:00</td>
+                    <td style="padding:3px 4px"><div style="background:rgba(139,16,32,.2);border-radius:3px;padding:2px 4px">García · Mat</div></td>
+                    <td style="padding:3px 4px"><div style="background:rgba(59,130,246,.15);border-radius:3px;padding:2px 4px">Torres · Fís</div></td>
+                    <td style="padding:3px 4px"><div style="background:rgba(139,16,32,.2);border-radius:3px;padding:2px 4px">García · Mat</div></td>
+                  </tr>
+                  <tr><td style="padding:3px 4px;color:var(--muted)">08:00</td>
+                    <td style="padding:3px 4px"><div style="background:rgba(16,185,129,.12);border-radius:3px;padding:2px 4px">Luna · Esp</div></td>
+                    <td style="padding:3px 4px"><div style="background:rgba(139,16,32,.2);border-radius:3px;padding:2px 4px">García · Mat</div></td>
+                    <td style="padding:3px 4px"><div style="background:rgba(168,85,247,.12);border-radius:3px;padding:2px 4px">Pérez · Hist</div></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h4>Ver por grupo o por docente</h4><p>Usa los botones <strong>Por Grupo</strong> / <strong>Por Docente</strong> para cambiar la vista. La grilla semanal muestra los bloques de clase asignados.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div><h4>Agregar o modificar clase</h4><p>Clic en un bloque existente para editarlo, o en una celda vacía para agregar una clase nueva. Define docente, materia, grupo, día y hora.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h4>Los horarios rigen la nómina</h4><p>Cada bloque en el horario define cuántas horas se esperan del docente. Si el horario es incorrecto, la nómina también lo será. Actualizar al inicio de cada ciclo es crucial.</p></div></div>
           </div>
         </div>
       </div>
-      <p class="animate-5" style="margin-top:32px; font-size:.72rem; color:rgba(255,255,255,.18);">
-        Instituto de Estudios Superiores Elise Freinet · Hidalgo, México
-      </p>
     </div>
-  </div>
 
-</div><!-- /deck -->
+    <!-- COORD-1: Suplencias -->
+    <div class="slide" id="slide-coord-1">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Coordinación · 2 de 3</div>
+        <h2>Registrar suplencias y faltas</h2>
+        <p class="subtitle">Dentro de la quincena → pestaña <strong>Incidencias</strong> → Nueva incidencia</p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas/7</span></div>
+              <div class="mockup-body">
+                <div class="ui-card" style="background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.2)">
+                  <h4 style="color:#93c5fd;margin-bottom:8px">Nueva suplencia</h4>
+                  <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">Docente titular que faltó:</div>
+                  <div style="background:rgba(255,255,255,.06);border-radius:5px;padding:5px 8px;font-size:.72rem;margin-bottom:6px">Ramírez Olvera, Jorge</div>
+                  <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">Docente que suplió:</div>
+                  <div style="background:rgba(255,255,255,.06);border-radius:5px;padding:5px 8px;font-size:.72rem;margin-bottom:6px">García Mendoza, Ana</div>
+                  <div style="display:flex;gap:8px;font-size:.7rem">
+                    <div style="flex:1"><div style="color:var(--muted);margin-bottom:3px">Fecha</div><div style="background:rgba(255,255,255,.06);border-radius:5px;padding:4px 8px">14 abr 2026</div></div>
+                    <div style="flex:1"><div style="color:var(--muted);margin-bottom:3px">Horas</div><div style="background:rgba(255,255,255,.06);border-radius:5px;padding:4px 8px">4</div></div>
+                  </div>
+                  <div style="margin-top:8px"><span class="ui-btn ui-btn-red" style="font-size:.7rem">Registrar suplencia</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div><h4>Registrar la incidencia</h4><p>Selecciona el tipo: <strong>Falta</strong> o <strong>Suplencia</strong>. Para suplencias, indica quién faltó, quién suplió, fecha y horas suplidas.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div><h4>Queda en estado Pendiente</h4><p>Tu registro queda en <span class="badge badge-amber">Pendiente</span>. La Coordinación Docente la valida, y Capital Humano la aprueba para que aplique en nómina.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div><h4>Efecto en nómina</h4><p>Al aprobarse: se descuentan horas al titular y se suman las horas suplidas al docente sustituto. Ambos se reflejan en el Excel final.</p></div></div>
+            </div>
+            <div class="warn" style="margin-top:8px">Solo registra incidencias de la quincena actual. Las quincenas cerradas no aceptan nuevas incidencias.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COORD-2: Eval virtual -->
+    <div class="slide" id="slide-coord-2">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Coordinación · 3 de 3</div>
+        <h2>Evaluación virtual (40%)</h2>
+        <p class="subtitle">Solo Coord. Académica · Dentro de la quincena → pestaña <strong>Virtual</strong></p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas/7</span></div>
+              <div class="mockup-body">
+                <div class="ui-tabs">
+                  <div class="ui-tab">📋 Nómina</div>
+                  <div class="ui-tab sel">💻 Virtual</div>
+                </div>
+                <div class="ui-card">
+                  <h4 style="margin-bottom:8px">Romero Montalvo · Maestría Salud Pública</h4>
+                  <div style="font-size:.68rem;color:var(--muted);margin-bottom:6px">Semana 1 — Criterios Coord. Académica (40%)</div>
+                  <div style="display:flex;flex-direction:column;gap:4px;font-size:.7rem">
+                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Vinculación de actividades</label>
+                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox"/> Respeto secuencial</label>
+                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Congruencia contenido/actividades</label>
+                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox"/> Material de apoyo</label>
+                  </div>
+                  <div style="margin-top:8px"><span class="ui-btn ui-btn-red" style="font-size:.67rem">Guardar semana 1</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div><h4>Captura por semana</h4><p>Para cada docente virtual de tu programa, marca los 4 criterios que SÍ cumplió en cada semana de la quincena (2 o 3 semanas según el período).</p></div></div>
+              <div class="step"><div class="step-n">2</div><div><h4>Cada criterio vale 0.15</h4><p>Si marcas todos los criterios de todas las semanas, contribuyes con el <strong>40% máximo</strong> al porcentaje de cumplimiento del docente.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div><h4>Umbral de pago: 60%</h4><p>El docente se paga solo si <strong>CA + EV &gt; 60%</strong>. Si no llega, sus horas virtuales quedan en $0. El sistema calcula esto automáticamente al guardar.</p></div></div>
+            </div>
+            <div class="tip" style="margin-top:8px">Educación Virtual captura el otro 60% de forma independiente. Ambas capturas se combinan para el resultado final.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ FINANZAS ══ -->
+
+    <!-- FIN-0 -->
+    <div class="slide" id="slide-fin-0">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Finanzas · 1 de 2</div>
+        <h2>Consultar nómina completa</h2>
+        <p class="subtitle">Menú lateral → <strong>Quincenas</strong> → Clic en la quincena → pestaña Nómina</p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas/7</span></div>
+              <div class="mockup-body">
+                <div style="font-size:.68rem;color:var(--muted);margin-bottom:8px">Rol: Finanzas — vista completa · 146 docentes</div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between;align-items:start">
+                    <div>
+                      <strong>García Mendoza, Ana</strong><br/>
+                      <span style="font-size:.65rem;color:var(--muted)">NOI: 1042 · Asimilados a salarios</span>
+                    </div>
+                    <div style="text-align:right;font-size:.7rem">
+                      Hon: $720.00<br/>IVA: $115.20<br/>
+                      <strong style="color:#6ee7b7">Total: $686.40</strong>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:10px;display:flex;gap:6px">
+                  <span class="ui-btn ui-btn-green" style="font-size:.65rem">⬇ Excel Honorarios Centro</span>
+                  <span class="ui-btn ui-btn-ghost" style="font-size:.65rem">⬇ Excel Instituto</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h4>Acceso total de lectura</h4><p>Finanzas puede ver todas las quincenas, todos los docentes y el desglose fiscal completo: honorarios, IVA, retención ISR, retención IVA y total a pagar.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div><h4>Exportar Excel</h4><p>Descarga el Excel <strong>HONORARIOS CENTRO</strong> o <strong>HONORARIOS INSTITUTO</strong> desde el botón de exportar. Es el documento formal para revisión y firma del contador.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h4>Cargar NOI de docentes</h4><p>Desde la sección <strong>Docentes</strong>, Finanzas puede actualizar el número NOI de cada docente (número interno de Aspel). Necesario para la exportación a NOI.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIN-1 -->
+    <div class="slide" id="slide-fin-1">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Finanzas · 2 de 2</div>
+        <h2>Ajustes manuales</h2>
+        <p class="subtitle">Dentro de la quincena → pestaña Nómina → expandir docente → sección Ajustes</p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas/7</span></div>
+              <div class="mockup-body">
+                <div class="ui-card" style="background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.2)">
+                  <h4 style="color:var(--amber-t);margin-bottom:8px">Ajustes — Finanzas</h4>
+                  <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">Descuento manual ($):</div>
+                  <div style="background:rgba(255,255,255,.06);border-radius:5px;padding:4px 8px;font-size:.72rem;margin-bottom:6px">0.00</div>
+                  <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">Ajuste extra / abono ($):</div>
+                  <div style="background:rgba(255,255,255,.06);border-radius:5px;padding:4px 8px;font-size:.72rem;margin-bottom:6px">0.00</div>
+                  <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">Nota / concepto:</div>
+                  <div style="background:rgba(255,255,255,.06);border-radius:5px;padding:4px 8px;font-size:.72rem;margin-bottom:8px">Ej: Descuento préstamo Q5</div>
+                  <span class="ui-btn ui-btn-red" style="font-size:.67rem">Guardar ajuste</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:10px">
+              <h3>¿Para qué sirven los ajustes?</h3>
+              <p style="margin-top:4px">Para aplicar descuentos o abonos que <strong style="color:#fff">no vienen de la asistencia</strong>: préstamos, correcciones de quincenas anteriores, pagos pendientes, convenios especiales.</p>
+            </div>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div><h4>Descuento manual</h4><p>Ingresa un monto positivo para descontar del total a pagar del docente en esta quincena.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div><h4>Ajuste extra (abono)</h4><p>Ingresa un monto positivo para sumar al total a pagar. Útil para pagos pendientes de quincenas anteriores.</p></div></div>
+            </div>
+            <div class="warn" style="margin-top:10px">Los ajustes son <strong>solo para Finanzas y Superadmin</strong>. Siempre agrega una nota explicativa para trazabilidad.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PORTAL DOCENTE ══ -->
+
+    <!-- DOC-0 -->
+    <div class="slide" id="slide-doc-0">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Docente · 1 de 2</div>
+        <h2>Tu portal personal</h2>
+        <p class="subtitle">Al ingresar con tu número de empleado eres dirigido automáticamente a tu portal</p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/portal/docente</span></div>
+              <div class="mockup-body">
+                <div class="ui-topbar"><strong>Bienvenido, Ana García</strong><span style="font-size:.65rem">Bachillerato · Docente</span></div>
+                <div class="ui-tabs">
+                  <div class="ui-tab sel">📅 Mis Checadas</div>
+                  <div class="ui-tab">💵 Mi Nómina</div>
+                  <div class="ui-tab">📜 Historial</div>
+                </div>
+                <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px">Quincena actual: 1–15 abr 2026</div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div><strong>Lun 7 abr</strong> · Bachillerato<br/><span style="font-size:.65rem;color:var(--muted)">Entrada: 07:03 · Salida: 12:55</span></div>
+                    <span class="badge badge-green">✓ 6h</span>
+                  </div>
+                </div>
+                <div class="ui-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div><strong>Mié 9 abr</strong> · Bachillerato<br/><span style="font-size:.65rem;color:var(--muted)">Entrada: 07:18 · Sin salida</span></div>
+                    <span class="badge badge-amber">⚠ Incompleta</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h4>Ver mis checadas</h4><p>La pestaña <strong>Mis Checadas</strong> muestra cada entrada y salida registrada en el biométrico, con el estado de cada bloque de clase.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div><h4>Ver mi nómina borrador</h4><p>La pestaña <strong>Mi Nómina</strong> muestra el cálculo provisional de la quincena en curso: horas a pagar, honorarios, retenciones y total estimado.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h4>Historial de quincenas</h4><p>La pestaña <strong>Historial</strong> muestra quincenas anteriores pagadas con el detalle completo de cada una.</p></div></div>
+          </div>
+        </div>
+        <div class="tip">Si una checada aparece como <span class="badge badge-amber">Incompleta</span> o <span class="badge badge-red">Sin registro</span> y crees que es un error, usa la opción de aclaración.</div>
+      </div>
+    </div>
+
+    <!-- DOC-1 -->
+    <div class="slide" id="slide-doc-1">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Docente · 2 de 2</div>
+        <h2>Enviar una aclaración</h2>
+        <p class="subtitle">Portal → pestaña <strong>Mis Checadas</strong> → clic en la checada con problema → <strong>Solicitar aclaración</strong></p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/portal/docente</span></div>
+              <div class="mockup-body">
+                <div class="ui-card" style="background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.2)">
+                  <h4 style="color:#93c5fd;margin-bottom:8px">Nueva aclaración</h4>
+                  <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">Clase / fecha con problema:</div>
+                  <div style="background:rgba(255,255,255,.06);border-radius:5px;padding:4px 8px;font-size:.72rem;margin-bottom:6px">Mié 9 abr 2026 — Bachillerato</div>
+                  <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px">Descripción del problema:</div>
+                  <div style="background:rgba(255,255,255,.06);border-radius:5px;padding:6px 8px;font-size:.72rem;margin-bottom:8px;min-height:50px">El biométrico no registró mi salida. Salí a las 13:00 como siempre.</div>
+                  <span class="ui-btn ui-btn-red" style="font-size:.67rem">Enviar aclaración</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:10px">
+              <h3>¿Cuándo usar una aclaración?</h3>
+              <p style="margin-top:4px">Cuando el biométrico no registró tu entrada o salida correctamente, o cuando el estado de un bloque no coincide con tu asistencia real.</p>
+            </div>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div><h4>Describe el problema</h4><p>Sé específico: fecha, hora aproximada, si fue entrada o salida, y qué ocurrió. Eso facilita que Capital Humano lo resuelva rápido.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div><h4>Seguimiento</h4><p>En la pestaña <strong>Historial</strong> puedes ver el estado de tus aclaraciones: <span class="badge badge-amber">Pendiente</span>, <span class="badge badge-blue">En revisión</span> o <span class="badge badge-green">Resuelta</span>.</p></div></div>
+            </div>
+            <div class="warn" style="margin-top:8px">Las aclaraciones no modifican automáticamente tu nómina. Capital Humano las evalúa y aplica el ajuste si procede.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EV slide (simple) -->
+    <div class="slide" id="slide-ev-0">
+      <div class="glow-tl"></div><div class="line-l"></div>
+      <div style="max-width:900px;margin:0 auto">
+        <div class="eyebrow">Educación Virtual</div>
+        <h2>Captura de evaluación virtual (60%)</h2>
+        <p class="subtitle">Dentro de la quincena → pestaña <strong>Virtual</strong></p>
+        <div class="g2">
+          <div>
+            <div class="mockup">
+              <div class="mockup-bar">🔴🟡🟢 <span class="url">nexo.iesef.edu.mx/quincenas/7</span></div>
+              <div class="mockup-body">
+                <div class="ui-card">
+                  <h4 style="margin-bottom:8px">Romero · MSP · Semana 2 — Educación Virtual (60%)</h4>
+                  <div style="display:flex;flex-direction:column;gap:4px;font-size:.7rem">
+                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Formato institucional</label>
+                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Instrumento de evaluación</label>
+                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Publicación de actividades</label>
+                    <label style="display:flex;align-items:center;gap:8px"><input type="checkbox"/> Evaluación de actividades</label>
+                  </div>
+                  <div style="margin-top:8px"><span class="ui-btn ui-btn-red" style="font-size:.67rem">Guardar</span></div>
+                </div>
+                <div style="margin-top:8px;font-size:.7rem;color:var(--muted)">Cumplimiento EV actual: <strong style="color:#6ee7b7">45%</strong> de 60% posible</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div><h4>Un formulario por docente y semana</h4><p>Para cada docente virtual, marca los 4 criterios de Educación Virtual que cumplió en esa semana. Guarda cada semana por separado.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div><h4>Captura todos los programas</h4><p>A diferencia de la Coord. Académica, Educación Virtual captura para <strong>todos los programas virtuales</strong> de la institución.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div><h4>El resultado es automático</h4><p>Al guardar, el sistema combina tu captura (60%) con la de la Coord. Académica (40%) y determina si el docente supera el umbral del 60% de cumplimiento.</p></div></div>
+            </div>
+            <div class="warn" style="margin-top:8px">Captura antes del cierre de quincena. Una vez cerrada, no puedes modificar la evaluación virtual.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /slide-wrap -->
+
+  <!-- Nav bar -->
+  <div id="nav">
+    <button id="btn-prev" onclick="navPrev()">← Anterior</button>
+    <span id="slide-info">Selecciona un rol para comenzar</span>
+    <button id="btn-next" onclick="navNext()">Siguiente →</button>
+  </div>
+</div><!-- /main -->
+</div><!-- /app -->
 
 <script>
-// ── Neural canvas ──────────────────────────────────────────────────
-function initNeural(canvasId) {
-  const canvas = document.getElementById(canvasId)
-  if (!canvas) return
-  const ctx = canvas.getContext('2d')
-  const N = 28, DIST = 160, SPD = 0.22, FRAME = 1000/30
-  let w, h, nodes = [], raf, last = 0
+// ── State ─────────────────────────────────────────────────────────
+const sections = {
+  home:  ['home'],
+  ch:    ['ch-0','ch-1','ch-2','ch-3'],
+  coord: ['coord-0','coord-1','coord-2'],
+  fin:   ['fin-0','fin-1'],
+  doc:   ['doc-0','doc-1'],
+  ev:    ['ev-0'],
+}
+const roleLabels = {
+  ch:'Capital Humano', coord:'Coordinación', fin:'Finanzas', doc:'Docente/Trabajador', ev:'Educación Virtual'
+}
+const roleSections = {
+  ch:    ['sb-sec-ch',   ['btn-ch-0','btn-ch-1','btn-ch-2','btn-ch-3']],
+  coord: ['sb-sec-coord',['btn-coord-0','btn-coord-1','btn-coord-2']],
+  fin:   ['sb-sec-fin',  ['btn-fin-0','btn-fin-1']],
+  doc:   ['sb-sec-doc',  ['btn-doc-0','btn-doc-1']],
+  ev:    [null,           []],
+}
 
-  const resize = () => {
-    w = canvas.width  = canvas.parentElement.offsetWidth
-    h = canvas.height = canvas.parentElement.offsetHeight
-    nodes.forEach(n => { n.x = Math.random()*w; n.y = Math.random()*h })
+let currentSlide = 'home'
+let currentSection = null
+let sectionSlides = []
+let sectionIdx = 0
+
+function showSlide(id) {
+  const prev = document.getElementById('slide-' + currentSlide)
+  const next = document.getElementById('slide-' + id)
+  if (!next || id === currentSlide) return
+  prev.classList.add('leaving')
+  setTimeout(() => prev.classList.remove('active','leaving'), 350)
+  next.classList.add('active')
+  currentSlide = id
+  updateNav()
+}
+
+function showSection(sec, idx=0) {
+  currentSection = sec
+  sectionSlides = sections[sec]
+  sectionIdx = idx
+  // Update sidebar buttons
+  document.querySelectorAll('.sb-btn').forEach(b => b.classList.remove('active'))
+  const btnId = 'btn-' + sec + '-' + idx
+  const btn = document.getElementById(btnId)
+  if (btn) btn.classList.add('active')
+  else { const h = document.getElementById('btn-home'); if(h) h.classList.add('active') }
+  showSlide(sectionSlides[idx])
+}
+
+function navPrev() {
+  if (!currentSection || sectionIdx <= 0) return
+  sectionIdx--
+  showSection(currentSection, sectionIdx)
+}
+function navNext() {
+  if (!currentSection) return
+  if (sectionIdx < sectionSlides.length - 1) {
+    sectionIdx++
+    showSection(currentSection, sectionIdx)
   }
-  for (let i=0; i<N; i++) nodes.push({
-    x:0, y:0,
-    vx:(Math.random()-.5)*SPD, vy:(Math.random()-.5)*SPD,
-    r:Math.random()*1.1+0.8, op:Math.random()
+}
+function updateNav() {
+  const prev = document.getElementById('btn-prev')
+  const next = document.getElementById('btn-next')
+  const info = document.getElementById('slide-info')
+  if (!currentSection || currentSection === 'home') {
+    prev.disabled = true; next.disabled = true
+    info.textContent = 'Selecciona un rol para comenzar'
+    return
+  }
+  prev.disabled = sectionIdx <= 0
+  next.disabled = sectionIdx >= sectionSlides.length - 1
+  const label = roleLabels[currentSection] || ''
+  info.textContent = `${label} · ${sectionIdx+1} de ${sectionSlides.length}`
+}
+
+function activateRole(role) {
+  // Show sidebar sections
+  Object.keys(roleSections).forEach(r => {
+    const [secId, btns] = roleSections[r]
+    const show = r === role
+    if (secId) document.getElementById(secId).style.display = show ? '' : 'none'
+    btns.forEach(b => { document.getElementById(b).style.display = show ? '' : 'none' })
   })
-
-  const draw = now => {
-    raf = requestAnimationFrame(draw)
-    if (document.hidden || now-last < FRAME) return
-    last = now
-    ctx.clearRect(0,0,w,h)
-    for (const n of nodes) {
-      n.x+=n.vx; n.y+=n.vy
-      if(n.x<0||n.x>w) n.vx*=-1
-      if(n.y<0||n.y>h) n.vy*=-1
-      n.op = Math.min(1, n.op+0.005)
-    }
-    for (let i=0; i<nodes.length; i++) {
-      for (let j=i+1; j<nodes.length; j++) {
-        const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y
-        const d=Math.sqrt(dx*dx+dy*dy)
-        if(d<DIST) {
-          ctx.beginPath(); ctx.moveTo(nodes[i].x,nodes[i].y); ctx.lineTo(nodes[j].x,nodes[j].y)
-          ctx.strokeStyle=`rgba(255,255,255,${(0.15*(1-d/DIST)).toFixed(3)})`
-          ctx.lineWidth=0.5; ctx.stroke()
-        }
-      }
-    }
-    for (const n of nodes) {
-      ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2)
-      ctx.fillStyle=`rgba(255,255,255,${(n.op*.45).toFixed(3)})`; ctx.fill()
-    }
-  }
-  resize()
-  window.addEventListener('resize', resize, {passive:true})
-  raf = requestAnimationFrame(draw)
-}
-initNeural('neural-canvas')
-initNeural('neural-canvas-2')
-
-// ── Slide engine ───────────────────────────────────────────────────
-const slides = Array.from(document.querySelectorAll('.slide'))
-const total  = slides.length
-let current  = 0, transitioning = false
-
-const dotsEl   = document.getElementById('dots')
-const counterEl = document.getElementById('slide-counter')
-const prevBtn  = document.getElementById('btn-prev')
-const nextBtn  = document.getElementById('btn-next')
-
-// Crear dots
-slides.forEach((_, i) => {
-  const d = document.createElement('button')
-  d.className = 'dot' + (i===0?' active':'')
-  d.setAttribute('aria-label', `Diapositiva ${i+1}`)
-  d.onclick = () => goTo(i)
-  dotsEl.appendChild(d)
-})
-
-function updateUI() {
-  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i===current))
-  counterEl.textContent = `${current+1} / ${total}`
-  prevBtn.disabled = current === 0
-  nextBtn.disabled = current === total-1
+  document.getElementById('btn-home').classList.remove('active')
+  showSection(role, 0)
 }
 
-function goTo(idx) {
-  if (transitioning || idx === current || idx < 0 || idx >= total) return
-  transitioning = true
-  const from = slides[current], to = slides[idx]
-  from.classList.add('leaving')
-  setTimeout(() => { from.classList.remove('active','leaving') }, 450)
-  to.classList.add('active')
-  current = idx
-  updateUI()
-  setTimeout(() => { transitioning = false }, 500)
-}
-
-function nextSlide() { goTo(current+1) }
-function prevSlide() { goTo(current-1) }
-
+// Keyboard
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight' || e.key === ' ')  nextSlide()
-  if (e.key === 'ArrowLeft')                     prevSlide()
+  if (e.key === 'ArrowRight') navNext()
+  if (e.key === 'ArrowLeft')  navPrev()
 })
 
-// Swipe support
-let touchX = null
-document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX }, {passive:true})
-document.addEventListener('touchend',   e => {
-  if (touchX === null) return
-  const dx = e.changedTouches[0].clientX - touchX
-  if (Math.abs(dx) > 50) dx < 0 ? nextSlide() : prevSlide()
-  touchX = null
-}, {passive:true})
-
-updateUI()
+updateNav()
 </script>
 </body>
 </html>
