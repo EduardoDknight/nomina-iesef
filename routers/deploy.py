@@ -20,6 +20,7 @@ import hashlib
 import subprocess
 import logging
 import os
+import sys
 import threading
 from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException, Header
@@ -90,7 +91,7 @@ async def deploy(
     # 3. pip install -r requirements.txt (instala paquetes nuevos sin reinstalar existentes)
     try:
         pip = subprocess.run(
-            ["pip", "install", "-r", "requirements.txt", "-q"],
+            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "-q"],
             capture_output=True,
             text=True,
             timeout=120,
