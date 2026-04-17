@@ -82,9 +82,13 @@ async def deploy(
         logger.info(f"git pull: {stdout}")
         if result.returncode != 0:
             logger.error(f"git pull falló: {stderr}")
-            raise HTTPException(status_code=500, detail=f"git pull falló: {stderr}")
+            raise HTTPException(status_code=500, detail=f"git pull falló rc={result.returncode}: {stderr}")
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=f"git no encontrado en PATH: {e} | PATH={os.environ.get('PATH','')}")
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=500, detail="git pull timeout (>60s)")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"git pull excepción: {type(e).__name__}: {e}")
 
     ya_actualizado = "Already up to date" in stdout or "Ya está actualizado" in stdout
 
