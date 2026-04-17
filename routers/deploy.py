@@ -68,27 +68,32 @@ async def deploy(
         logger.warning("Deploy rechazado: firma inválida")
         raise HTTPException(status_code=401, detail="Firma inválida")
 
-    # 2. git pull
+    # 2. git fetch + reset --hard (robusto ante divergencias locales)
     try:
+        fetch = subprocess.run(
+            ["git", "fetch", "origin", "main"],
+            capture_output=True, text=True, timeout=60, cwd=str(ROOT),
+        )
+        if fetch.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"git fetch falló: {fetch.stderr.strip()}")
+
         result = subprocess.run(
-            ["git", "pull", "--ff-only"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            cwd=str(ROOT),
+            ["git", "reset", "--hard", "origin/main"],
+            capture_output=True, text=True, timeout=30, cwd=str(ROOT),
         )
         stdout = result.stdout.strip()
         stderr = result.stderr.strip()
-        logger.info(f"git pull: {stdout}")
+        logger.info(f"git reset --hard: {stdout}")
         if result.returncode != 0:
-            logger.error(f"git pull falló: {stderr}")
-            raise HTTPException(status_code=500, detail=f"git pull falló rc={result.returncode}: {stderr}")
+            raise HTTPException(status_code=500, detail=f"git reset falló: {stderr}")
     except FileNotFoundError as e:
-        raise HTTPException(status_code=500, detail=f"git no encontrado en PATH: {e} | PATH={os.environ.get('PATH','')}")
+        raise HTTPException(status_code=500, detail=f"git no en PATH: {e}")
     except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=500, detail="git pull timeout (>60s)")
+        raise HTTPException(status_code=500, detail="git timeout (>60s)")
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"git pull excepción: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"git excepción: {type(e).__name__}: {e}")
 
     ya_actualizado = "Already up to date" in stdout or "Ya está actualizado" in stdout
 
