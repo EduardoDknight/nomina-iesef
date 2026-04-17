@@ -124,7 +124,7 @@ function colorConfig(minutos) {
 
 // ── Hook principal ────────────────────────────────────────────────────────────
 
-function useSyncInfo() {
+export function useSyncInfo() {
   const [ultimoSync, setUltimoSync] = useState(null)
   const [total, setTotal]           = useState(null)
   const [cargando, setCargando]     = useState(true)
