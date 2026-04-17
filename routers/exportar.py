@@ -12,6 +12,7 @@ from config import settings
 from routers.auth import get_usuario_actual, UsuarioActual, admin_o_finanzas, puede_resumen_nomina
 from services.exportar_honorarios import generar_honorarios_excel
 from services.exportar_nomina_resumen import generar_nomina_resumen_excel
+from services.exportar_reporte_docentes import generar_reporte_asistencia_docentes
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/exportar", tags=["exportar"])
@@ -106,6 +107,38 @@ async def exportar_nomina_resumen(
             conn.close()
 
     nombre = f"NOMINA_RESUMEN_Q{quincena_id}.xlsx"
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'}
+    )
+
+
+@router.get("/quincenas/{quincena_id}/reporte_asistencia")
+async def exportar_reporte_asistencia(
+    quincena_id: int,
+    _: UsuarioActual = Depends(puede_resumen_nomina)
+):
+    """
+    Genera el Reporte de Asistencia Docentes v2.0.
+    Grid por días, agrupado por programa, con diseño mejorado.
+    """
+    conn = None
+    try:
+        conn = get_conn()
+        excel_bytes = generar_reporte_asistencia_docentes(conn, quincena_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error exportar_reporte_asistencia: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error generando reporte: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+    nombre = f"REPORTE_ASISTENCIA_DOCENTES_Q{quincena_id}.xlsx"
     return Response(
         content=excel_bytes,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

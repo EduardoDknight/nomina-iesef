@@ -119,6 +119,33 @@ function TabNomina({ quincena, canEdit }) {
     }
   }
 
+  const exportarAsistencia = async () => {
+    setExportando('asistencia')
+    try {
+      const res = await api.get(`/exportar/quincenas/${quincena.id}/reporte_asistencia`, {
+        responseType: 'blob'
+      })
+      const url = URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      const ini = quincena.fecha_inicio?.replaceAll('-', '') ?? quincena.id
+      const fin = quincena.fecha_fin?.replaceAll('-', '')   ?? ''
+      a.download = `ASISTENCIA_${ini}${fin ? '_' + fin : ''}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      try {
+        const text = await err.response?.data?.text?.()
+        const parsed = JSON.parse(text || '{}')
+        setMsg({ tipo: 'error', texto: parsed.detail || 'Error al generar reporte de asistencia.' })
+      } catch {
+        setMsg({ tipo: 'error', texto: 'Error al generar reporte de asistencia.' })
+      }
+    } finally {
+      setExportando(null)
+    }
+  }
+
   const guardarAjuste = async (docenteId) => {
     setSavingAjuste(true)
     try {
@@ -195,6 +222,31 @@ function TabNomina({ quincena, canEdit }) {
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM8.5 17l2-3-2-3h1.6l1.2 2 1.2-2H14l-2 3 2 3h-1.6l-1.2-2-1.2 2H8.5z"/>
               </svg>
               {exportando === 'resumen' ? 'Generando...' : 'Exportar Nómina'}
+            </button>
+          )}
+          {/* Botón Reporte Asistencia v2.0 */}
+          {['superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente', 'coord_academica'].includes(usuario?.rol)
+            && (
+            <button onClick={exportarAsistencia} disabled={!!exportando}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors"
+              style={{
+                background: exportando === 'asistencia' ? '#1e3a8a' : '#1d4ed8',
+                color: 'white',
+                border: '1px solid #1e3a8a',
+              }}
+              onMouseEnter={e => { if (!exportando) e.currentTarget.style.background = '#1e3a8a' }}
+              onMouseLeave={e => { if (!exportando) e.currentTarget.style.background = '#1d4ed8' }}
+              title="Reporte de asistencia por días — v2.0"
+            >
+              {/* Ícono tabla/cuadrícula */}
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="3" y1="15" x2="21" y2="15"/>
+                <line x1="9" y1="3" x2="9" y2="21"/>
+                <line x1="15" y1="3" x2="15" y2="21"/>
+              </svg>
+              {exportando === 'asistencia' ? 'Generando...' : 'Reporte Asistencia'}
             </button>
           )}
         </div>
