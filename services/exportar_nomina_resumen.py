@@ -304,14 +304,21 @@ def _clasificar(nominas, detalle_por_docente):
 
 # ── Construcción hojas ─────────────────────────────────────────────────────────
 
-COLS_CENTRO   = ["PROGRAMA", "DOCENTE", "NOI",
-                  "TOTAL A PAGAR", "DESCUENTO",
-                  "PRESENCIAL", "DESC. PRESENCIAL", "OTROS / AJUSTES"]
-COLS_INSTITUTO = COLS_CENTRO + ["VIRTUAL", "DESC. VIRTUAL", "DESC. OTROS"]
+COLS_CENTRO = [
+    "PROGRAMA", "DOCENTE", "NOI",
+    "PRESENCIAL ($)", "DESCUENTO", "AJUSTES",
+    "HONORARIOS", "IVA 16%", "RET. ISR 10%", "RET. IVA", "TOTAL A PAGAR",
+]
+COLS_INSTITUTO = [
+    "PROGRAMA", "DOCENTE", "NOI",
+    "PRESENCIAL ($)", "VIRTUAL ($)", "DESCUENTO", "AJUSTES",
+    "HONORARIOS", "IVA 16%", "RET. ISR 10%", "RET. IVA", "TOTAL A PAGAR",
+]
 
-ANCHOS_CENTRO   = {1:22, 2:32, 3:8, 4:14, 5:13, 6:13, 7:16, 8:14}
-ANCHOS_INSTITUTO = {1:22, 2:32, 3:8, 4:14, 5:13,
-                    6:13, 7:16, 8:14, 9:13, 10:13, 11:13}
+ANCHOS_CENTRO   = {1:22, 2:32, 3:8, 4:14, 5:13, 6:12,
+                   7:14, 8:11, 9:12, 10:10, 11:14}
+ANCHOS_INSTITUTO = {1:22, 2:32, 3:8, 4:14, 5:13, 6:13, 7:12,
+                    8:14, 9:11, 10:12, 11:10, 12:14}
 
 
 def _escribir_hoja(ws, cols: List[str],
@@ -320,7 +327,8 @@ def _escribir_hoja(ws, cols: List[str],
                    anchos: Dict[int, int],
                    es_instituto: bool) -> None:
     n_cols   = len(cols)
-    cols_num = [4, 5, 6, 7, 8] + ([9, 10, 11] if es_instituto else [])
+    # CENTRO cols monetarias 4-11 · INSTITUTO cols monetarias 4-12
+    cols_num = list(range(4, 13 if es_instituto else 12))
 
     # ── Encabezado ──
     for c, texto in enumerate(cols, 1):
@@ -352,21 +360,38 @@ def _escribir_hoja(ws, cols: List[str],
             dp_p = dp["desc_presencial"]
             dp_v = dp["desc_virtual"]
             otros= dp["monto_otros"]
-            tot  = mp + mv + otros - dp_p - dp_v
             desc = dp_p + dp_v
+            tot  = mp + mv + otros - desc          # honorarios netos (base fiscal)
 
-            _data_cell(ws, fila, 1, pnom,                    bg=bg)
-            _data_cell(ws, fila, 2, nom["nombre_completo"],  bg=bg)
-            _data_cell(ws, fila, 3, nom["noi"] or "",        bg=bg)
-            _data_cell(ws, fila, 4, float(tot),  bg=bg, money=True)
-            _data_cell(ws, fila, 5, float(desc), bg=bg, money=True, rojo=bool(desc))
-            _data_cell(ws, fila, 6, float(mp),   bg=bg, money=True)
-            _data_cell(ws, fila, 7, float(dp_p), bg=bg, money=True, rojo=bool(dp_p))
-            _data_cell(ws, fila, 8, float(otros),bg=bg, money=True)
+            # ── Cálculo fiscal Art. 106 LISR ──────────────────────────────────
+            iva_row     = _r(tot * Decimal("0.16"))
+            ret_isr_row = _r(tot * Decimal("0.10"))
+            ret_iva_row = _r(iva_row * Decimal("2") / Decimal("3"))
+            total_pagar = _r(tot + iva_row - ret_isr_row - ret_iva_row)
+
+            _data_cell(ws, fila, 1, pnom,                   bg=bg)
+            _data_cell(ws, fila, 2, nom["nombre_completo"], bg=bg)
+            _data_cell(ws, fila, 3, nom["noi"] or "",       bg=bg)
+
             if es_instituto:
-                _data_cell(ws, fila, 9,  float(mv),  bg=bg, money=True)
-                _data_cell(ws, fila, 10, float(dp_v), bg=bg, money=True, rojo=bool(dp_v))
-                _data_cell(ws, fila, 11, 0.0,         bg=bg, money=True)
+                _data_cell(ws, fila, 4, float(mp),   bg=bg, money=True)
+                _data_cell(ws, fila, 5, float(mv),   bg=bg, money=True)
+                _data_cell(ws, fila, 6, float(desc), bg=bg, money=True, rojo=bool(desc))
+                _data_cell(ws, fila, 7, float(otros),bg=bg, money=True)
+                h, iv, r1, r2, tp = 8, 9, 10, 11, 12
+            else:
+                _data_cell(ws, fila, 4, float(mp),   bg=bg, money=True)
+                _data_cell(ws, fila, 5, float(desc), bg=bg, money=True, rojo=bool(desc))
+                _data_cell(ws, fila, 6, float(otros),bg=bg, money=True)
+                h, iv, r1, r2, tp = 7, 8, 9, 10, 11
+
+            _data_cell(ws, fila, h,  float(tot),         bg=bg, money=True)
+            _data_cell(ws, fila, iv, float(iva_row),     bg=bg, money=True)
+            _data_cell(ws, fila, r1, float(ret_isr_row), bg=bg, money=True,
+                       rojo=bool(ret_isr_row))
+            _data_cell(ws, fila, r2, float(ret_iva_row), bg=bg, money=True,
+                       rojo=bool(ret_iva_row))
+            _data_cell(ws, fila, tp, float(total_pagar), bg=bg, money=True)
             ws.row_dimensions[fila].height = 16
             fila += 1
 

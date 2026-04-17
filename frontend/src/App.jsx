@@ -15,6 +15,7 @@ import CambiarPassword from './pages/CambiarPassword'
 import PortalDocente from './pages/PortalDocente'
 import PortalTrabajador from './pages/PortalTrabajador'
 import Estadisticas from './pages/Estadisticas'
+import AsistenciaClasificada from './pages/AsistenciaClasificada'
 
 // Ruta que requiere autenticación — si debe cambiar password redirige ahí primero
 function PrivateRoute({ children }) {
@@ -72,6 +73,7 @@ export default function App() {
           <Route path="docentes" element={<Docentes />} />
           <Route path="quincenas" element={<Quincenas />} />
           <Route path="quincenas/:id" element={<QuincenaDetalle />} />
+          <Route path="quincenas/:id/asistencia-clasificada" element={<AsistenciaClasificada />} />
           <Route path="horarios" element={<Horarios />} />
           <Route path="estadisticas" element={<Estadisticas />} />
           <Route path="configuracion" element={<Configuracion />} />

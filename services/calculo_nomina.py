@@ -643,3 +643,212 @@ def guardar_nomina(conn, resultado: ResultadoNomina, generado_por_id: int) -> in
         return nomina_id
     finally:
         cur.close()
+
+
+# ── Vista de asistencia clasificada ───────────────────────────────────────────
+
+def obtener_bloques_clasificados(
+    conn,
+    docente_id: int,
+    fecha_inicio,
+    fecha_fin,
+    quincena_id: int,
+    razon_social: str = "ambas"
+) -> List[dict]:
+    """
+    Retorna la lista de bloques presenciales de un docente en el período,
+    con su clasificación: tiene_entrada, tiene_salida, estado (pagado/no_pagado),
+    es_continuidad, override.
+
+    Usado por la vista de asistencia clasificada para coordinaciones.
+    No hace cálculo fiscal — solo clasifica cada bloque del horario.
+    """
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    bloques = []
+    try:
+        # Igual que en calcular_nomina_docente — mismo SQL de clasificación
+        cur.execute("""
+            WITH
+            fechas AS (
+                SELECT gs::date AS fecha,
+                       EXTRACT(DOW FROM gs) AS dow
+                FROM generate_series(%s::date, %s::date, '1 day'::interval) gs
+                WHERE EXTRACT(DOW FROM gs) != 0
+            ),
+            checadas AS (
+                SELECT
+                    DATE(ac.timestamp_checada)  AS fecha,
+                    ac.timestamp_checada::time  AS hora,
+                    ac.tipo_punch
+                FROM asistencias_checadas ac
+                WHERE ac.timestamp_checada >= %s::date
+                  AND ac.timestamp_checada <  (%s::date + INTERVAL '1 day')::timestamp
+                  AND ac.user_id = (
+                      SELECT chec_id FROM docentes WHERE id = %s AND chec_id IS NOT NULL
+                  )
+            ),
+            bloques AS (
+                SELECT
+                    hc.id              AS horario_id,
+                    hc.dia_semana,
+                    hc.hora_inicio,
+                    hc.hora_fin,
+                    hc.horas_bloque,
+                    p.id               AS programa_id,
+                    p.nombre           AS programa_nombre,
+                    p.razon_social::text AS razon_social,
+                    COALESCE(a.costo_hora, p.costo_hora) AS tarifa,
+                    a.modalidad,
+                    CASE hc.dia_semana
+                        WHEN 'lunes'     THEN 1
+                        WHEN 'martes'    THEN 2
+                        WHEN 'miercoles' THEN 3
+                        WHEN 'jueves'    THEN 4
+                        WHEN 'viernes'   THEN 5
+                        WHEN 'sabado'    THEN 6
+                    END AS dow_num
+                FROM horario_clases hc
+                JOIN asignaciones a ON hc.asignacion_id = a.id
+                                   AND a.docente_id = %s
+                                   AND a.activa = true
+                JOIN materias m    ON a.materia_id = m.id
+                JOIN programas p   ON m.programa_id = p.id
+                WHERE hc.activo = true
+                  AND (%s = 'ambas' OR p.razon_social::text = %s)
+            ),
+            bloques_por_fecha AS (
+                SELECT b.*, f.fecha
+                FROM bloques b
+                JOIN fechas f ON f.dow = b.dow_num
+            )
+            SELECT
+                bf.programa_id,
+                bf.programa_nombre,
+                bf.razon_social,
+                bf.tarifa,
+                bf.horas_bloque,
+                bf.fecha,
+                bf.hora_inicio,
+                bf.hora_fin,
+                bf.dia_semana,
+                bf.modalidad,
+                (bf.modalidad = 'virtual'
+                 OR (bf.modalidad = 'mixta' AND bf.dow_num < 6)
+                ) AS es_virtual,
+                EXISTS (
+                    SELECT 1 FROM checadas c
+                    WHERE c.fecha = bf.fecha
+                      AND c.hora BETWEEN bf.hora_inicio - INTERVAL '20 minutes'
+                                    AND bf.hora_inicio + INTERVAL '10 minutes'
+                ) AS tiene_entrada,
+                EXISTS (
+                    SELECT 1 FROM checadas c
+                    WHERE c.fecha = bf.fecha
+                      AND c.hora >= bf.hora_fin
+                              - (LEAST(bf.horas_bloque * 10, 20) || ' minutes')::INTERVAL
+                ) AS tiene_salida
+            FROM bloques_por_fecha bf
+            ORDER BY bf.fecha, bf.hora_inicio
+        """, (fecha_inicio, fecha_fin,
+              fecha_inicio, fecha_fin,
+              docente_id,
+              docente_id,
+              razon_social, razon_social))
+
+        raw = [dict(r) for r in cur.fetchall()]
+
+        # ── Regla de continuidad (back-to-back) ──────────────────────────────
+        from collections import defaultdict as _dd2
+
+        def _tm2(t):
+            return t.hour * 60 + t.minute if t else 0
+
+        por_fecha = _dd2(list)
+        for i, b in enumerate(raw):
+            if not b['es_virtual']:
+                por_fecha[b['fecha']].append(i)
+
+        for _fecha, idxs in por_fecha.items():
+            idxs.sort(key=lambda i: _tm2(raw[i]['hora_inicio']))
+            cadenas = []
+            cadena_act = [idxs[0]]
+            for k in range(1, len(idxs)):
+                ba = raw[cadena_act[-1]]
+                bb = raw[idxs[k]]
+                if _tm2(ba['hora_fin']) == _tm2(bb['hora_inicio']):
+                    cadena_act.append(idxs[k])
+                else:
+                    cadenas.append(cadena_act)
+                    cadena_act = [idxs[k]]
+            cadenas.append(cadena_act)
+
+            for cadena in cadenas:
+                if len(cadena) < 2:
+                    continue
+                primero = raw[cadena[0]]
+                ultimo  = raw[cadena[-1]]
+                if not (primero['tiene_entrada'] and ultimo['tiene_salida']):
+                    continue
+                for idx in cadena:
+                    b = raw[idx]
+                    if not b['tiene_entrada']:
+                        raw[idx]['tiene_entrada'] = True
+                        raw[idx]['es_continuidad'] = True
+                    if not b['tiene_salida']:
+                        raw[idx]['tiene_salida']  = True
+                        raw[idx]['es_continuidad'] = True
+
+        # ── Overrides manuales ────────────────────────────────────────────────
+        overrides_map: dict = {}
+        try:
+            cur.execute("""
+                SELECT fecha::text, hora_ini::text, hora_fin::text, decision
+                FROM overrides_pago_clase
+                WHERE quincena_id = %s AND docente_id = %s
+            """, (quincena_id, docente_id))
+            for r in cur.fetchall():
+                key = (r['fecha'], r['hora_ini'][:5], r['hora_fin'][:5])
+                overrides_map[key] = r['decision']
+        except Exception:
+            conn.rollback()
+
+        for b in raw:
+            key = (str(b['fecha']), str(b['hora_inicio'])[:5], str(b['hora_fin'])[:5])
+            b['override'] = overrides_map.get(key)
+            if b['override'] == 'pagar':
+                b['tiene_entrada'] = True
+                b['tiene_salida']  = True
+            elif b['override'] == 'no_pagar':
+                b['tiene_entrada'] = False
+                b['tiene_salida']  = False
+
+        # ── Construir resultado final ─────────────────────────────────────────
+        for b in raw:
+            if b['es_virtual']:
+                estado = 'virtual'
+            elif b['tiene_entrada'] and b['tiene_salida']:
+                estado = 'pagado'
+            else:
+                estado = 'no_pagado'
+
+            bloques.append({
+                "fecha":         str(b['fecha']),
+                "dia_semana":    b['dia_semana'],
+                "hora_inicio":   str(b['hora_inicio'])[:5],
+                "hora_fin":      str(b['hora_fin'])[:5],
+                "horas_bloque":  int(b['horas_bloque'] or 0),
+                "programa_id":   b['programa_id'],
+                "programa":      b['programa_nombre'],
+                "razon_social":  b['razon_social'],
+                "modalidad":     b['modalidad'],
+                "es_virtual":    bool(b['es_virtual']),
+                "tiene_entrada": bool(b.get('tiene_entrada', False)),
+                "tiene_salida":  bool(b.get('tiene_salida', False)),
+                "es_continuidad":bool(b.get('es_continuidad', False)),
+                "override":      b.get('override'),
+                "estado":        estado,
+            })
+    finally:
+        cur.close()
+
+    return bloques

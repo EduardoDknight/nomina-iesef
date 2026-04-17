@@ -137,6 +137,22 @@ function TabNomina({ quincena, canEdit }) {
               {generando ? 'Calculando...' : nomina.length > 0 ? 'Recalcular' : 'Calcular nómina'}
             </button>
           )}
+          {/* Botón Vista Asistencia Clasificada */}
+          {['superadmin', 'director_cap_humano', 'cap_humano', 'coord_docente', 'coord_academica'].includes(usuario?.rol)
+            && (
+            <button
+              onClick={() => navigate(`/quincenas/${quincena.id}/asistencia-clasificada`)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg
+                         bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              Asistencia por Bloques
+            </button>
+          )}
+
           {['en_revision', 'cerrada', 'pagada'].includes(quincena.estado)
             && ['superadmin', 'director_cap_humano', 'cap_humano', 'finanzas', 'coord_docente'].includes(usuario?.rol)
             && (

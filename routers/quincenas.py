@@ -9,6 +9,7 @@ import logging
 
 from config import settings
 from routers.auth import get_usuario_actual, UsuarioActual, solo_admin, puede_horarios, puede_quincenas
+from services.calculo_nomina import obtener_bloques_clasificados
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/quincenas", tags=["quincenas"])
@@ -397,6 +398,97 @@ async def get_asistencia_quincena(
         row['programas'] = list(r['programas']) if r['programas'] else []
         result.append(row)
     return result
+
+
+@router.get("/{quincena_id}/asistencia-clasificada")
+async def get_asistencia_clasificada(
+    quincena_id: int,
+    docente_id: Optional[int] = None,
+    usuario: UsuarioActual = Depends(get_usuario_actual)
+):
+    """
+    Vista detallada de asistencia por bloques para coordinaciones y Capital Humano.
+
+    Devuelve, por cada docente, la lista de bloques del horario en el período
+    de la quincena con su clasificación automática:
+      - pagado:   tiene entrada Y salida válidas (reglas 10 / 20 min)
+      - no_pagado: falta entrada o salida
+      - virtual:  bloque virtual (no aplica biométrico)
+
+    Incluye detección de cadenas back-to-back y overrides manuales.
+
+    Query param opcional: ?docente_id=X  para filtrar un solo docente.
+    """
+    conn = get_conn()
+    cur  = conn.cursor()
+
+    cur.execute("SELECT * FROM quincenas WHERE id = %s", (quincena_id,))
+    q = cur.fetchone()
+    if not q:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Quincena no encontrada")
+
+    # Docentes con asignaciones presenciales en el período
+    filtro_doc = "AND d.id = %s" if docente_id else ""
+    # Orden: vigente_desde<=fecha_fin, vigente_hasta>=fecha_inicio, razon_social ×2
+    params_doc = [
+        q['fecha_fin'], q['fecha_inicio'],
+        q['razon_social'], q['razon_social'],
+    ]
+    if docente_id:
+        params_doc.append(docente_id)
+
+    cur.execute(f"""
+        SELECT DISTINCT d.id, d.nombre_completo, d.chec_id, d.tipo
+        FROM docentes d
+        JOIN asignaciones a  ON a.docente_id   = d.id
+                             AND a.activa       = true
+                             AND a.vigente_desde <= %s
+                             AND (a.vigente_hasta IS NULL OR a.vigente_hasta >= %s)
+                             AND a.modalidad IN ('presencial', 'mixta')
+        JOIN materias mat    ON a.materia_id    = mat.id
+        JOIN programas p     ON mat.programa_id = p.id
+        WHERE d.activo = true
+          AND d.chec_id IS NOT NULL
+          AND (%s = 'ambas' OR p.razon_social::text = %s)
+          {filtro_doc}
+        ORDER BY d.nombre_completo
+    """, params_doc)
+
+    docentes = cur.fetchall()
+    cur.close()
+
+    resultado = []
+    for doc in docentes:
+        bloques = obtener_bloques_clasificados(
+            conn,
+            docente_id=doc['id'],
+            fecha_inicio=q['fecha_inicio'],
+            fecha_fin=q['fecha_fin'],
+            quincena_id=quincena_id,
+            razon_social=q['razon_social'],
+        )
+
+        presenciales = [b for b in bloques if not b['es_virtual']]
+        pagados      = [b for b in presenciales if b['estado'] == 'pagado']
+
+        resultado.append({
+            "docente_id":   doc['id'],
+            "nombre":       doc['nombre_completo'],
+            "chec_id":      doc['chec_id'],
+            "tipo":         doc['tipo'],
+            "bloques":      bloques,
+            "resumen": {
+                "bloques_programados": len(presenciales),
+                "bloques_pagados":     len(pagados),
+                "bloques_no_pagados":  len(presenciales) - len(pagados),
+                "horas_programadas":   sum(b['horas_bloque'] for b in presenciales),
+                "horas_pagadas":       sum(b['horas_bloque'] for b in pagados),
+            }
+        })
+
+    conn.close()
+    return resultado
 
 
 # ── INCIDENCIAS ────────────────────────────────────────────────────────────────
