@@ -671,11 +671,35 @@ export default function AdminQuincenaDetalle() {
   const { id }     = useParams()
   const navigate   = useNavigate()
   const { usuario } = useAuth()
-  const [quincena, setQuincena] = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [tab, setTab]           = useState('asistencia')
+  const [quincena, setQuincena]   = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [tab, setTab]             = useState('asistencia')
+  const [descargando, setDescargando] = useState(false)
 
   const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
+
+  const descargarReporte = async () => {
+    setDescargando(true)
+    try {
+      const res = await api.get(`/admin/periodos/${id}/exportar_reporte`, {
+        responseType: 'blob',
+      })
+      const url  = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href  = url
+      const fi   = quincena?.fecha_inicio ?? id
+      const ff   = quincena?.fecha_fin    ?? ''
+      link.setAttribute('download', `reporte_checador_${fi}_${ff}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      // silencioso — el error es visible si el archivo no descarga
+    } finally {
+      setDescargando(false)
+    }
+  }
 
   useEffect(() => {
     api.get(`/admin/periodos/${id}`)
@@ -722,7 +746,22 @@ export default function AdminQuincenaDetalle() {
             Ciclo {quincena.ciclo} · Personal Administrativo · #{quincena.id}
           </p>
         </div>
-        <SyncBadge />
+        <div className="flex items-center gap-3">
+          {canEdit && (
+            <button
+              onClick={descargarReporte}
+              disabled={descargando}
+              title="Descargar reporte de checador (Excel)"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg disabled:opacity-50 transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              {descargando ? 'Generando...' : 'Reporte Excel'}
+            </button>
+          )}
+          <SyncBadge />
+        </div>
       </div>
 
       {/* Tabs */}

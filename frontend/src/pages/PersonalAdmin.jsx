@@ -17,6 +17,7 @@ const EMPTY_BLOQUE = {
   lunes: true, martes: true, miercoles: true, jueves: true,
   viernes: true, sabado: false, domingo: false,
   hora_entrada: '09:00', hora_salida: '17:00',
+  tiene_comida: false,
 }
 
 const EMPTY_FORM = {
@@ -205,6 +206,16 @@ function ModalTrabajador({ trabajador, onClose, onSaved }) {
                         className={input} />
                     </div>
                   </div>
+                  {/* Comida */}
+                  <label className="flex items-center gap-2 cursor-pointer select-none mt-1">
+                    <input
+                      type="checkbox"
+                      checked={!!bloque.tiene_comida}
+                      onChange={e => updateBloque(i, 'tiene_comida', e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-xs text-slate-600">Registra media hora de comida</span>
+                  </label>
                 </div>
               ))}
             </div>

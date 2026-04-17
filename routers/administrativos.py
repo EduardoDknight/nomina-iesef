@@ -13,6 +13,7 @@ Reglas de asistencia:
 """
 
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from decimal import Decimal
@@ -20,6 +21,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import logging
 from datetime import date, timedelta, datetime
+from io import BytesIO
 
 from config import settings
 from routers.auth import get_usuario_actual, UsuarioActual, solo_admin
@@ -56,6 +58,7 @@ class HorarioBlock(BaseModel):
     domingo:      bool = False
     hora_entrada: str  # "HH:MM"
     hora_salida:  str  # "HH:MM"
+    tiene_comida: bool = False
 
 
 class TrabajadorCreate(BaseModel):
@@ -104,7 +107,8 @@ def _fetch_trabajador_con_horarios(cur, trabajador_id: int) -> Optional[dict]:
     t = dict(t)
     cur.execute(
         "SELECT id, lunes, martes, miercoles, jueves, viernes, sabado, domingo, "
-        "       hora_entrada::text AS hora_entrada, hora_salida::text AS hora_salida "
+        "       hora_entrada::text AS hora_entrada, hora_salida::text AS hora_salida, "
+        "       tiene_comida "
         "FROM horarios_trabajador WHERE trabajador_id = %s ORDER BY id",
         (trabajador_id,)
     )
@@ -125,13 +129,14 @@ def _insert_horarios(cur, trabajador_id: int, horarios: List[HorarioBlock]):
         cur.execute(
             """INSERT INTO horarios_trabajador
                (trabajador_id, lunes, martes, miercoles, jueves, viernes, sabado, domingo,
-                hora_entrada, hora_salida)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                hora_entrada, hora_salida, tiene_comida)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (
                 trabajador_id,
                 h.lunes, h.martes, h.miercoles, h.jueves,
                 h.viernes, h.sabado, h.domingo,
                 h.hora_entrada, h.hora_salida,
+                h.tiene_comida,
             )
         )
 
@@ -1243,3 +1248,49 @@ def eliminar_incidencia_admin(
     finally:
         if conn:
             conn.close()
+
+
+# ── Endpoint: Exportar Reporte de Checador ─────────────────────────────────────
+
+@router.get("/periodos/{periodo_id}/exportar_reporte")
+def exportar_reporte_checador(
+    periodo_id: int,
+    usuario: UsuarioActual = Depends(solo_admin)
+):
+    """
+    Genera y descarga el Excel de reporte de checador para personal administrativo.
+    Accesible únicamente para superadmin, director_cap_humano y cap_humano.
+    Clon del formato del sistema v1.
+    """
+    from services.exportar_reporte_admin import generar_reporte_checador_admin
+
+    # Verificar que el período existe y obtener fechas para el nombre del archivo
+    conn = None
+    try:
+        conn = get_conn()
+        cur  = conn.cursor()
+        cur.execute(
+            "SELECT id, fecha_inicio, fecha_fin FROM periodos_admin WHERE id = %s",
+            (periodo_id,)
+        )
+        periodo = cur.fetchone()
+        if not periodo:
+            raise HTTPException(status_code=404, detail="Período no encontrado")
+        fi = periodo["fecha_inicio"]
+        ff = periodo["fecha_fin"]
+    finally:
+        if conn:
+            conn.close()
+
+    try:
+        xlsx_bytes = generar_reporte_checador_admin(periodo_id)
+    except Exception as e:
+        logger.error(f"Error generando reporte checador: {e}")
+        raise HTTPException(status_code=500, detail="Error generando el reporte")
+
+    filename = f"reporte_checador_{fi}_{ff}.xlsx"
+    return StreamingResponse(
+        BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
