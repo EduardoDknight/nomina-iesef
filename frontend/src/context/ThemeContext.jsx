@@ -4,11 +4,9 @@ const ThemeContext = createContext(null)
 
 export function ThemeProvider({ children }) {
   const [dark, setDark] = useState(() => {
-    // 1. Preferencia guardada por el usuario
+    // Preferencia guardada por el usuario; default: modo claro
     const saved = localStorage.getItem('nexo-theme')
-    if (saved) return saved === 'dark'
-    // 2. Preferencia del sistema operativo
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
+    return saved === 'dark'
   })
 
   // Aplicar/quitar clase 'dark' en <html> cada vez que cambie
