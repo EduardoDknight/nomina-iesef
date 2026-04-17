@@ -171,8 +171,9 @@ SELECT
     d.noi,
     d.adscripcion,
     nq.honorarios,
-    COALESCE(nq.horas_descuento * nq.costo_hora_promedio, 0) AS descuentos_total,
-    nq.ajustes,
+    COALESCE(nq.horas_descuento * nq.costo_hora_promedio, 0)
+        + COALESCE(nq.descuento_manual, 0)            AS descuentos_total,
+    COALESCE(nq.ajustes, 0) + COALESCE(nq.ajuste_extra, 0) AS ajustes,
     nq.total_final
 FROM nomina_quincena nq
 JOIN docentes d ON d.id = nq.docente_id

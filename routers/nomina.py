@@ -35,6 +35,15 @@ class NominaResumenDocente(BaseModel):
     ajustes:             float
     total_final:         float
     estado:              str
+    # Ajustes manuales de Finanzas (editables solo por finanzas/superadmin)
+    descuento_manual:     float = 0.0
+    ajuste_extra:         float = 0.0
+    nota_ajuste_finanzas: Optional[str] = None
+
+class AjusteFinanzasInput(BaseModel):
+    descuento_manual: float = 0.0
+    ajuste_extra:     float = 0.0
+    nota:             Optional[str] = None
 
 class GenerarNominaResult(BaseModel):
     quincena_id:  int
@@ -179,7 +188,10 @@ async def get_nomina_quincena(
             nq.honorarios, nq.iva, nq.sub_total,
             nq.retencion_isr, nq.retencion_iva,
             nq.total_a_pagar, nq.ajustes, nq.total_final,
-            nq.estado
+            nq.estado,
+            COALESCE(nq.descuento_manual, 0) AS descuento_manual,
+            COALESCE(nq.ajuste_extra, 0)     AS ajuste_extra,
+            nq.nota_ajuste_finanzas
         FROM nomina_quincena nq
         JOIN docentes d ON nq.docente_id = d.id
         WHERE nq.quincena_id = %s
@@ -238,3 +250,78 @@ async def get_nomina_docente(
     cur.close()
     conn.close()
     return {"nomina": dict(nq), "detalle_programas": [dict(d) for d in detalle]}
+
+
+@router.patch("/quincenas/{quincena_id}/docente/{docente_id}/ajuste-finanzas")
+async def actualizar_ajuste_finanzas(
+    quincena_id: int,
+    docente_id:  int,
+    data: AjusteFinanzasInput,
+    usuario: UsuarioActual = Depends(get_usuario_actual),
+):
+    """
+    Actualiza los ajustes manuales de Finanzas para un docente en una quincena.
+    Solo accessible por finanzas y superadmin.
+
+    - descuento_manual: monto a descontar (ej. cobro de error de pago anterior)
+    - ajuste_extra:     monto adicional (ej. bono, corrección de pago insuficiente)
+    - nota:             texto explicativo (opcional)
+
+    Recalcula total_final = total_a_pagar + ajustes + ajuste_extra - descuento_manual
+    """
+    if usuario.rol not in ('superadmin', 'finanzas'):
+        raise HTTPException(status_code=403,
+                            detail="Solo Finanzas puede editar ajustes manuales")
+    if data.descuento_manual < 0 or data.ajuste_extra < 0:
+        raise HTTPException(status_code=422,
+                            detail="descuento_manual y ajuste_extra no pueden ser negativos")
+
+    conn = get_conn()
+    cur  = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, total_a_pagar, ajustes
+            FROM nomina_quincena
+            WHERE quincena_id = %s AND docente_id = %s
+        """, (quincena_id, docente_id))
+        nq = cur.fetchone()
+        if not nq:
+            raise HTTPException(status_code=404,
+                                detail="Nómina no calculada para este docente en esta quincena")
+
+        nuevo_total_final = (
+            float(nq["total_a_pagar"])
+            + float(nq["ajustes"])
+            + data.ajuste_extra
+            - data.descuento_manual
+        )
+
+        cur.execute("""
+            UPDATE nomina_quincena
+               SET descuento_manual     = %s,
+                   ajuste_extra         = %s,
+                   nota_ajuste_finanzas = %s,
+                   total_final          = %s
+             WHERE id = %s
+        """, (
+            data.descuento_manual,
+            data.ajuste_extra,
+            data.nota,
+            round(nuevo_total_final, 2),
+            nq["id"],
+        ))
+        conn.commit()
+        return {
+            "ok": True,
+            "descuento_manual": data.descuento_manual,
+            "ajuste_extra":     data.ajuste_extra,
+            "total_final":      round(nuevo_total_final, 2),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error ajuste finanzas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close(); conn.close()

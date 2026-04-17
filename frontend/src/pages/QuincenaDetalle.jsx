@@ -46,6 +46,7 @@ const EV_NOMBRES = ['Formato institucional', 'Instrumento de evaluación',
 
 function TabNomina({ quincena, canEdit }) {
   const { usuario } = useAuth()
+  const navigate = useNavigate()   // ← fix: navigate estaba undefined en este scope
   const [nomina, setNomina] = useState([])
   const [loading, setLoading] = useState(true)
   const [generando, setGenerando] = useState(false)
@@ -53,6 +54,12 @@ function TabNomina({ quincena, canEdit }) {
   const [msg, setMsg] = useState(null)
   const [busqueda, setBusqueda] = useState('')
   const [expandedId, setExpandedId] = useState(null)
+  // Ajustes manuales de Finanzas (editables solo por finanzas/superadmin)
+  const [editingAjuste, setEditingAjuste] = useState(null) // docente_id o null
+  const [ajusteForm, setAjusteForm] = useState({ descuento_manual: '', ajuste_extra: '', nota: '' })
+  const [savingAjuste, setSavingAjuste] = useState(false)
+
+  const esFinanzas = ['superadmin', 'finanzas'].includes(usuario?.rol)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -109,6 +116,23 @@ function TabNomina({ quincena, canEdit }) {
       }
     } finally {
       setExportando(null)
+    }
+  }
+
+  const guardarAjuste = async (docenteId) => {
+    setSavingAjuste(true)
+    try {
+      await api.patch(`/nomina/quincenas/${quincena.id}/docente/${docenteId}/ajuste-finanzas`, {
+        descuento_manual: parseFloat(ajusteForm.descuento_manual) || 0,
+        ajuste_extra:     parseFloat(ajusteForm.ajuste_extra)     || 0,
+        nota:             ajusteForm.nota || null,
+      })
+      setEditingAjuste(null)
+      cargar()
+    } catch (err) {
+      setMsg({ tipo: 'error', texto: err.response?.data?.detail || 'Error al guardar ajuste' })
+    } finally {
+      setSavingAjuste(false)
     }
   }
 
@@ -227,6 +251,12 @@ function TabNomina({ quincena, canEdit }) {
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Honorarios</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">IVA</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">ISR</th>
+                {esFinanzas && <>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-red-500 uppercase tracking-wide"
+                    title="Descuento manual de Finanzas">Desc.</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-emerald-600 uppercase tracking-wide"
+                    title="Ajuste/bono extra de Finanzas">Ajuste+</th>
+                </>}
                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Total</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
               </tr>
@@ -235,7 +265,7 @@ function TabNomina({ quincena, canEdit }) {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    {[...Array(8)].map((_, j) => (
+                    {[...Array(esFinanzas ? 11 : 9)].map((_, j) => (
                       <td key={j} className="px-4 py-3"><div className="h-3 bg-slate-100 rounded" /></td>
                     ))}
                   </tr>
@@ -269,13 +299,100 @@ function TabNomina({ quincena, canEdit }) {
                     <td className="px-4 py-3 text-right font-mono text-slate-700">{fmt(n.honorarios)}</td>
                     <td className="px-4 py-3 text-right font-mono text-slate-500 text-xs">{fmt(n.iva)}</td>
                     <td className="px-4 py-3 text-right font-mono text-red-500 text-xs">{fmt(n.retencion_isr)}</td>
+                    {esFinanzas && <>
+                      <td className="px-4 py-3 text-right font-mono text-xs">
+                        {n.descuento_manual > 0
+                          ? <span className="text-red-600 font-semibold">-{fmt(n.descuento_manual)}</span>
+                          : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-xs">
+                        {n.ajuste_extra > 0
+                          ? <span className="text-emerald-600 font-semibold">+{fmt(n.ajuste_extra)}</span>
+                          : <span className="text-slate-300">—</span>}
+                      </td>
+                    </>}
                     <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800">{fmt(n.total_final)}</td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 capitalize">
-                        {n.estado}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 capitalize">
+                          {n.estado}
+                        </span>
+                        {esFinanzas && (
+                          <button
+                            onClick={() => {
+                              setEditingAjuste(n.docente_id)
+                              setAjusteForm({
+                                descuento_manual: n.descuento_manual || 0,
+                                ajuste_extra:     n.ajuste_extra     || 0,
+                                nota:             n.nota_ajuste_finanzas || '',
+                              })
+                            }}
+                            className="text-slate-400 hover:text-blue-600 transition-colors"
+                            title="Ajustar descuento/bono (Finanzas)"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>,
+                  /* Panel de edición de ajustes (solo finanzas) */
+                  esFinanzas && editingAjuste === n.docente_id && (
+                    <tr key={`${n.docente_id}-ajuste`} className="bg-amber-50 border-b border-amber-200">
+                      <td colSpan={esFinanzas ? 12 : 9} className="px-4 py-3">
+                        <div className="flex items-end gap-3 flex-wrap">
+                          <span className="text-xs font-semibold text-amber-800 uppercase mr-1">
+                            Ajuste Finanzas — {n.docente_nombre}
+                          </span>
+                          <label className="flex flex-col gap-0.5">
+                            <span className="text-[11px] text-red-600 font-medium">Descuento (−)</span>
+                            <input type="number" min="0" step="0.01"
+                              value={ajusteForm.descuento_manual}
+                              onChange={e => setAjusteForm(f => ({ ...f, descuento_manual: e.target.value }))}
+                              className="border rounded px-2 py-1 text-sm w-28 focus:ring-1 focus:ring-red-300"
+                              placeholder="0.00"
+                            />
+                          </label>
+                          <label className="flex flex-col gap-0.5">
+                            <span className="text-[11px] text-emerald-700 font-medium">Ajuste Extra (+)</span>
+                            <input type="number" min="0" step="0.01"
+                              value={ajusteForm.ajuste_extra}
+                              onChange={e => setAjusteForm(f => ({ ...f, ajuste_extra: e.target.value }))}
+                              className="border rounded px-2 py-1 text-sm w-28 focus:ring-1 focus:ring-emerald-300"
+                              placeholder="0.00"
+                            />
+                          </label>
+                          <label className="flex flex-col gap-0.5 flex-1 min-w-[180px]">
+                            <span className="text-[11px] text-slate-500 font-medium">Nota</span>
+                            <input type="text"
+                              value={ajusteForm.nota}
+                              onChange={e => setAjusteForm(f => ({ ...f, nota: e.target.value }))}
+                              className="border rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-300"
+                              placeholder="Motivo del ajuste..."
+                            />
+                          </label>
+                          <div className="flex gap-2 mb-0.5">
+                            <button onClick={() => guardarAjuste(n.docente_id)} disabled={savingAjuste}
+                              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+                              {savingAjuste ? 'Guardando...' : 'Guardar'}
+                            </button>
+                            <button onClick={() => setEditingAjuste(null)}
+                              className="px-3 py-1.5 text-sm bg-white border rounded hover:bg-slate-50">
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                        {n.nota_ajuste_finanzas && (
+                          <p className="text-xs text-amber-700 mt-1.5 ml-0.5">
+                            Nota guardada: "{n.nota_ajuste_finanzas}"
+                          </p>
+                        )}
+                      </td>
+                    </tr>
+                  ),
                   isOpen && (
                     <tr key={`${n.docente_id}-horarios`}>
                       <HorariosDocentePanel docenteId={n.docente_id} />
@@ -306,6 +423,14 @@ function TabNomina({ quincena, canEdit }) {
                   <td className="px-4 py-3 text-right font-mono text-red-500 text-xs">
                     {fmt(nominaFiltrada.reduce((s, n) => s + (n.retencion_isr || 0), 0))}
                   </td>
+                  {esFinanzas && <>
+                    <td className="px-4 py-3 text-right font-mono text-red-600 text-xs">
+                      {(() => { const t = nominaFiltrada.reduce((s,n)=>s+(n.descuento_manual||0),0); return t>0?'-'+fmt(t):'—' })()}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-emerald-600 text-xs">
+                      {(() => { const t = nominaFiltrada.reduce((s,n)=>s+(n.ajuste_extra||0),0); return t>0?'+'+fmt(t):'—' })()}
+                    </td>
+                  </>}
                   <td className="px-4 py-3 text-right font-mono text-slate-800">{fmt(nominaFiltrada.reduce((s,n)=>s+(n.total_final||0),0))}</td>
                   <td />
                 </tr>
