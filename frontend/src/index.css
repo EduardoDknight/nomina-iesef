@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4: usar clase `.dark` en lugar de prefers-color-scheme del OS   */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* =============================================================================
    DARK MODE — NEXO IESEF
    Estrategia: la clase `dark` se agrega al <html> por ThemeContext.
