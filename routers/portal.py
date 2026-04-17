@@ -167,6 +167,14 @@ async def mis_checadas(
         """, (usuario.docente_id,))
         horarios = list(cur.fetchall())
 
+        # ── Días no laborables del rango ───────────────────────────────────────
+        cur.execute("""
+            SELECT fecha::text, tipo, descripcion
+            FROM dias_no_laborables
+            WHERE fecha BETWEEN %s AND %s AND activo = true
+        """, (fi, ff))
+        no_lab_rows = list(cur.fetchall())
+
     finally:
         cur.close()
         conn.close()
@@ -417,6 +425,9 @@ async def mis_checadas(
 
     horas_totales = horas_checadas + horas_asumidas + horas_continuidad
 
+    no_lab_idx = {r["fecha"]: {"tipo": r["tipo"], "descripcion": r["descripcion"]}
+                  for r in no_lab_rows}
+
     # ── 6. Todas las marcaciones (raw) ─────────────────────────────────────────
     todas_marcaciones = []
     for i, ch in enumerate(dedup):
@@ -443,6 +454,7 @@ async def mis_checadas(
         'horas_continuidad':  round(horas_continuidad, 2),
         'horas_totales':      round(horas_totales, 2),
         'alerta_continuidad': hay_alerta_continuidad,
+        'dias_no_laborables': no_lab_idx,
         'actualizado_en':     datetime.now().isoformat(),
     }
 
@@ -575,6 +587,15 @@ async def mi_asistencia(
                 por_fecha[f] = []
             por_fecha[f].append({"hora": r["hora"], "tipo": r["tipo_punch"]})
 
+        # Días no laborables del rango (vacaciones / suspensiones)
+        cur.execute("""
+            SELECT fecha::text, tipo, descripcion
+            FROM dias_no_laborables
+            WHERE fecha BETWEEN %s AND %s AND activo = true
+        """, (fi, ff))
+        no_lab_idx = {r["fecha"]: {"tipo": r["tipo"], "descripcion": r["descripcion"]}
+                      for r in cur.fetchall()}
+
         # Construir lista de días lunes→sábado para cada semana del rango
         dias = []
         current = fi
@@ -604,13 +625,14 @@ async def mi_asistencia(
                     )
 
                 dias.append({
-                    "fecha":          fecha_str,
-                    "dia_semana":     DIAS_ES_TW[wd],
-                    "es_hoy":         current == hoy,
-                    "entrada":        entrada,
-                    "salida":         salida,
-                    "todas":          todas,
-                    "tiene_checadas": bool(checadas_dia),
+                    "fecha":            fecha_str,
+                    "dia_semana":       DIAS_ES_TW[wd],
+                    "es_hoy":           current == hoy,
+                    "entrada":          entrada,
+                    "salida":           salida,
+                    "todas":            todas,
+                    "tiene_checadas":   bool(checadas_dia),
+                    "dia_no_laborable": no_lab_idx.get(fecha_str),  # {tipo, descripcion} | null
                 })
             current += timedelta(days=1)
 
@@ -730,6 +752,15 @@ async def mis_checadas_semana(usuario: UsuarioActual = Depends(_solo_docente)):
         for h in cur.fetchall():
             horarios_por_dia.setdefault(h["dia_semana"], []).append(dict(h))
 
+        # Días no laborables de la semana
+        cur.execute("""
+            SELECT fecha::text, tipo, descripcion
+            FROM dias_no_laborables
+            WHERE fecha BETWEEN %s AND %s AND activo = true
+        """, (lunes, sabado))
+        no_lab_idx = {r["fecha"]: {"tipo": r["tipo"], "descripcion": r["descripcion"]}
+                      for r in cur.fetchall()}
+
         dias = []
         for i in range(5, -1, -1):   # sábado → lunes (más reciente primero)
             fecha     = lunes + timedelta(days=i)
@@ -798,12 +829,13 @@ async def mis_checadas_semana(usuario: UsuarioActual = Depends(_solo_docente)):
             ]
 
             dias.append({
-                "fecha":          fecha_str,
-                "dia_semana":     DIAS_ES[i],
-                "es_hoy":         fecha == hoy,
-                "clases":         clases_resultado,
-                "sin_clase":      sin_clase,
-                "tiene_checadas": bool(checadas_dia),
+                "fecha":             fecha_str,
+                "dia_semana":        DIAS_ES[i],
+                "es_hoy":            fecha == hoy,
+                "clases":            clases_resultado,
+                "sin_clase":         sin_clase,
+                "tiene_checadas":    bool(checadas_dia),
+                "dia_no_laborable":  no_lab_idx.get(fecha_str),
             })
 
         return {
@@ -849,6 +881,15 @@ async def mi_asistencia_semana(usuario: UsuarioActual = Depends(_solo_trabajador
                     {"hora": r["hora"], "tipo": r["tipo_punch"]}
                 )
 
+        # Días no laborables de la semana
+        cur.execute("""
+            SELECT fecha::text, tipo, descripcion
+            FROM dias_no_laborables
+            WHERE fecha BETWEEN %s AND %s AND activo = true
+        """, (lunes, sabado))
+        no_lab_idx = {r["fecha"]: {"tipo": r["tipo"], "descripcion": r["descripcion"]}
+                      for r in cur.fetchall()}
+
         dias = []
         for i in range(5, -1, -1):
             fecha     = lunes + timedelta(days=i)
@@ -863,13 +904,14 @@ async def mi_asistencia_semana(usuario: UsuarioActual = Depends(_solo_trabajador
             ]
 
             dias.append({
-                "fecha":          fecha_str,
-                "dia_semana":     DIAS_ES[i],
-                "es_hoy":         fecha == hoy,
-                "entrada":        entrada,
-                "salida":         salida,
-                "todas":          todas,
-                "tiene_checadas": bool(checadas_dia),
+                "fecha":            fecha_str,
+                "dia_semana":       DIAS_ES[i],
+                "es_hoy":           fecha == hoy,
+                "entrada":          entrada,
+                "salida":           salida,
+                "todas":            todas,
+                "tiene_checadas":   bool(checadas_dia),
+                "dia_no_laborable": no_lab_idx.get(fecha_str),
             })
 
         return {

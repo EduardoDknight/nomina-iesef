@@ -2631,6 +2631,53 @@ const TABS = [
   { id: 'campo_clinico', label: 'Campo Clínico', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
 ]
 
+// ── Banner días no laborables ─────────────────────────────────────────────────
+const DNL_CFG = {
+  vacaciones:         { label: 'Vacaciones',    bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-800',   icon: '🏖' },
+  suspension_oficial: { label: 'Susp. oficial', bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-800',  icon: '📋' },
+  suspension_interna: { label: 'Susp. interna', bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-800', icon: '🔔' },
+}
+
+function BannerDiasNoLaborables({ dias }) {
+  if (!dias || dias.length === 0) return null
+  // Agrupar por tipo
+  const porTipo = {}
+  dias.forEach(d => {
+    porTipo[d.tipo] = porTipo[d.tipo] || []
+    porTipo[d.tipo].push(d)
+  })
+  return (
+    <div className="space-y-2 mb-5">
+      {Object.entries(porTipo).map(([tipo, items]) => {
+        const cfg = DNL_CFG[tipo] || { label: tipo, bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', icon: '📅' }
+        return (
+          <div key={tipo} className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-sm ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+            <span className="text-base shrink-0 mt-0.5">{cfg.icon}</span>
+            <div>
+              <span className="font-semibold">{cfg.label}</span>
+              <span className="ml-1 font-normal">
+                {items.map((d, i) => (
+                  <span key={i}>
+                    {i > 0 && ' · '}
+                    {new Date(d.fecha + 'T12:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                    {d.descripcion && <span className="opacity-75"> ({d.descripcion})</span>}
+                  </span>
+                ))}
+              </span>
+              {tipo === 'suspension_interna' && (
+                <p className="text-[11px] opacity-75 mt-0.5">Los docentes afectados cobran sin checada — revisar y aprobar en la vista de asistencia.</p>
+              )}
+              {(tipo === 'vacaciones' || tipo === 'suspension_oficial') && (
+                <p className="text-[11px] opacity-75 mt-0.5">No se esperan checadas de docentes estos días.</p>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function QuincenaDetalle() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -2639,12 +2686,24 @@ export default function QuincenaDetalle() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('nomina')
   const [cambiandoEstado, setCambiandoEstado] = useState(false)
+  const [diasNoLab, setDiasNoLab] = useState([])
 
   const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
 
   useEffect(() => {
     api.get(`/quincenas/${id}`)
-      .then(res => setQuincena(res.data))
+      .then(res => {
+        setQuincena(res.data)
+        // Cargar días no laborables del período
+        const q = res.data
+        if (q.fecha_inicio && q.fecha_fin) {
+          api.get('/calendario/dias-no-laborables/rango', {
+            params: { desde: q.fecha_inicio, hasta: q.fecha_fin }
+          })
+            .then(r => setDiasNoLab(r.data || []))
+            .catch(() => setDiasNoLab([]))
+        }
+      })
       .catch(() => navigate('/quincenas'))
       .finally(() => setLoading(false))
   }, [id, navigate])
@@ -2752,6 +2811,9 @@ export default function QuincenaDetalle() {
           </>}
         </div>
       </div>
+
+      {/* Días no laborables del período */}
+      <BannerDiasNoLaborables dias={diasNoLab} />
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200 mb-6">

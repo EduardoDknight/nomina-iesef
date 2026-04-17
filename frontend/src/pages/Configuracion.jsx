@@ -6,6 +6,21 @@ import { useAuth } from '../context/AuthContext'
 
 const input = "w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
 
+/**
+ * Normaliza errores de FastAPI a string.
+ * FastAPI 422 devuelve detail como array de objetos [{loc, msg, type}].
+ * Si lo pasamos directo a React children el componente crashea.
+ */
+function errMsg(err, fallback = 'Error al guardar.') {
+  const detail = err?.response?.data?.detail
+  if (!detail) return err?.message || fallback
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail.map(e => (typeof e === 'string' ? e : e.msg ?? JSON.stringify(e))).join(' · ')
+  }
+  return String(detail)
+}
+
 const ROLES_LABEL = {
   superadmin:          'Super Admin',
   director_cap_humano: 'Director Cap. Humano',
@@ -58,7 +73,7 @@ function TabProgramas({ esDirector }) {
       setEditando(null)
       cargar()
     } catch (err) {
-      setMsg({ tipo: 'error', texto: err.response?.data?.detail || 'Error al guardar.' })
+      setMsg({ tipo: 'error', texto: errMsg(err) })
     } finally {
       setSaving(false)
     }
@@ -188,7 +203,7 @@ function TabTolerencias({ puedeEditar }) {
       setEditando(false)
       setMsg({ tipo: 'ok', texto: 'Configuración guardada.' })
     } catch (err) {
-      setMsg({ tipo: 'error', texto: err.response?.data?.detail || 'Error al guardar.' })
+      setMsg({ tipo: 'error', texto: errMsg(err) })
     } finally {
       setSaving(false)
     }
@@ -358,7 +373,7 @@ function DrawerUsuario({ usuario: u, onClose, onSaved }) {
       }
       onSaved()
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error al guardar.')
+      setError(errMsg(err))
     } finally {
       setLoading(false)
     }
@@ -625,7 +640,7 @@ function TabCredenciales() {
       setMsg({ tipo: 'ok', texto: `Contraseña de ${r.data.nombre} restablecida a ${r.data.password_reset_a}` })
       if (subtab === 'docentes') cargarDocentes(); else if (subtab === 'administrativos') cargarAdministrativos()
     } catch (err) {
-      setMsg({ tipo: 'error', texto: err.response?.data?.detail || 'Error al restablecer.' })
+      setMsg({ tipo: 'error', texto: errMsg(err, 'Error al restablecer.') })
     } finally {
       setResetting(null)
     }
@@ -770,8 +785,9 @@ const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
 const DIAS_SEMANA = ['D','L','M','M','J','V','S']
 
 const TIPO_COLOR = {
-  vacaciones:          { bg: 'bg-red-500',   ring: 'ring-red-400',   text: 'text-white',       label: 'Vacaciones' },
-  suspension_oficial:  { bg: 'bg-amber-400', ring: 'ring-amber-300', text: 'text-amber-900',   label: 'Suspensión oficial' },
+  vacaciones:          { bg: 'bg-red-500',    ring: 'ring-red-400',    text: 'text-white',     label: 'Vacaciones' },
+  suspension_oficial:  { bg: 'bg-amber-400',  ring: 'ring-amber-300',  text: 'text-amber-900', label: 'Suspensión oficial' },
+  suspension_interna:  { bg: 'bg-violet-500', ring: 'ring-violet-400', text: 'text-white',     label: 'Suspensión interna' },
 }
 
 function buildCalendar(year, month) {
@@ -792,11 +808,17 @@ function TabCalendario({ puedeEditar }) {
   const hoy = new Date()
   const [anio, setAnio] = useState(hoy.getFullYear())
   const [mes, setMes] = useState(hoy.getMonth())        // 0-11
-  const [dias, setDias] = useState([])                   // {fecha, tipo, descripcion, id}
+  const [dias, setDias] = useState([])                   // {fecha, tipo, descripcion, hora_inicio, hora_fin, id}
   const [loading, setLoading] = useState(false)
-  const [modal, setModal] = useState(null)               // {fecha, iso} — popup para agregar
+  const [modal, setModal] = useState(null)               // {dia, iso} — popup para agregar
   const [tipoNuevo, setTipoNuevo] = useState('vacaciones')
   const [descNueva, setDescNueva] = useState('')
+  const [todoElDia, setTodoElDia] = useState(true)         // para suspension_interna
+  const [horaInicio, setHoraInicio] = useState('09:00')
+  const [horaFin, setHoraFin] = useState('11:00')
+  const [programasTodos, setProgramasTodos] = useState(true)       // true = todos los programas
+  const [programasSelec, setProgramasSelec] = useState([])          // IDs seleccionados
+  const [programasCatalogo, setProgramasCatalogo] = useState([])    // catálogo cargado 1 vez
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
 
@@ -810,6 +832,15 @@ function TabCalendario({ puedeEditar }) {
   }
 
   useEffect(() => { cargar() }, [anio])
+
+  // Catálogo de programas (carga única para el selector de programas afectados)
+  useEffect(() => {
+    if (programasCatalogo.length === 0) {
+      api.get('/catalogos/programas')
+        .then(res => setProgramasCatalogo(res.data))
+        .catch(() => {})
+    }
+  }, [])
 
   // Index por fecha ISO para O(1) lookup
   const diasIdx = {}
@@ -832,7 +863,9 @@ function TabCalendario({ puedeEditar }) {
     const existente = diasIdx[iso]
     if (existente) {
       // Eliminar
-      if (!confirm(`¿Quitar "${existente.descripcion || existente.tipo}" del ${iso}?`)) return
+      const label = existente.descripcion || TIPO_COLOR[existente.tipo]?.label || existente.tipo
+      const horario = existente.hora_inicio ? ` · ${existente.hora_inicio}–${existente.hora_fin}` : ''
+      if (!confirm(`¿Quitar "${label}${horario}" del ${iso}?`)) return
       setSaving(true)
       api.delete(`/calendario/dias-no-laborables/${existente.id}`)
         .then(() => { setMsg({ tipo: 'ok', texto: `${iso} eliminado.` }); cargar() })
@@ -841,59 +874,102 @@ function TabCalendario({ puedeEditar }) {
     } else {
       setTipoNuevo('vacaciones')
       setDescNueva('')
+      setTodoElDia(true)
+      setHoraInicio('09:00')
+      setHoraFin('11:00')
+      setProgramasTodos(true)
+      setProgramasSelec([])
       setModal({ dia: day, iso })
     }
   }
 
   const guardarDia = async () => {
     if (!modal) return
+
+    // Validación de horario parcial
+    if (tipoNuevo === 'suspension_interna' && !todoElDia) {
+      if (!horaInicio || !horaFin) {
+        setMsg({ tipo: 'error', texto: 'Indica hora de inicio y fin para la suspensión.' })
+        return
+      }
+      if (horaInicio >= horaFin) {
+        setMsg({ tipo: 'error', texto: 'La hora de inicio debe ser antes que la hora de fin.' })
+        return
+      }
+    }
+    // Validación de programas específicos
+    if (tipoNuevo === 'suspension_interna' && !programasTodos && programasSelec.length === 0) {
+      setMsg({ tipo: 'error', texto: 'Selecciona al menos un programa o elige "Todos los programas".' })
+      return
+    }
+
     setSaving(true)
     setMsg(null)
     try {
-      await api.post('/calendario/dias-no-laborables', null, {
-        params: {
-          fecha:       modal.iso,
-          tipo:        tipoNuevo,
-          descripcion: descNueva || undefined,
-          ciclo:       String(anio),
+      const body = {
+        fecha:       modal.iso,
+        tipo:        tipoNuevo,
+        descripcion: descNueva || null,
+        ciclo:       String(anio),
+      }
+      if (tipoNuevo === 'suspension_interna') {
+        if (!todoElDia) {
+          body.hora_inicio = horaInicio
+          body.hora_fin    = horaFin
         }
-      })
-      setMsg({ tipo: 'ok', texto: `${modal.iso} marcado como ${TIPO_COLOR[tipoNuevo].label}.` })
+        body.programas_ids = (!programasTodos && programasSelec.length > 0)
+          ? programasSelec
+          : null
+      }
+      await api.post('/calendario/dias-no-laborables', body)
+
+      const labelHorario   = (tipoNuevo === 'suspension_interna' && !todoElDia) ? ` (${horaInicio}–${horaFin})` : ''
+      const nProgramas     = (!programasTodos && programasSelec.length > 0) ? ` · ${programasSelec.length} programa(s)` : ''
+      setMsg({ tipo: 'ok', texto: `${modal.iso} marcado como ${TIPO_COLOR[tipoNuevo].label}${labelHorario}${nProgramas}.` })
       setModal(null)
       cargar()
     } catch (err) {
-      setMsg({ tipo: 'error', texto: err.response?.data?.detail || 'Error al guardar.' })
+      setMsg({ tipo: 'error', texto: errMsg(err) })
     } finally { setSaving(false) }
   }
 
   // Resumen del mes actual
-  const diasMes = dias.filter(d => {
+  const diasMes    = dias.filter(d => {
     const [y, m] = d.fecha.split('-').map(Number)
     return y === anio && m === mes + 1
   })
-  const vacMes  = diasMes.filter(d => d.tipo === 'vacaciones').length
-  const suspMes = diasMes.filter(d => d.tipo === 'suspension_oficial').length
+  const vacMes       = diasMes.filter(d => d.tipo === 'vacaciones').length
+  const suspMes      = diasMes.filter(d => d.tipo === 'suspension_oficial').length
+  const suspIntMes   = diasMes.filter(d => d.tipo === 'suspension_interna').length
 
   // Total del año
-  const vacAnio  = dias.filter(d => d.tipo === 'vacaciones').length
-  const suspAnio = dias.filter(d => d.tipo === 'suspension_oficial').length
+  const vacAnio      = dias.filter(d => d.tipo === 'vacaciones').length
+  const suspAnio     = dias.filter(d => d.tipo === 'suspension_oficial').length
+  const suspIntAnio  = dias.filter(d => d.tipo === 'suspension_interna').length
 
   return (
     <div className="max-w-2xl">
       {/* Encabezado */}
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex items-start justify-between mb-5 gap-4">
         <div>
           <h2 className="text-base font-semibold text-slate-800">Calendario Institucional</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Días no laborables para docentes virtuales · {vacAnio} vacaciones + {suspAnio} suspensiones en {anio}
+            {[
+              vacAnio > 0    && `${vacAnio} vac`,
+              suspAnio > 0   && `${suspAnio} of.`,
+              suspIntAnio > 0 && `${suspIntAnio} int.`,
+            ].filter(Boolean).join(' · ') || 'Sin días marcados'}{' '}en {anio}
           </p>
         </div>
-        <div className="flex gap-2 text-xs">
+        <div className="flex flex-wrap gap-1.5 text-xs shrink-0">
           <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-50 text-red-700 border border-red-200">
-            <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block"></span>Vacaciones
+            <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" />Vacaciones
           </span>
           <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-            <span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block"></span>Suspensión oficial
+            <span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />Susp. oficial
+          </span>
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-violet-50 text-violet-700 border border-violet-200">
+            <span className="w-2.5 h-2.5 rounded-sm bg-violet-500 inline-block" />Susp. interna
           </span>
         </div>
       </div>
@@ -920,9 +996,13 @@ function TabCalendario({ puedeEditar }) {
         </button>
         <span className="text-sm font-semibold text-slate-700">
           {MESES[mes]} {anio}
-          {(vacMes > 0 || suspMes > 0) && (
+          {(vacMes > 0 || suspMes > 0 || suspIntMes > 0) && (
             <span className="ml-2 text-xs font-normal text-slate-400">
-              ({vacMes > 0 ? `${vacMes} vac` : ''}{vacMes > 0 && suspMes > 0 ? ' · ' : ''}{suspMes > 0 ? `${suspMes} susp` : ''})
+              ({[
+                vacMes     > 0 && `${vacMes} vac`,
+                suspMes    > 0 && `${suspMes} of.`,
+                suspIntMes > 0 && `${suspIntMes} int.`,
+              ].filter(Boolean).join(' · ')})
             </span>
           )}
         </span>
@@ -961,15 +1041,23 @@ function TabCalendario({ puedeEditar }) {
               const esHoy   = iso === toISO(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
               const esFinde = (idx % 7 === 0) || (idx % 7 === 6)
 
+              // Suspensión interna parcial: fondo violeta con borde discontinuo
+              const esSuspIntParcial = marcado?.tipo === 'suspension_interna' && marcado?.hora_inicio
+
               return (
                 <div
                   key={iso}
                   onClick={() => handleClickDia(day)}
-                  title={marcado ? `${marcado.descripcion || marcado.tipo}` : puedeEditar ? 'Clic para marcar' : ''}
+                  title={
+                    marcado
+                      ? `${TIPO_COLOR[marcado.tipo]?.label || marcado.tipo}${marcado.descripcion ? ` — ${marcado.descripcion}` : ''}${marcado.hora_inicio ? ` · ${marcado.hora_inicio}–${marcado.hora_fin}` : ''}`
+                      : puedeEditar ? 'Clic para marcar' : ''
+                  }
                   className={[
-                    'h-10 flex items-center justify-center text-sm border-b border-r border-slate-100 last:border-r-0 select-none transition-colors',
+                    'relative h-10 flex items-center justify-center text-sm border-b border-r border-slate-100 last:border-r-0 select-none transition-colors',
                     puedeEditar && !marcado ? 'cursor-pointer hover:bg-blue-50' : '',
-                    marcado ? `${col.bg} ${col.text} cursor-pointer font-semibold` : '',
+                    marcado && !esSuspIntParcial ? `${col.bg} ${col.text} cursor-pointer font-semibold` : '',
+                    esSuspIntParcial ? 'bg-violet-100 text-violet-800 cursor-pointer font-semibold border-2 border-violet-400' : '',
                     !marcado && esFinde ? 'text-slate-400' : '',
                     !marcado && !esFinde ? 'text-slate-700' : '',
                   ].join(' ')}>
@@ -980,6 +1068,12 @@ function TabCalendario({ puedeEditar }) {
                   ].join(' ')}>
                     {day}
                   </span>
+                  {/* Indicador de horas para suspensión parcial */}
+                  {esSuspIntParcial && (
+                    <span className="absolute bottom-0.5 left-0 right-0 text-center text-[8px] text-violet-500 leading-none font-medium">
+                      {marcado.hora_inicio}
+                    </span>
+                  )}
                 </div>
               )
             })}
@@ -994,23 +1088,51 @@ function TabCalendario({ puedeEditar }) {
             Días no laborables en {MESES[mes]}
           </p>
           {diasMes.map(d => {
-            const col = TIPO_COLOR[d.tipo]
+            const col = TIPO_COLOR[d.tipo] || { bg: 'bg-slate-400', label: d.tipo }
+            const badgeCls =
+              d.tipo === 'vacaciones'         ? 'bg-red-100 text-red-700'       :
+              d.tipo === 'suspension_oficial'  ? 'bg-amber-100 text-amber-700'   :
+                                                 'bg-violet-100 text-violet-700'
+
+            // Nombres de programas afectados (solo para suspension_interna con lista)
+            const nombresPrograma = d.programas_ids?.length
+              ? d.programas_ids
+                  .map(id => programasCatalogo.find(p => p.id === id)?.nombre || `Prog.${id}`)
+                  .join(', ')
+              : null
+
             return (
-              <div key={d.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${col.bg}`} />
-                  <span className="text-sm text-slate-700 font-medium">
-                    {new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric' })}
+              <div key={d.id} className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${col.bg}`} />
+                    <span className="text-sm text-slate-700 font-medium">
+                      {new Date(d.fecha + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric' })}
+                    </span>
+                    {d.descripcion && (
+                      <span className="text-xs text-slate-500 truncate">— {d.descripcion}</span>
+                    )}
+                    {d.hora_inicio && (
+                      <span className="text-xs font-mono text-violet-600 flex-shrink-0 bg-violet-50 px-1.5 py-0.5 rounded">
+                        {d.hora_inicio}–{d.hora_fin}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${badgeCls}`}>
+                    {col.label}
                   </span>
-                  {d.descripcion && (
-                    <span className="text-xs text-slate-500">— {d.descripcion}</span>
-                  )}
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  d.tipo === 'vacaciones' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {col.label}
-                </span>
+                {/* Programas específicos (solo suspension_interna con lista acotada) */}
+                {nombresPrograma && (
+                  <div className="mt-1.5 ml-4 flex items-center gap-1.5 flex-wrap">
+                    <svg className="w-3 h-3 text-violet-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-[11px] text-violet-700">{nombresPrograma}</span>
+                    <span className="text-[10px] text-slate-400">— resto de programas asiste normal</span>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -1026,36 +1148,189 @@ function TabCalendario({ puedeEditar }) {
       {/* Modal: tipo y descripción */}
       {modal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-5 w-80">
+          <div className="bg-white rounded-xl shadow-xl p-5 w-96 max-w-[95vw]">
             <h3 className="font-semibold text-slate-800 mb-1">Marcar día no laborable</h3>
             <p className="text-sm text-slate-500 mb-4">{modal.iso}</p>
 
+            {/* Selector de tipo */}
             <div className="mb-3">
-              <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
-              <div className="flex gap-2">
-                {['vacaciones','suspension_oficial'].map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setTipoNuevo(t)}
-                    className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
-                      tipoNuevo === t
-                        ? t === 'vacaciones'
-                          ? 'bg-red-500 text-white border-red-500'
-                          : 'bg-amber-400 text-amber-900 border-amber-400'
-                        : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                    }`}>
-                    {TIPO_COLOR[t].label}
-                  </button>
-                ))}
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Tipo</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => setTipoNuevo('vacaciones')}
+                  className={`py-2 px-1 text-xs rounded-lg border font-medium transition-colors ${
+                    tipoNuevo === 'vacaciones'
+                      ? 'bg-red-500 text-white border-red-500'
+                      : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                  }`}>
+                  Vacaciones
+                </button>
+                <button
+                  onClick={() => setTipoNuevo('suspension_oficial')}
+                  className={`py-2 px-1 text-xs rounded-lg border font-medium transition-colors ${
+                    tipoNuevo === 'suspension_oficial'
+                      ? 'bg-amber-400 text-amber-900 border-amber-400'
+                      : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                  }`}>
+                  Susp. oficial
+                </button>
+                <button
+                  onClick={() => setTipoNuevo('suspension_interna')}
+                  className={`py-2 px-1 text-xs rounded-lg border font-medium transition-colors ${
+                    tipoNuevo === 'suspension_interna'
+                      ? 'bg-violet-500 text-white border-violet-500'
+                      : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                  }`}>
+                  Susp. interna
+                </button>
               </div>
             </div>
 
+            {/* Opciones extra para suspensión interna */}
+            {tipoNuevo === 'suspension_interna' && (
+              <div className="mb-3 space-y-3">
+                {/* Nota explicativa */}
+                <div className="px-3 py-2.5 bg-violet-50 border border-violet-200 rounded-lg">
+                  <p className="text-xs text-violet-800 font-medium mb-0.5">Docentes sí cobran</p>
+                  <p className="text-xs text-violet-700">
+                    Las clases en este período se pagan aunque no haya checada biométrica.
+                    Los administrativos no se ven afectados.
+                  </p>
+                </div>
+
+                {/* Cobertura: todo el día vs horas específicas */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">Cobertura</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setTodoElDia(true)}
+                      className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                        todoElDia
+                          ? 'bg-violet-500 text-white border-violet-500'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                      }`}>
+                      Todo el día
+                    </button>
+                    <button
+                      onClick={() => setTodoElDia(false)}
+                      className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                        !todoElDia
+                          ? 'bg-violet-500 text-white border-violet-500'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                      }`}>
+                      Horario específico
+                    </button>
+                  </div>
+                </div>
+
+                {/* Pickers de hora — solo si no es todo el día */}
+                {!todoElDia && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Hora inicio</label>
+                      <input
+                        type="time"
+                        value={horaInicio}
+                        onChange={e => setHoraInicio(e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Hora fin</label>
+                      <input
+                        type="time"
+                        value={horaFin}
+                        onChange={e => setHoraFin(e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Programas afectados */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">Programas afectados</label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => { setProgramasTodos(true); setProgramasSelec([]) }}
+                      className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                        programasTodos
+                          ? 'bg-violet-500 text-white border-violet-500'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                      }`}>
+                      Todos los programas
+                    </button>
+                    <button
+                      onClick={() => setProgramasTodos(false)}
+                      className={`flex-1 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                        !programasTodos
+                          ? 'bg-violet-500 text-white border-violet-500'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                      }`}>
+                      Programas específicos
+                    </button>
+                  </div>
+
+                  {!programasTodos && (
+                    <div className="border border-slate-200 rounded-lg overflow-hidden max-h-44 overflow-y-auto">
+                      {programasCatalogo.length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center py-3">Cargando…</p>
+                      ) : programasCatalogo.map(p => {
+                        const selec = programasSelec.includes(p.id)
+                        return (
+                          <label
+                            key={p.id}
+                            className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors border-b border-slate-100 last:border-b-0 ${
+                              selec ? 'bg-violet-50' : 'hover:bg-slate-50'
+                            }`}>
+                            <input
+                              type="checkbox"
+                              checked={selec}
+                              onChange={() =>
+                                setProgramasSelec(prev =>
+                                  selec ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                                )
+                              }
+                              className="w-3.5 h-3.5 accent-violet-600"
+                            />
+                            <span className={`text-xs flex-1 ${selec ? 'text-violet-800 font-medium' : 'text-slate-600'}`}>
+                              {p.nombre}
+                            </span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full capitalize ${
+                              p.razon_social === 'centro'
+                                ? 'bg-blue-100 text-blue-600'
+                                : 'bg-emerald-100 text-emerald-600'
+                            }`}>
+                              {p.razon_social}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {!programasTodos && programasSelec.length === 0 && (
+                    <p className="text-[11px] text-amber-600 mt-1.5">
+                      Selecciona al menos un programa o usa "Todos los programas".
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Descripción */}
             <div className="mb-4">
-              <label className="block text-xs font-medium text-slate-600 mb-1">Descripción (opcional)</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Descripción {tipoNuevo === 'suspension_interna' ? '(motivo del evento)' : '(opcional)'}
+              </label>
               <input
                 value={descNueva}
                 onChange={e => setDescNueva(e.target.value)}
-                placeholder="Ej. Semana Santa"
+                placeholder={
+                  tipoNuevo === 'suspension_interna'
+                    ? 'Ej. Simulacro, Día del Maestro, Ceremonia…'
+                    : 'Ej. Semana Santa'
+                }
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

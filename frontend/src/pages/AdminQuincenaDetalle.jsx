@@ -649,14 +649,14 @@ function TabIncidencias({ quincena, canEdit }) {
 
 const TABS = [
   {
-    id: 'asistencia',
-    label: 'Asistencia',
-    icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
-  },
-  {
     id: 'nomina',
     label: 'Nómina',
     icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z',
+  },
+  {
+    id: 'asistencia',
+    label: 'Asistencia',
+    icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
   },
   {
     id: 'incidencias',
@@ -671,9 +671,9 @@ export default function AdminQuincenaDetalle() {
   const { id }     = useParams()
   const navigate   = useNavigate()
   const { usuario } = useAuth()
-  const [quincena, setQuincena]   = useState(null)
-  const [loading, setLoading]     = useState(true)
-  const [tab, setTab]             = useState('asistencia')
+  const [quincena, setQuincena]       = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [tab, setTab]                 = useState('nomina')
   const [descargando, setDescargando] = useState(false)
 
   const canEdit = ['superadmin', 'director_cap_humano', 'cap_humano'].includes(usuario?.rol)
