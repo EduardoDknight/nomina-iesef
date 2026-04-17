@@ -5,32 +5,47 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-16 (PC casa, sesión completa)
+**Fecha:** 2026-04-17 (PC casa, noche)
 **Rama:** `main`
-**Último commit:** `adbe062` feat: Excel fiscal + PWA + asistencia clasificada
+**Último commit:** `3eb9126` feat: suspensión interna, indicadores días no laborables, timezone fix + merge
 
-### Commits del día (en orden)
+### Commits de esta sesión
 | Hash | Descripción |
 |---|---|
-| `7b6cfa1` | docs: CLAUDE.md — reglas binarias de asistencia (sin retardos ni parciales para docentes) |
-| `8903caa` | docs: NEXO_ESTADO.md — NSSM documentado, infraestructura actualizada |
-| `bfc4c75` | fix: NSSM servicios + incidencias (superadmin aprobar + botón validada_coord) |
-| `adbe062` | feat: Excel fiscal (IVA+ISR), PWA instalable y vista asistencia por bloques |
+| `3eb9126` | feat: suspensión interna, indicadores días no laborables, timezone fix + merge PC trabajo |
+
+### Commits PC trabajo integrados (17 commits remotos)
+| Hash | Descripción |
+|---|---|
+| `363e09a` | feat: reporte checador Excel para administrativos + soporte comida |
+| `25c1e51` | fix: tiene_comida=true por defecto en todos los trabajadores |
+| `5e25757` | feat: botón instalar PWA en login (móvil/tablet) |
+| `268d47a` | fix: deploy usa git fetch + reset --hard en vez de pull --ff-only |
+| `557c4c8` | docs: presentación/manual de usuario Nexo IESEF (12 slides HTML) |
+| `9daa5f9` | docs: guía de usuario Nexo por rol |
+| `f2ac593` | chore: actualizar launch.json con servidor de docs |
 
 ---
 
-## ✅ ACCIONES COMPLETADAS (noche 2026-04-16 PC casa)
+## ✅ ACCIONES COMPLETADAS (noche 2026-04-17 PC casa)
 
-1. ✅ NSSM instalado: `nomina-iesef` (uvicorn) + `cloudflared-nomina` (túnel), ambos Automatic
-2. ✅ Incidencias fix: superadmin puede aprobar + botón Aprobar visible en estado validada_coord
-3. ✅ CLAUDE.md corregido: regla binaria de asistencia, sin retardos para docentes, sin horas parciales
-4. ✅ Excel Nómina: columnas fiscales (IVA 16%, RET. ISR, RET. IVA, TOTAL A PAGAR)
-5. ✅ PWA: manifest.json + Service Worker + iconos 192/512 — app instalable en móvil
-6. ✅ Vista Asistencia Clasificada: endpoint + página /quincenas/:id/asistencia-clasificada
-7. ⬜ **Pendiente verificar en navegador:**
-   - Excel exportado → nuevas columnas fiscales visibles (IVA, ISR, Total)
-   - En Chrome Android/Desktop: banner "Instalar app" debe aparecer
-   - Botón "Asistencia por Bloques" visible en QuincenaDetalle para coord+
+1. ✅ Suspensión interna: tercer tipo de día no laborable (docentes cobran sin checar)
+   - Migrations 015/016 aplicadas en BD local
+   - Soporte horario parcial (hora_inicio/hora_fin) y programas específicos
+2. ✅ Indicadores días no laborables en todos los portales:
+   - Portal Docente: banner por tipo + badge por clase (`🏖 Vacaciones`, `📋 Susp. oficial`, `🔔 Susp. interna`)
+   - Portal Trabajador: badge coloreado + panel expandible con descripción
+   - QuincenaDetalle: banner encima de pestañas agrupando días por tipo
+3. ✅ Fix timezone semana: `toISOString()` UTC → `getFullYear/Month/Date` hora local México
+4. ✅ AdminQuincenaDetalle: pestañas en orden correcto (Nómina primero)
+5. ✅ Merge integrado con PC trabajo: reporte Excel admins, comida, PWA login, docs, deploy fix
+6. ✅ Migrations renombradas: 015_suspension_interna + 016_programas_suspension
+
+### ⬜ Pendiente verificar en navegador
+   - Excel exportado → columnas IVA/ISR/Total visibles
+   - PWA: banner "Instalar app" en Chrome/Android y botón en Login
+   - Vista Asistencia Clasificada: botón en QuincenaDetalle
+   - Suspensión interna: probar flujo completo en Configuración
 
 ---
 
@@ -134,6 +149,12 @@ nssm restart cloudflared-nomina
 | 2026-04-16 noche | PC casa | **Excel columnas fiscales (IVA/ISR/Total)** | Nómina ahora muestra desglose fiscal completo |
 | 2026-04-16 noche | PC casa | **PWA — app instalable** | manifest.json + SW + iconos institucionales |
 | 2026-04-16 noche | PC casa | **Vista Asistencia Clasificada** | /quincenas/:id/asistencia-clasificada — bloques con semáforo verde/rojo |
+| 2026-04-17 | PC trabajo | **Reporte checador Excel admins** | `/admin/periodos/:id/exportar_reporte` + campo tiene_comida |
+| 2026-04-17 | PC trabajo | **PWA botón en Login** | Solo Chrome Android/tablet cuando hay soporte |
+| 2026-04-17 | PC trabajo | **deploy.py fix** | `git fetch + reset --hard` en lugar de `pull --ff-only` |
+| 2026-04-17 | PC trabajo | **Docs: manual + presentación** | HTML autocontenido, guía por rol |
+| 2026-04-17 noche | PC casa | **Suspensión interna** | Nuevo tipo cal. + migrations 015/016 + indicadores portales |
+| 2026-04-17 noche | PC casa | **Fix timezone semana** | Semana arranca lunes correcto (hora local, no UTC) |
 
 ---
 
@@ -152,7 +173,9 @@ nssm restart cloudflared-nomina
 | Exportación Excel Nómina + columnas fiscales | ✅ activo | IVA 16%, RET ISR, RET IVA, TOTAL A PAGAR |
 | Vista Asistencia Clasificada por Bloques | ✅ activo | /quincenas/:id/asistencia-clasificada |
 | Personal Administrativo: CRUD + asistencia | ✅ activo | |
-| Portales docente/trabajador | ✅ activo | |
+| Portales docente/trabajador | ✅ activo | Indicadores días no laborables + fix timezone semana |
+| Calendario días no laborables | ✅ activo | 3 tipos: vacaciones, susp.oficial, susp.interna (con horario y programas) |
+| Reporte checador Excel (administrativos) | ✅ activo | Botón en AdminQuincenaDetalle |
 | Estadísticas: KPIs + 5 gráficas | ✅ activo | |
 | SyncBadge en 7 vistas | ✅ activo | |
 | Dark mode (toggle 🌙/☀️ + CSS global) | ✅ activo | |
@@ -180,40 +203,25 @@ nssm restart cloudflared-nomina
 
 ## SIGUIENTE SPRINT
 
-### 🚨 ACCIONES URGENTES — PC CASA ESTA NOCHE (2026-04-17)
-> El webhook está roto por divergencia git y falta openpyxl. El export Excel NO funciona hasta resolver esto.
-
-```powershell
-cd C:\Proyectos\nomina-iesef
-
-# 1. Resolver divergencia + traer código nuevo (deploy.py con git fetch+reset+pip install)
-git fetch origin
-git reset --hard origin/main
-pip install -r requirements.txt
-
-# 2. Actualizar DEPLOY_SECRET en .env
-notepad .env
-# Cambiar: DEPLOY_SECRET=iesef-nexo-RMEbFH_dRdhAFyuXnHbcyuxRB9AP70Dak6SjXW89180
-
-# 3. Reiniciar servicio
-nssm restart nomina-iesef
-
-# 4. En GitHub → Webhooks → Change secret → mismo valor → Redeliver → debe dar 200
-
-# 5. Instalar Tailscale (acceso remoto futuro)
-winget install tailscale
-tailscale up
-# Anotar la IP de Tailscale de PC casa para futuras sesiones desde PC trabajo
-```
+### ✅ ACCIONES URGENTES PC CASA (2026-04-17) — COMPLETADAS
+- [x] Divergencia git resuelta: merge de 17 commits de PC trabajo + push `3eb9126`
+- [x] Código actualizado: `git reset --hard origin/main` + merge OK
+- [ ] **Ejecutar migrations en BD local** (pendiente):
+  - `migrations/014_comida_trabajadores.sql` (de PC trabajo)
+  - `migrations/015_suspension_interna.sql`
+  - `migrations/016_programas_suspension.sql`
+- [ ] Verificar que DEPLOY_SECRET en .env coincide con el de GitHub Webhooks
+- [ ] Tailscale: instalar para acceso remoto futuro desde PC trabajo
 
 ### 🔴 CRÍTICO — Verificar en navegador
 - [x] Quincena "centro" → 22 docentes de Bachillerato ✅ correcto
 - [x] Excel exportado → Barrera Reyes $120 ✅ correcto, múltiplos de $120
 - [x] Excel solo genera hoja CENTRO para quincena centro ✅
-- [x] NSSM servicios corriendo ✅ (2026-04-16 noche)
-- [ ] **Excel: verificar columnas IVA/ISR/Total** (bloqueado hasta resolver urgente de arriba)
-- [ ] PWA: verificar banner "Instalar app" en Chrome/Android
+- [x] NSSM servicios corriendo ✅
+- [ ] Excel: verificar columnas IVA/ISR/Total en próxima exportación
+- [ ] PWA: verificar banner "Instalar app" en Chrome/Android + botón en Login
 - [ ] Vista Asistencia Clasificada: verificar botón en QuincenaDetalle
+- [ ] Suspensión interna: probar flujo en Configuración → Calendario
 
 ### 🟠 Desarrollo prioritario
 - [ ] **Carga horarios desde PDF aSc** — botón ya existe, falta implementar el parser
