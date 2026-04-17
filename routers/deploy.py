@@ -87,7 +87,23 @@ async def deploy(
 
     ya_actualizado = "Already up to date" in stdout or "Ya está actualizado" in stdout
 
-    # 3. Terminar el proceso uvicorn en background para cargar el código nuevo.
+    # 3. pip install -r requirements.txt (instala paquetes nuevos sin reinstalar existentes)
+    try:
+        pip = subprocess.run(
+            ["pip", "install", "-r", "requirements.txt", "-q"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(ROOT),
+        )
+        if pip.returncode != 0:
+            logger.warning(f"pip install warning: {pip.stderr.strip()}")
+        else:
+            logger.info("pip install -r requirements.txt OK")
+    except subprocess.TimeoutExpired:
+        logger.warning("pip install timeout (>120s) — continuando de todas formas")
+
+    # 4. Terminar el proceso uvicorn en background para cargar el código nuevo.
     #    os._exit(0) termina el proceso; watchdog.ps1 lo relanza en ~2s
     #    automáticamente con los módulos frescos del disco.
     threading.Thread(target=_restart_after_delay, args=(1.5,), daemon=True).start()
