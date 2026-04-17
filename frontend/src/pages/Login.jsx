@@ -199,13 +199,38 @@ function NeuralCanvas() {
 // ── Login ─────────────────────────────────────────────────────────────────────
 
 export default function Login() {
-  const [email,    setEmail]    = useState('')
-  const [password, setPassword] = useState('')
-  const [error,    setError]    = useState('')
-  const [loading,  setLoading]  = useState(false)
-  const [showPass, setShowPass] = useState(false)
+  const [email,         setEmail]         = useState('')
+  const [password,      setPassword]      = useState('')
+  const [error,         setError]         = useState('')
+  const [loading,       setLoading]       = useState(false)
+  const [showPass,      setShowPass]      = useState(false)
+  const [installPrompt, setInstallPrompt] = useState(null)
   const { login } = useAuth()
   const navigate  = useNavigate()
+
+  // Captura el evento de instalación PWA (solo aparece en móvil/tablet cuando Chrome
+  // considera que la app es instalable y no está ya instalada en modo standalone)
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    if (isStandalone) return   // ya está instalada, no mostrar botón
+
+    const isMobileTablet = window.innerWidth < 1024
+    if (!isMobileTablet) return
+
+    const handler = (e) => {
+      e.preventDefault()        // evita que Chrome muestre el banner automático
+      setInstallPrompt(e)       // guardamos el prompt para dispararlo con el botón
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setInstallPrompt(null)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -420,7 +445,28 @@ export default function Login() {
             </form>
           </div>
 
-          <p className="text-center text-xs mt-6" style={{ color: 'rgba(255,255,255,0.15)' }}>
+          {/* Botón instalar PWA — solo aparece en móvil/tablet cuando Chrome ofrece la instalación */}
+          {installPrompt && (
+            <button
+              onClick={handleInstall}
+              className="flex items-center gap-2 mx-auto mt-5 px-4 py-2 rounded-xl text-xs transition-all active:scale-95"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border:     '1px solid rgba(255,255,255,0.12)',
+                color:      'rgba(255,255,255,0.45)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.10)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              Instalar app
+            </button>
+          )}
+
+          <p className="text-center text-xs mt-4" style={{ color: 'rgba(255,255,255,0.15)' }}>
             IESEF · Sistema Interno · v1.0
           </p>
         </div>
