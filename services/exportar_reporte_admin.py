@@ -156,26 +156,35 @@ def _clasificar_checadas(
         entrada_checada    = by_type[0][0]  if by_type.get(0) else None
         salida_checada     = by_type[1][-1] if by_type.get(1) else None
     elif tiene_comida:
-        # Tolerancia proporcional al turno: 25% de la duración, mín 30 min, máx 90 min
-        shift_secs = abs(_time_to_secs(hora_salida) - _time_to_secs(hora_entrada))
-        tol        = max(30 * 60, min(TOLERANCIA_COMIDA_SEG, shift_secs // 4))
-        # Separar en zona comida (±tol del punto medio) y zona trabajo
-        zona_comida  = [h for h in all_horas
-                        if abs(_time_to_secs(h) - mid_secs) <= tol]
-        zona_trabajo = [h for h in all_horas
-                        if abs(_time_to_secs(h) - mid_secs) > tol]
+        if n <= 2:
+            # Con 1-2 checadas no hay suficiente información para identificar comida.
+            # Asignar directamente: primera=entrada, última=salida.
+            if n >= 1:
+                entrada_checada = all_horas[0]
+            if n >= 2:
+                salida_checada = all_horas[-1]
+        else:
+            # n >= 3: clasificar por zonas.
+            # Tolerancia proporcional al turno: 25% de la duración, mín 30 min, máx 90 min
+            shift_secs = abs(_time_to_secs(hora_salida) - _time_to_secs(hora_entrada))
+            tol        = max(30 * 60, min(TOLERANCIA_COMIDA_SEG, shift_secs // 4))
+            # Separar en zona comida (±tol del punto medio) y zona trabajo
+            zona_comida  = [h for h in all_horas
+                            if abs(_time_to_secs(h) - mid_secs) <= tol]
+            zona_trabajo = [h for h in all_horas
+                            if abs(_time_to_secs(h) - mid_secs) > tol]
 
-        if zona_comida:
-            comida_sal_checada = zona_comida[0]
-        if len(zona_comida) >= 2:
-            comida_ent_checada = zona_comida[1]
+            if zona_comida:
+                comida_sal_checada = zona_comida[0]
+            if len(zona_comida) >= 2:
+                comida_ent_checada = zona_comida[1]
 
-        antes   = [h for h in zona_trabajo if _time_to_secs(h) < mid_secs]
-        despues = [h for h in zona_trabajo if _time_to_secs(h) > mid_secs]
-        if antes:
-            entrada_checada = antes[0]
-        if despues:
-            salida_checada = despues[-1]
+            antes   = [h for h in zona_trabajo if _time_to_secs(h) < mid_secs]
+            despues = [h for h in zona_trabajo if _time_to_secs(h) > mid_secs]
+            if antes:
+                entrada_checada = antes[0]
+            if despues:
+                salida_checada = despues[-1]
     else:
         # Sin comida: primera=entrada, última=salida
         entrada_checada = all_horas[0]        if all_horas else None
