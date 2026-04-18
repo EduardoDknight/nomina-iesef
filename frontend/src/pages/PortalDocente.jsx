@@ -8,6 +8,39 @@ import { SyncBadgePortal } from '../components/SyncBadge'
 const fmt = (n) => n == null ? '—' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
 const fmtFecha = (d) => d ? new Date(d + 'T12:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
+// ── Días no laborables ───────────────────────────────────────────────────────
+const DIA_NO_LAB_CFG = {
+  vacaciones:          { label: 'Vacaciones',     bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700',   icon: '🏖' },
+  suspension_oficial:  { label: 'Susp. oficial',  bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700',  icon: '📋' },
+  suspension_interna:  { label: 'Susp. interna',  bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', icon: '🔔' },
+}
+
+function BadgeDiaNoLab({ tipo, descripcion, compact = false }) {
+  const cfg = DIA_NO_LAB_CFG[tipo] || { label: tipo, bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600', icon: '📅' }
+  if (compact) {
+    return (
+      <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+        {cfg.icon} {cfg.label}
+      </span>
+    )
+  }
+  return (
+    <div className={`flex items-start gap-2 px-4 py-3 rounded-xl border text-sm ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+      <span className="shrink-0 text-base leading-none mt-0.5">{cfg.icon}</span>
+      <div>
+        <span className="font-semibold">{cfg.label}</span>
+        {descripcion && <span className="ml-1 font-normal opacity-80">— {descripcion}</span>}
+        {tipo === 'suspension_interna' && (
+          <p className="text-[11px] opacity-70 mt-0.5">Las clases de este día se pagan aunque no haya checada.</p>
+        )}
+        {(tipo === 'vacaciones' || tipo === 'suspension_oficial') && (
+          <p className="text-[11px] opacity-70 mt-0.5">No se esperan checadas ni se pagan clases este día.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const ESTADO_NOMINA = {
   borrador: { label: 'Borrador', cls: 'bg-amber-100 text-amber-700' },
   validado: { label: 'Validado', cls: 'bg-blue-100 text-blue-700' },
@@ -205,8 +238,8 @@ function isoWeekBounds(offsetWeeks = 0) {
   const wd  = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1  // 0=lun
   const lun = new Date(hoy); lun.setDate(hoy.getDate() - wd)
   const sab = new Date(lun); sab.setDate(lun.getDate() + 5)
-  const fmt = (d) => d.toISOString().slice(0, 10)
-  return { fi: fmt(lun), ff: fmt(sab) }
+  const localISO = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  return { fi: localISO(lun), ff: localISO(sab) }
 }
 
 function currentQuincena() {
@@ -339,6 +372,15 @@ function TabChecadas() {
         </div>
       ) : (
         <>
+          {/* Días no laborables en el rango */}
+          {data.dias_no_laborables && Object.entries(data.dias_no_laborables).length > 0 && (
+            <div className="space-y-2">
+              {Object.entries(data.dias_no_laborables).map(([fecha, dnl]) => (
+                <BadgeDiaNoLab key={fecha} tipo={dnl.tipo} descripcion={dnl.descripcion} />
+              ))}
+            </div>
+          )}
+
           {/* Alerta continuidad */}
           {data.alerta_continuidad && (
             <div className="flex items-start gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
@@ -441,9 +483,16 @@ function TabChecadas() {
                             <span className="text-slate-300 text-sm">—</span>
                           )}
                         </td>
-                        {/* Status icon */}
+                        {/* Status icon / día no laborable */}
                         <td className="px-2 py-2.5 text-center">
-                          <span className={`text-base font-bold ${stIco.cls}`}>{stIco.icon}</span>
+                          {c.estado === 'sin_checadas' && data.dias_no_laborables?.[c.fecha] ? (
+                            <BadgeDiaNoLab
+                              tipo={data.dias_no_laborables[c.fecha].tipo}
+                              compact
+                            />
+                          ) : (
+                            <span className={`text-base font-bold ${stIco.cls}`}>{stIco.icon}</span>
+                          )}
                         </td>
                       </tr>
                     )

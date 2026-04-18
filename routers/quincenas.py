@@ -1215,14 +1215,27 @@ async def get_checadas_docente(
                 usadas.add(best_sal[0])
 
     # ── 4. Checadas sin clase ─────────────────────────────────────────────────
+    # Mapa posicional por día: primera=Entrada, última=Salida, intermedias=?
+    # tipo_punch del MB360 no es confiable (casi siempre 0 para todo)
+    _idx_por_dia: dict = {}
+    for _i, _ch in enumerate(dedup):
+        _idx_por_dia.setdefault(_ch['timestamp_checada'].date(), []).append(_i)
+
     sin_clase = []
     for i, ch in enumerate(dedup):
         if i not in usadas:
-            ts = ch['timestamp_checada']
+            ts       = ch['timestamp_checada']
+            _idxs    = _idx_por_dia.get(ts.date(), [])
+            if i == _idxs[0]:
+                tipo_label = 'Entrada'
+            elif i == _idxs[-1]:
+                tipo_label = 'Salida'
+            else:
+                tipo_label = '?'
             sin_clase.append({
                 'fecha': ts.strftime('%a %d %b'),
                 'ts':    ts.strftime('%H:%M'),
-                'tipo':  'Entrada' if ch['tipo_punch'] == 0 else 'Salida',
+                'tipo':  tipo_label,
             })
 
     # ── 4.5. Cadenas back-to-back con extremos checados: continuidad ──────────
@@ -1350,11 +1363,18 @@ async def get_checadas_docente(
     # ── 6. Todas las marcaciones (raw) ─────────────────────────────────────────
     todas_marcaciones = []
     for i, ch in enumerate(dedup):
-        ts = ch['timestamp_checada']
+        ts    = ch['timestamp_checada']
+        _idxs = _idx_por_dia.get(ts.date(), [])
+        if i == _idxs[0]:
+            tipo_short = 'E'
+        elif i == _idxs[-1]:
+            tipo_short = 'S'
+        else:
+            tipo_short = '?'
         todas_marcaciones.append({
             'fecha':       ts.strftime('%Y-%m-%d'),
             'ts':          ts.strftime('%H:%M'),
-            'tipo':        'E' if ch['tipo_punch'] == 0 else 'S',
+            'tipo':        tipo_short,
             'dispositivo': ch.get('id_dispositivo', ''),
             'asignada':    i in usadas,
         })

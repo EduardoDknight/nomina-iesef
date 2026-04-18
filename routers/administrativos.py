@@ -1294,3 +1294,45 @@ def exportar_reporte_checador(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/periodos/{periodo_id}/exportar_reporte_v2")
+def exportar_reporte_checador_v2(
+    periodo_id: int,
+    usuario: UsuarioActual = Depends(solo_admin)
+):
+    """
+    Genera y descarga el Excel de reporte de checador v2.0.
+    Misma estructura grid-por-días que v1, diseño notablemente mejorado.
+    """
+    from services.exportar_reporte_admin_v2 import generar_reporte_admin_v2
+
+    conn = None
+    try:
+        conn = get_conn()
+        cur  = conn.cursor()
+        cur.execute(
+            "SELECT id, fecha_inicio, fecha_fin FROM periodos_admin WHERE id = %s",
+            (periodo_id,)
+        )
+        periodo = cur.fetchone()
+        if not periodo:
+            raise HTTPException(status_code=404, detail="Período no encontrado")
+        fi = periodo["fecha_inicio"]
+        ff = periodo["fecha_fin"]
+    finally:
+        if conn:
+            conn.close()
+
+    try:
+        xlsx_bytes = generar_reporte_admin_v2(periodo_id)
+    except Exception as e:
+        logger.error(f"Error generando reporte checador v2: {e}")
+        raise HTTPException(status_code=500, detail="Error generando el reporte v2")
+
+    filename = f"reporte_admin_v2_{fi}_{ff}.xlsx"
+    return StreamingResponse(
+        BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
