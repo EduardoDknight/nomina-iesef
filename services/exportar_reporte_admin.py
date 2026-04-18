@@ -64,7 +64,7 @@ DAY_COL  = {
     4: "viernes", 5: "sabado", 6: "domingo",
 }
 
-TOLERANCIA_COMIDA_SEG = 45 * 60   # ±45 min alrededor del punto medio
+TOLERANCIA_COMIDA_SEG = 90 * 60   # ±90 min alrededor del punto medio de la jornada
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -139,56 +139,44 @@ def _clasificar_checadas(
     comida_sal_checada: Optional[time] = None
     comida_ent_checada: Optional[time] = None
 
-    # ── Intentar con tipo_punch ZKTeco (0=in, 1=out, 2=lunch-out, 3=lunch-in)
+    # MB360 envía casi todo como tipo_punch=0 → no es confiable.
+    # Algoritmo por zonas: comida se clasifica PRIMERO (±90 min del punto medio);
+    # entrada/salida se asignan de lo que queda fuera de esa zona.
+    all_horas = [_td_to_time(c["hora"]) for c in checadas_sorted]
+
     by_type: dict[int, list] = defaultdict(list)
     for c in checadas_sorted:
         by_type[c["tipo_punch"]].append(_td_to_time(c["hora"]))
+    has_dedicated_comida = bool(by_type.get(2) or by_type.get(3))
 
-    if by_type.get(2):
-        comida_sal_checada = by_type[2][0]
-    if by_type.get(3):
-        comida_ent_checada = by_type[3][0]
-    if by_type.get(0):
-        entrada_checada = by_type[0][0]
-    if by_type.get(1):
-        salida_checada = by_type[1][-1]
+    if has_dedicated_comida:
+        # El dispositivo envió tipos explícitos de comida → confiar en ellos
+        comida_sal_checada = by_type[2][0]  if by_type.get(2) else None
+        comida_ent_checada = by_type[3][0]  if by_type.get(3) else None
+        entrada_checada    = by_type[0][0]  if by_type.get(0) else None
+        salida_checada     = by_type[1][-1] if by_type.get(1) else None
+    elif tiene_comida:
+        # Separar en zona comida (±TOLERANCIA del punto medio) y zona trabajo
+        zona_comida  = [h for h in all_horas
+                        if abs(_time_to_secs(h) - mid_secs) <= TOLERANCIA_COMIDA_SEG]
+        zona_trabajo = [h for h in all_horas
+                        if abs(_time_to_secs(h) - mid_secs) > TOLERANCIA_COMIDA_SEG]
 
-    # ── Fallback heurístico si no hay tipo_punch 2/3
-    all_horas = [_td_to_time(c["hora"]) for c in checadas_sorted]
-    if tiene_comida and comida_sal_checada is None and comida_ent_checada is None:
-        candidatas_comida = []
-        for h in all_horas:
-            h_secs = _time_to_secs(h)
-            if abs(h_secs - mid_secs) <= TOLERANCIA_COMIDA_SEG:
-                candidatas_comida.append(h)
+        if zona_comida:
+            comida_sal_checada = zona_comida[0]
+        if len(zona_comida) >= 2:
+            comida_ent_checada = zona_comida[1]
 
-        if candidatas_comida:
-            comida_sal_checada = candidatas_comida[0]
-        if len(candidatas_comida) >= 2:
-            comida_ent_checada = candidatas_comida[1]
-
-        clasificadas = {comida_sal_checada, comida_ent_checada} - {None}
-
-        # Entrada: primera checada fuera de zona de comida y antes del punto medio
-        if entrada_checada is None:
-            for h in all_horas:
-                if h not in clasificadas and _time_to_secs(h) <= mid_secs:
-                    entrada_checada = h
-                    break
-
-        # Salida: última checada fuera de zona de comida y después del punto medio
-        if salida_checada is None:
-            for h in reversed(all_horas):
-                if h not in clasificadas and _time_to_secs(h) >= mid_secs:
-                    salida_checada = h
-                    break
-
-    elif not tiene_comida:
-        # Sin comida — primer/último punch si tipo_punch no los dio
-        if entrada_checada is None and all_horas:
-            entrada_checada = all_horas[0]
-        if salida_checada is None and len(all_horas) >= 2:
-            salida_checada = all_horas[-1]
+        antes   = [h for h in zona_trabajo if _time_to_secs(h) < mid_secs]
+        despues = [h for h in zona_trabajo if _time_to_secs(h) > mid_secs]
+        if antes:
+            entrada_checada = antes[0]
+        if despues:
+            salida_checada = despues[-1]
+    else:
+        # Sin comida: primera=entrada, última=salida
+        entrada_checada = all_horas[0]        if all_horas else None
+        salida_checada  = all_horas[-1] if len(all_horas) >= 2 else None
 
     # ── Retardo
     es_retardo = False
