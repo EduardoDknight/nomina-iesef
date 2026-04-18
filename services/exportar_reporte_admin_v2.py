@@ -83,7 +83,7 @@ DAY_COL  = {
     0: "lunes", 1: "martes", 2: "miercoles", 3: "jueves",
     4: "viernes", 5: "sabado", 6: "domingo",
 }
-TOLERANCIA_COMIDA_SEG = 45 * 60
+TOLERANCIA_COMIDA_SEG = 90 * 60   # ±90 min alrededor del punto medio de la jornada
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -132,61 +132,69 @@ def _put(ws, row: int, col: int, value=None,
         c.border = BORDER_THIN
 
 
-# ── Clasificación idéntica al v1 ──────────────────────────────────────────────
+# ── Clasificación posicional (MB360 envía todo como tipo_punch=0) ─────────────
 
 def _clasificar_checadas(checadas_raw: list, hora_entrada: time,
                           hora_salida: time, tiene_comida: bool) -> dict:
     checadas_sorted = sorted(checadas_raw, key=lambda x: _time_to_secs(x["hora"]))
-
-    entrada_secs = _time_to_secs(hora_entrada)
-    salida_secs  = _time_to_secs(hora_salida)
-    mid_secs     = (entrada_secs + salida_secs) // 2
+    all_horas = [_td_to_time(c["hora"]) for c in checadas_sorted]
+    n = len(all_horas)
 
     entrada_checada:    Optional[time] = None
     salida_checada:     Optional[time] = None
     comida_sal_checada: Optional[time] = None
     comida_ent_checada: Optional[time] = None
 
+    # Si el dispositivo envía tipos dedicados de comida (2/3), usarlos directamente
     by_type: dict = defaultdict(list)
     for c in checadas_sorted:
         by_type[c["tipo_punch"]].append(_td_to_time(c["hora"]))
+    has_dedicated_comida = bool(by_type.get(2) or by_type.get(3))
 
-    if by_type.get(2):
-        comida_sal_checada = by_type[2][0]
-    if by_type.get(3):
-        comida_ent_checada = by_type[3][0]
-    if by_type.get(0):
-        entrada_checada = by_type[0][0]
-    if by_type.get(1):
-        salida_checada = by_type[1][-1]
-
-    all_horas = [_td_to_time(c["hora"]) for c in checadas_sorted]
-    if tiene_comida and comida_sal_checada is None and comida_ent_checada is None:
-        candidatas = [h for h in all_horas
-                      if abs(_time_to_secs(h) - mid_secs) <= TOLERANCIA_COMIDA_SEG]
-        if candidatas:
-            comida_sal_checada = candidatas[0]
-        if len(candidatas) >= 2:
-            comida_ent_checada = candidatas[1]
-        clasificadas = {comida_sal_checada, comida_ent_checada} - {None}
-        if entrada_checada is None:
-            for h in all_horas:
-                if h not in clasificadas and _time_to_secs(h) <= mid_secs:
-                    entrada_checada = h
-                    break
-        if salida_checada is None:
-            for h in reversed(all_horas):
-                if h not in clasificadas and _time_to_secs(h) >= mid_secs:
-                    salida_checada = h
-                    break
-    elif not tiene_comida:
-        if entrada_checada is None and all_horas:
-            entrada_checada = all_horas[0]
-        if salida_checada is None and len(all_horas) >= 2:
-            salida_checada = all_horas[-1]
+    if has_dedicated_comida:
+        comida_sal_checada = by_type[2][0]  if by_type.get(2) else None
+        comida_ent_checada = by_type[3][0]  if by_type.get(3) else None
+        entrada_checada    = by_type[0][0]  if by_type.get(0) else None
+        salida_checada     = by_type[1][-1] if by_type.get(1) else None
+    elif tiene_comida:
+        # Algoritmo posicional: clasificar comida PRIMERO, luego entrada/salida
+        mid_secs = (_time_to_secs(hora_entrada) + _time_to_secs(hora_salida)) // 2
+        if n >= 3:
+            # Con 3+ checadas: primera=entrada, intermedias=comida, última=salida
+            entrada_checada    = all_horas[0]
+            salida_checada     = all_horas[-1]
+            middles            = all_horas[1:-1]
+            comida_sal_checada = middles[0] if middles else None
+            comida_ent_checada = middles[1] if len(middles) >= 2 else None
+        elif n == 2:
+            # Con 2 checadas: la más cercana al punto medio es comida
+            h0, h1 = all_horas[0], all_horas[1]
+            d0 = abs(_time_to_secs(h0) - mid_secs)
+            d1 = abs(_time_to_secs(h1) - mid_secs)
+            if d0 <= TOLERANCIA_COMIDA_SEG and d0 <= d1:
+                comida_sal_checada = h0
+                salida_checada     = h1
+            elif d1 <= TOLERANCIA_COMIDA_SEG:
+                entrada_checada    = h0
+                comida_sal_checada = h1
+            else:
+                entrada_checada = h0
+                salida_checada  = h1
+        elif n == 1:
+            h = all_horas[0]
+            d = abs(_time_to_secs(h) - mid_secs)
+            if d <= TOLERANCIA_COMIDA_SEG:
+                comida_sal_checada = h
+            else:
+                entrada_checada = h
+    else:
+        # Sin comida: primera=entrada, última=salida
+        entrada_checada = all_horas[0]        if all_horas else None
+        salida_checada  = all_horas[-1] if n >= 2 else None
 
     es_retardo = False
     if entrada_checada:
+        entrada_secs = _time_to_secs(hora_entrada)
         es_retardo = _time_to_secs(entrada_checada) > entrada_secs + 10 * 60
 
     comida_incompleta = (
