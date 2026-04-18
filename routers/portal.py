@@ -318,14 +318,27 @@ async def mis_checadas(
                 usadas.add(best_sal[0])
 
     # ── 4. Checadas sin clase ─────────────────────────────────────────────────
+    # Mapa posicional por día: primera=Entrada, última=Salida, intermedias=?
+    # tipo_punch del MB360 no es confiable (casi siempre 0 para todo)
+    _idx_por_dia: dict = {}
+    for _i, _ch in enumerate(dedup):
+        _idx_por_dia.setdefault(_ch['timestamp_checada'].date(), []).append(_i)
+
     sin_clase = []
     for i, ch in enumerate(dedup):
         if i not in usadas:
-            ts = ch['timestamp_checada']
+            ts    = ch['timestamp_checada']
+            _idxs = _idx_por_dia.get(ts.date(), [])
+            if i == _idxs[0]:
+                tipo_label = 'Entrada'
+            elif i == _idxs[-1]:
+                tipo_label = 'Salida'
+            else:
+                tipo_label = '?'
             sin_clase.append({
                 'fecha': ts.strftime('%Y-%m-%d'),
                 'ts':    ts.strftime('%H:%M'),
-                'tipo':  'Entrada' if ch['tipo_punch'] == 0 else 'Salida',
+                'tipo':  tipo_label,
             })
 
     # ── 4.5. Cadenas back-to-back con extremos checados: continuidad ──────────
@@ -431,11 +444,18 @@ async def mis_checadas(
     # ── 6. Todas las marcaciones (raw) ─────────────────────────────────────────
     todas_marcaciones = []
     for i, ch in enumerate(dedup):
-        ts = ch['timestamp_checada']
+        ts    = ch['timestamp_checada']
+        _idxs = _idx_por_dia.get(ts.date(), [])
+        if i == _idxs[0]:
+            tipo_short = 'E'
+        elif i == _idxs[-1]:
+            tipo_short = 'S'
+        else:
+            tipo_short = '?'
         todas_marcaciones.append({
             'fecha':       ts.strftime('%Y-%m-%d'),
             'ts':          ts.strftime('%H:%M'),
-            'tipo':        'E' if ch['tipo_punch'] == 0 else 'S',
+            'tipo':        tipo_short,
             'dispositivo': ch.get('id_dispositivo', ''),
             'asignada':    i in usadas,
         })
@@ -896,12 +916,20 @@ async def mi_asistencia_semana(usuario: UsuarioActual = Depends(_solo_trabajador
             fecha_str = str(fecha)
             checadas_dia = por_fecha.get(fecha_str, [])
 
-            entrada = next((str(c["hora"])[:5] for c in checadas_dia if c["tipo"] == 0), None)
-            salida  = next((str(c["hora"])[:5] for c in reversed(checadas_dia) if c["tipo"] == 1), None)
-            todas   = [
-                {"hora": str(c["hora"])[:5], "tipo": "entrada" if c["tipo"] == 0 else "salida"}
-                for c in checadas_dia
-            ]
+            # Posicional: primera=entrada, última=salida, intermedias=?
+            # tipo_punch del MB360 no es confiable (casi siempre 0)
+            _n = len(checadas_dia)
+            entrada = str(checadas_dia[0]["hora"])[:5]  if _n >= 1 else None
+            salida  = str(checadas_dia[-1]["hora"])[:5] if _n >= 2 else None
+            todas   = []
+            for _ci, _c in enumerate(checadas_dia):
+                if _ci == 0:
+                    _tipo_c = "entrada"
+                elif _ci == _n - 1:
+                    _tipo_c = "salida"
+                else:
+                    _tipo_c = "?"
+                todas.append({"hora": str(_c["hora"])[:5], "tipo": _tipo_c})
 
             dias.append({
                 "fecha":            fecha_str,
