@@ -5,17 +5,25 @@
 ---
 
 ## Última sesión
-**Fecha:** 2026-04-16 (PC casa, sesión completa)
+**Fecha:** 2026-04-18 (PC trabajo)
 **Rama:** `main`
-**Último commit:** `adbe062` feat: Excel fiscal + PWA + asistencia clasificada
+**Último commit:** `f2ac593` chore: launch.json + servidor docs
 
-### Commits del día (en orden)
+### Sesión 2026-04-17 PC trabajo — commits
 | Hash | Descripción |
 |---|---|
-| `7b6cfa1` | docs: CLAUDE.md — reglas binarias de asistencia (sin retardos ni parciales para docentes) |
-| `8903caa` | docs: NEXO_ESTADO.md — NSSM documentado, infraestructura actualizada |
-| `bfc4c75` | fix: NSSM servicios + incidencias (superadmin aprobar + botón validada_coord) |
-| `adbe062` | feat: Excel fiscal (IVA+ISR), PWA instalable y vista asistencia por bloques |
+| `5e25757` | feat: botón instalar PWA en login (móvil/tablet, solo cuando Chrome lo permite) |
+| `4d1f03f` | docs: acciones urgentes PC casa 2026-04-17 (webhook + openpyxl + Tailscale) |
+| `557c4c8` | docs: presentación nexo-manual.html (12 slides, HTML autocontenido) |
+| `9daa5f9` | docs: guía nexo-guia.html → renombrada a nexo-manual.html |
+| `262c7b6` | docs: renombrar presentación→nexo-presentacion.html, guía→nexo-manual.html |
+
+### Sesión 2026-04-18 PC trabajo — commits
+| Hash | Descripción |
+|---|---|
+| `363e09a` | feat: reporte checador Excel administrativos + soporte comida (migration 014) |
+| `25c1e51` | fix: tiene_comida=true por defecto en todos los trabajadores |
+| `f2ac593` | chore: launch.json con servidor de docs (nexo-manual port 5174) |
 
 ---
 
@@ -27,10 +35,6 @@
 4. ✅ Excel Nómina: columnas fiscales (IVA 16%, RET. ISR, RET. IVA, TOTAL A PAGAR)
 5. ✅ PWA: manifest.json + Service Worker + iconos 192/512 — app instalable en móvil
 6. ✅ Vista Asistencia Clasificada: endpoint + página /quincenas/:id/asistencia-clasificada
-7. ⬜ **Pendiente verificar en navegador:**
-   - Excel exportado → nuevas columnas fiscales visibles (IVA, ISR, Total)
-   - En Chrome Android/Desktop: banner "Instalar app" debe aparecer
-   - Botón "Asistencia por Bloques" visible en QuincenaDetalle para coord+
 
 ---
 
@@ -134,6 +138,12 @@ nssm restart cloudflared-nomina
 | 2026-04-16 noche | PC casa | **Excel columnas fiscales (IVA/ISR/Total)** | Nómina ahora muestra desglose fiscal completo |
 | 2026-04-16 noche | PC casa | **PWA — app instalable** | manifest.json + SW + iconos institucionales |
 | 2026-04-16 noche | PC casa | **Vista Asistencia Clasificada** | /quincenas/:id/asistencia-clasificada — bloques con semáforo verde/rojo |
+| 2026-04-17 | PC trabajo | **Botón instalar PWA en login** | Solo móvil/tablet, visible solo cuando Chrome ofrece instalación |
+| 2026-04-17 | PC trabajo | **docs/nexo-presentacion.html** | Presentación 12 slides del proyecto (canvas neural, branding IESEF) |
+| 2026-04-17 | PC trabajo | **docs/nexo-manual.html** | Manual de usuario por rol (Cap.Humano, Coord, Finanzas, Docente, EV) |
+| 2026-04-18 | PC trabajo | **Reporte checador Excel admin** | services/exportar_reporte_admin.py — clon exacto formato v1 |
+| 2026-04-18 | PC trabajo | **Migration 014: tiene_comida** | horarios_trabajador.tiene_comida=true por defecto (media hora comida) |
+| 2026-04-18 | PC trabajo | **Botón Reporte Excel en Admin** | AdminQuincenaDetalle — visible solo cap_humano/director/superadmin |
 
 ---
 
@@ -152,6 +162,8 @@ nssm restart cloudflared-nomina
 | Exportación Excel Nómina + columnas fiscales | ✅ activo | IVA 16%, RET ISR, RET IVA, TOTAL A PAGAR |
 | Vista Asistencia Clasificada por Bloques | ✅ activo | /quincenas/:id/asistencia-clasificada |
 | Personal Administrativo: CRUD + asistencia | ✅ activo | |
+| Reporte Checador Excel (admin) | ✅ en código | Pendiente migración 014 en PC casa |
+| Soporte comida en horarios trabajadores | ✅ en código | tiene_comida=true por defecto, migration 014 |
 | Portales docente/trabajador | ✅ activo | |
 | Estadísticas: KPIs + 5 gráficas | ✅ activo | |
 | SyncBadge en 7 vistas | ✅ activo | |
@@ -180,40 +192,40 @@ nssm restart cloudflared-nomina
 
 ## SIGUIENTE SPRINT
 
-### 🚨 ACCIONES URGENTES — PC CASA ESTA NOCHE (2026-04-17)
-> El webhook está roto por divergencia git y falta openpyxl. El export Excel NO funciona hasta resolver esto.
+### 🚨 ACCIONES URGENTES — PC CASA (PENDIENTES — confirmar si ya se hicieron)
 
 ```powershell
 cd C:\Proyectos\nomina-iesef
 
-# 1. Resolver divergencia + traer código nuevo (deploy.py con git fetch+reset+pip install)
+# 1. Resolver divergencia + traer TODO el código nuevo
 git fetch origin
 git reset --hard origin/main
-pip install -r requirements.txt
+pip install -r requirements.txt   # instala openpyxl y deps
 
 # 2. Actualizar DEPLOY_SECRET en .env
 notepad .env
-# Cambiar: DEPLOY_SECRET=iesef-nexo-RMEbFH_dRdhAFyuXnHbcyuxRB9AP70Dak6SjXW89180
+# DEPLOY_SECRET=iesef-nexo-RMEbFH_dRdhAFyuXnHbcyuxRB9AP70Dak6SjXW89180
 
-# 3. Reiniciar servicio
+# 3. Aplicar migración 014 (comida trabajadores) — NUEVA, nunca aplicada
+psql -U nomina_user -d iesef_nomina -f migrations/014_comida_trabajadores.sql
+
+# 4. Reiniciar servicio
 nssm restart nomina-iesef
 
-# 4. En GitHub → Webhooks → Change secret → mismo valor → Redeliver → debe dar 200
+# 5. GitHub → Webhooks → Change secret → mismo valor → Redeliver → verificar 200
 
-# 5. Instalar Tailscale (acceso remoto futuro)
-winget install tailscale
-tailscale up
-# Anotar la IP de Tailscale de PC casa para futuras sesiones desde PC trabajo
+# 6. Instalar Tailscale (acceso remoto futuro)
+winget install tailscale && tailscale up
+# Anotar la IP de Tailscale de PC casa
 ```
 
-### 🔴 CRÍTICO — Verificar en navegador
-- [x] Quincena "centro" → 22 docentes de Bachillerato ✅ correcto
-- [x] Excel exportado → Barrera Reyes $120 ✅ correcto, múltiplos de $120
-- [x] Excel solo genera hoja CENTRO para quincena centro ✅
-- [x] NSSM servicios corriendo ✅ (2026-04-16 noche)
-- [ ] **Excel: verificar columnas IVA/ISR/Total** (bloqueado hasta resolver urgente de arriba)
-- [ ] PWA: verificar banner "Instalar app" en Chrome/Android
-- [ ] Vista Asistencia Clasificada: verificar botón en QuincenaDetalle
+### 🔴 Estado a verificar esta sesión
+- [ ] ¿Se resolvió la divergencia git en PC casa?
+- [ ] ¿Funciona el webhook (`/deploy` → 200)?
+- [ ] ¿Excel nómina docentes exporta con columnas IVA/ISR/Total?
+- [ ] ¿Botón "Reporte Excel" aparece en Admin → Nómina → Detalle quincena?
+- [ ] ¿PWA botón "Instalar app" aparece en login (móvil)?
+- [ ] ¿Migración 014 aplicada? (`SELECT column_name FROM information_schema.columns WHERE table_name='horarios_trabajador'`)
 
 ### 🟠 Desarrollo prioritario
 - [ ] **Carga horarios desde PDF aSc** — botón ya existe, falta implementar el parser
