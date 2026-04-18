@@ -156,11 +156,14 @@ def _clasificar_checadas(
         entrada_checada    = by_type[0][0]  if by_type.get(0) else None
         salida_checada     = by_type[1][-1] if by_type.get(1) else None
     elif tiene_comida:
-        # Separar en zona comida (±TOLERANCIA del punto medio) y zona trabajo
+        # Tolerancia proporcional al turno: 25% de la duración, mín 30 min, máx 90 min
+        shift_secs = abs(_time_to_secs(hora_salida) - _time_to_secs(hora_entrada))
+        tol        = max(30 * 60, min(TOLERANCIA_COMIDA_SEG, shift_secs // 4))
+        # Separar en zona comida (±tol del punto medio) y zona trabajo
         zona_comida  = [h for h in all_horas
-                        if abs(_time_to_secs(h) - mid_secs) <= TOLERANCIA_COMIDA_SEG]
+                        if abs(_time_to_secs(h) - mid_secs) <= tol]
         zona_trabajo = [h for h in all_horas
-                        if abs(_time_to_secs(h) - mid_secs) > TOLERANCIA_COMIDA_SEG]
+                        if abs(_time_to_secs(h) - mid_secs) > tol]
 
         if zona_comida:
             comida_sal_checada = zona_comida[0]

@@ -156,12 +156,15 @@ def _clasificar_checadas(checadas_raw: list, hora_entrada: time,
         entrada_checada    = by_type[0][0]  if by_type.get(0) else None
         salida_checada     = by_type[1][-1] if by_type.get(1) else None
     elif tiene_comida:
-        mid_secs = (_time_to_secs(hora_entrada) + _time_to_secs(hora_salida)) // 2
+        # Tolerancia proporcional al turno: 25% de la duración, mín 30 min, máx 90 min
+        shift_secs = abs(_time_to_secs(hora_salida) - _time_to_secs(hora_entrada))
+        tol        = max(30 * 60, min(TOLERANCIA_COMIDA_SEG, shift_secs // 4))
+        mid_secs   = (_time_to_secs(hora_entrada) + _time_to_secs(hora_salida)) // 2
 
         zona_comida  = [h for h in all_horas
-                        if abs(_time_to_secs(h) - mid_secs) <= TOLERANCIA_COMIDA_SEG]
+                        if abs(_time_to_secs(h) - mid_secs) <= tol]
         zona_trabajo = [h for h in all_horas
-                        if abs(_time_to_secs(h) - mid_secs) > TOLERANCIA_COMIDA_SEG]
+                        if abs(_time_to_secs(h) - mid_secs) > tol]
 
         if zona_comida:
             comida_sal_checada = zona_comida[0]
@@ -449,21 +452,19 @@ def generar_reporte_admin_v2(periodo_id: int) -> bytes:
                      _fmt_hms(r["entrada"]) if r["entrada"] else None,
                      bg=ENT_OK_BG, size=9)
 
-            # SAL.COMER
+            # SAL.COMER — verde solo si hay checada real
             if tiene_comida and r["comida_sal"]:
                 _put(ws, base+3, col_i, _fmt_hms(r["comida_sal"]),
                      bg=COMIDA_BG, fg=COMIDA_FG, size=9)
             else:
-                _put(ws, base+3, col_i, None,
-                     bg=COMIDA_BG if tiene_comida else SIN_HORARIO)
+                _put(ws, base+3, col_i, None, bg="FFFFFF")
 
-            # REG.COMER
+            # REG.COMER — verde solo si hay checada real
             if tiene_comida and r["comida_ent"]:
                 _put(ws, base+4, col_i, _fmt_hms(r["comida_ent"]),
                      bg=COMIDA_BG, fg=COMIDA_FG, size=9)
             else:
-                _put(ws, base+4, col_i, None,
-                     bg=COMIDA_BG if tiene_comida else SIN_HORARIO)
+                _put(ws, base+4, col_i, None, bg="FFFFFF")
 
             # SALIDA
             _put(ws, base+5, col_i,
@@ -490,7 +491,7 @@ def generar_reporte_admin_v2(periodo_id: int) -> bytes:
             falta_val = None
         _put(ws, base+1, COL_FALTAS,
              falta_val,
-             bg=FALTAS_BG if total_faltas else "F8FAFC",
+             bg="FFFFFF" if total_faltas else "F8FAFC",
              fg=FALTAS_FG if total_faltas else "94A3B8",
              bold=bool(total_faltas), size=9)
 
@@ -500,7 +501,7 @@ def generar_reporte_admin_v2(periodo_id: int) -> bytes:
         # OBSERVACIONES — automático si hubo omisión comida
         obs_txt = "OMISIÓN REGISTRO\nALIMENTOS" if comida_incompleta_ok else None
         _put(ws, base+1, COL_OBS, obs_txt,
-             bg=OBS_BG if obs_txt else "F8FAFC",
+             bg="FFFFFF" if obs_txt else "F8FAFC",
              fg=OBS_FG if obs_txt else "94A3B8",
              bold=False, size=8, halign="center", valign="center", wrap=True)
 
